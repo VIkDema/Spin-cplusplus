@@ -8,6 +8,7 @@
 
 %{
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include <sys/types.h>
 #ifndef PC
 #include <unistd.h>
@@ -137,7 +138,7 @@ proc	: inst		/* optional instantiator */
 			}
 	  l_par decl r_par	{ Expand_Ok--;
 			  if (has_ini)
-			  fatal("initializer in parameter list", (char *) 0);
+			  fatal("initializer in parameter list" );
 			}
 	  Opt_priority
 	  Opt_enabler
@@ -172,7 +173,7 @@ inst	: /* empty */	{ $$ = ZN; }
 	| ACTIVE '[' const_expr ']' {
 			  $$ = nn(ZN,CONST,ZN,ZN); $$->val = $3->val;
 			  if ($3->val > 255)
-				non_fatal("max nr of processes is 255\n", "");
+				non_fatal("max nr of processes is 255\n");
 			}
 	| ACTIVE '[' NAME ']' {
 			  $$ = nn(ZN,CONST,ZN,ZN);
@@ -353,7 +354,7 @@ body	: '{'			{ open_seq(1); in_seq = $1->ln; }
           sequence OS		{ add_seq(Stop); }
           '}'			{ $$->sq = close_seq(0); in_seq = 0;
 				  if (scope_level != 0)
-				  {	non_fatal("missing '}' ?", 0);
+				  {	non_fatal("missing '}' ?");
 					scope_level = 0;
 				  }
 				}
@@ -366,7 +367,7 @@ sequence: step			{ if ($1) add_seq($1); }
 step    : one_decl		{ $$ = ZN; }
 	| XU vref_lst		{ setxus($2, $1->val); $$ = ZN; }
 	| NAME ':' one_decl	{ fatal("label preceding declaration,", (char *)0); }
-	| NAME ':' XU		{ fatal("label preceding xr/xs claim,", 0); }
+	| NAME ':' XU		{ fatal("label preceding xr/xs claim,"); }
 	| stmnt			{ $$ = $1; }
 	| stmnt UNLESS		{ if ($1->ntyp == DO) { safe_break(); } }
 	  stmnt			{ if ($1->ntyp == DO) { restore_break(); }
@@ -400,13 +401,13 @@ one_decl: vis TYPE osubt var_list {
 				}
 	| vis TYPE asgn '{' nlst '}' {
 				  if ($2->val != MTYPE)
-					fatal("malformed declaration", 0);
+					fatal("malformed declaration");
 				  setmtype($3, $5);
 				  if ($1)
 					non_fatal("cannot %s mtype (ignored)",
 						$1->sym->name);
 				  if (context != ZS)
-					fatal("mtype declaration must be global", 0);
+					fatal("mtype declaration must be global");
 				}
 	;
 
@@ -467,7 +468,7 @@ ivar    : vardcl           	{ $$ = $1;
 				  }
 				  trackvar($1, $3);
 				  if (any_oper($3, RUN))
-				  {	fatal("cannot use 'run' in var init, saw", (char *) 0);
+				  {	fatal("cannot use 'run' in var init, saw" );
 				  }
 				  nochan_manip($1, $3, 0);
 				  no_internals($1);
@@ -571,7 +572,7 @@ sfld	: /* empty */		{ $$ = ZN; }
 
 stmnt	: Special		{ $$ = $1; initialization_ok = 0; }
 	| Stmnt			{ $$ = $1; initialization_ok = 0;
-				  if (inEventMap) non_fatal("not an event", (char *)0);
+				  if (inEventMap) non_fatal("not an event");
 				}
 	;
 
@@ -787,13 +788,13 @@ const_expr:	CONST			{ $$ = $1; }
 	| const_expr '*' const_expr	{ $$ = $1; $$->val = $1->val * $3->val; }
 	| const_expr '/' const_expr	{ $$ = $1;
 					  if ($3->val == 0)
-					  { fatal("division by zero", (char *) 0);
+					  { fatal("division by zero" );
 					  }
 					  $$->val = $1->val / $3->val;
 					}
 	| const_expr '%' const_expr	{ $$ = $1;
 					  if ($3->val == 0)
-					  { fatal("attempt to take modulo of zero", (char *) 0);
+					  { fatal("attempt to take modulo of zero" );
 					  }
 					  $$->val = $1->val % $3->val;
 					}
@@ -829,7 +830,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 
 	| RUN aname		{ Expand_Ok++;
 				  if (!context)
-				   fatal("used 'run' outside proctype", (char *) 0);
+				   fatal("used 'run' outside proctype" );
 				}
 	  l_par args r_par
 	  Opt_priority		{ Expand_Ok--;
@@ -914,13 +915,13 @@ Probe	: FULL l_par varref r_par	{ $$ = nn($3,  FULL, $3, ZN); }
 Opt_enabler:	/* none */	{ $$ = ZN; }
 	| PROVIDED l_par full_expr r_par {
 				   if (!proper_enabler($3))
-				   { non_fatal("invalid PROVIDED clause", (char *)0);
+				   { non_fatal("invalid PROVIDED clause");
 				     $$ = ZN;
 				   } else
 				   { $$ = $3;
 				 } }
 	| PROVIDED error	 { $$ = ZN;
-				   non_fatal("usage: provided ( ..expr.. )", (char *)0);
+				   non_fatal("usage: provided ( ..expr.. )");
 				 }
 	;
 
@@ -931,12 +932,12 @@ oname	: /* empty */		{ $$ = ZN; }
 basetype: TYPE oname		{ if ($2)
 				  {	if ($1->val != MTYPE)
 					{	explain($1->val);
-						fatal("unexpected type", (char *) 0);
+						fatal("unexpected type" );
 				  }	}
 				  $$->sym = $2 ? $2->sym : ZS;
 				  $$->val = $1->val;
 				  if ($$->val == UNSIGNED)
-				  fatal("unsigned cannot be used as mesg type", 0);
+				  fatal("unsigned cannot be used as mesg type");
 				}
 	| UNAME			{ $$->sym = $1->sym;
 				  $$->val = STRUCT;
@@ -1093,7 +1094,7 @@ ltl_to_string(Lextok *n)
 	 */
 
 	if (!tf)
-	{	fatal("cannot create temporary file", (char *) 0);
+	{	fatal("cannot create temporary file" );
 	}
 	dont_simplify = 1;
 	recursive(tf, n);
@@ -1108,7 +1109,7 @@ ltl_to_string(Lextok *n)
 
 	if (!retval)
 	{	printf("%ld\n", (long int) retval);
-		fatal("could not translate ltl ltl_formula", 0);
+		fatal("could not translate ltl ltl_formula");
 	}
 
 	if (1) printf("ltl %s: %s\n", ltl_name, ltl_formula);
@@ -1153,7 +1154,6 @@ sanity_check(Lextok *t)	/* check proper embedding of ltl_expr */
 			printf("' and '");
 			explain(t->rgt->ntyp);
 			printf("'\n");
-	/*		non_fatal("missing parentheses?", (char *)0); */
 	}	}
 }
 #endif
@@ -1161,5 +1161,5 @@ sanity_check(Lextok *t)	/* check proper embedding of ltl_expr */
 void
 yyerror(char *fmt, ...)
 {
-	non_fatal(fmt, (char *) 0);
+	non_fatal(fmt );
 }

@@ -34,6 +34,8 @@ set(SPIN_SOURCES
     src/structs.cpp
     src/reprosrc.cpp
     src/version/version.hpp.in
+    src/fatal/fatal.hpp
+    src/fatal/fatal.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 
@@ -65,6 +67,10 @@ add_custom_command(
     DEPENDS ${BISON_INPUT_FILE}
 )
 
+find_package(fmt REQUIRED)
+include_directories(${fmt_INCLUDE_DIR})
+
 # Build targets
 add_executable(spin ${SPIN_SOURCES} ${TL_SOURCES} ${BISON_OUTPUT_FILE})
 target_include_directories(spin PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(spin fmt::fmt)
