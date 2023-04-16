@@ -8,6 +8,7 @@
 
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
+#include <iostream>
 #include "../spin.hpp"
 #include "../version/version.hpp"
 #include "pangen4.hpp"
@@ -2437,7 +2438,6 @@ static void Bailout(FILE *fd, char *str) {
   putstmnt(fd, y, m);                                                          \
   fprintf(fd, z)
 
-extern void explain(int);
 void dump_tree(const char *s, Lextok *p) {
   char z[64];
 
@@ -2445,7 +2445,7 @@ void dump_tree(const char *s, Lextok *p) {
     return;
 
   printf("\n%s:\t%2d:\t%3d (", s, p->ln, p->ntyp);
-  explain(p->ntyp);
+  std::cout << log::explainToString(p->ntyp);
   if (p->ntyp == 315)
     printf(": %s", p->sym->name);
   if (p->ntyp == 312)

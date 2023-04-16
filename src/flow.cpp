@@ -814,7 +814,7 @@ dump_lex(Lextok *t, char *s)
 	printf(s);
 	for (i = 0; i < depth; i++)
 		printf("\t");
-	explain(t->ntyp);
+	std::cout << log::explainToString(t->ntyp);
 	if (t->ntyp == NAME) printf(" %s ", t->sym->name);
 	if (t->ntyp == CONST) printf(" %d ", t->val);
 	if (t->ntyp == STRUCT)

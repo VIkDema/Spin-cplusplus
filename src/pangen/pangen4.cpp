@@ -7,6 +7,7 @@
  */
 
 #include "../spin.hpp"
+#include "../fatal/fatal.hpp"
 #include "y.tab.h"
 
 extern FILE *fd_tc, *fd_tb;
@@ -347,8 +348,6 @@ void genunio(void) {
   ntimes(fd_tc, 0, 1, R15_);
 }
 
-extern void explain(int);
-
 int proper_enabler(Lextok *n) {
   if (!n)
     return 1;
@@ -408,7 +407,7 @@ int proper_enabler(Lextok *n) {
     break;
   }
   printf("spin: saw ");
-  explain(n->ntyp);
+  log::explainToString(n->ntyp);
   printf("\n");
   return 0;
 }

@@ -10,6 +10,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include <sys/types.h>
+#include <iostream>
 #ifndef PC
 #include <unistd.h>
 #endif
@@ -41,7 +42,6 @@ extern	void	check_mtypes(Lextok *, Lextok *);
 extern	void	count_runs(Lextok *);
 extern	void	no_internals(Lextok *);
 extern	void	any_runs(Lextok *);
-extern	void	explain(int);
 extern	void	ltl_list(char *, char *);
 extern	void	validref(Lextok *, Lextok *);
 extern  void	sanity_check(Lextok *);
@@ -931,7 +931,8 @@ oname	: /* empty */		{ $$ = ZN; }
 
 basetype: TYPE oname		{ if ($2)
 				  {	if ($1->val != MTYPE)
-					{	explain($1->val);
+					{	
+						std::cout << log::explainToString($1->val);
 						log::fatal("unexpected type" );
 				  }	}
 				  $$->sym = $2 ? $2->sym : ZS;
@@ -1147,13 +1148,13 @@ sanity_check(Lextok *t)	/* check proper embedding of ltl_expr */
 	{	if (!is_boolean(t->ntyp)
 		&&  (is_temporal(t->lft->ntyp)
 		||   is_temporal(t->rgt->ntyp)))
-		{	printf("spin: attempt to apply '");
-			explain(t->ntyp);
-			printf("' to '");
-			explain(t->lft->ntyp);
-			printf("' and '");
-			explain(t->rgt->ntyp);
-			printf("'\n");
+		{	std::cout << "spin: attempt to apply '"
+		<< log::explainToString(t->ntyp)
+		<<"' to '" 
+		<< log::explainToString(t->lft->ntyp)
+		<<"' and '"
+		<<log::explainToString(t->rgt->ntyp)
+		<<"\'"<< std::endl
 	}	}
 }
 #endif

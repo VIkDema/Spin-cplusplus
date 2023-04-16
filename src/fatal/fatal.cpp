@@ -21,8 +21,6 @@ static constexpr std::string_view kOperator = "operator: ";
 static constexpr std::string_view kKeyword = "keyword: ";
 static constexpr std::string_view kFunction = "function-name: ";
 
-std::string explainToString(int n);
-
 void non_fatal(const std::string_view &s1,
                const std::optional<std::string> &s2) {
 
