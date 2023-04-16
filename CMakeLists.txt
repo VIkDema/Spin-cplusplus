@@ -12,38 +12,38 @@ set(CMAKE_CXX_FLAGS_PICKY "-std=c++17 -Wstrict-prototypes -pedantic -fno-strengt
 
 # Source files
 set(SPIN_SOURCES
-    spin.hpp
-    spinlex.cpp
-    sym.cpp
-    vars.cpp
-    main.cpp
-    msc_tcl.cpp
-    mesg.cpp
-    flow.cpp
-    sched.cpp
-    run.cpp
-    pangen/pangen1.cpp
-    pangen/pangen2.cpp
-    pangen/pangen3.cpp
-    pangen/pangen4.cpp
-    pangen/pangen5.cpp
-    pangen/pangen6.cpp
-    pangen/pangen7.cpp
-    guided.cpp
-    dstep.cpp
-    structs.cpp
-    reprosrc.cpp
+    src/spin.hpp
+    src/spinlex.cpp
+    src/sym.cpp
+    src/vars.cpp
+    src/main.cpp
+    src/msc_tcl.cpp
+    src/mesg.cpp
+    src/flow.cpp
+    src/sched.cpp
+    src/run.cpp
+    src/pangen/pangen1.cpp
+    src/pangen/pangen2.cpp
+    src/pangen/pangen3.cpp
+    src/pangen/pangen4.cpp
+    src/pangen/pangen5.cpp
+    src/pangen/pangen6.cpp
+    src/pangen/pangen7.cpp
+    src/guided.cpp
+    src/dstep.cpp
+    src/structs.cpp
+    src/reprosrc.cpp
 )
 
 set(TL_SOURCES
-    tl/tl_parse.cpp
-    tl/tl_lex.cpp
-    tl/tl_main.cpp
-    tl/tl_trans.cpp
-    tl/tl_buchi.cpp
-    tl/tl_mem.cpp
-    tl/tl_rewrt.cpp
-    tl/tl_cache.cpp
+    src/tl/tl_parse.cpp
+    src/tl/tl_lex.cpp
+    src/tl/tl_main.cpp
+    src/tl/tl_trans.cpp
+    src/tl/tl_buchi.cpp
+    src/tl/tl_mem.cpp
+    src/tl/tl_rewrt.cpp
+    src/tl/tl_cache.cpp
 )
 
 # Bison settings
@@ -54,7 +54,7 @@ if(NOT BISON_EXECUTABLE)
 endif()
 
 set(BISON_FLAGS "--defines=${CMAKE_CURRENT_BINARY_DIR}/y.tab.h")
-set(BISON_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/spin.y")
+set(BISON_INPUT_FILE "${CMAKE_CURRENT_SOURCE_DIR}/src/spin.y")
 set(BISON_OUTPUT_FILE "${CMAKE_CURRENT_BINARY_DIR}/y.tab.cpp")
 
 add_custom_command(

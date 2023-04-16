@@ -7,7 +7,7 @@
  */
 
 %{
-#include "/Users/vikdema/Desktop/projects/Spin/src++/spin.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include <sys/types.h>
 #ifndef PC
 #include <unistd.h>
