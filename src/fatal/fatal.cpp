@@ -26,7 +26,6 @@ std::string explainToString(int n);
 void non_fatal(const std::string_view &s1,
                const std::optional<std::string> &s2) {
 
-
   std::string fname =
       Fname ? Fname->name : (oFname ? oFname->name : "nofilename");
   std::string separator =
