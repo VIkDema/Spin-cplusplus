@@ -377,7 +377,7 @@ int eval(Lextok *now) {
     case '/':
       temp = eval(now->rgt);
       if (temp == 0) {
-        fatal("division by zero");
+        log::fatal("division by zero");
       }
       return (eval(now->lft) / temp);
     case '*':
@@ -389,7 +389,7 @@ int eval(Lextok *now) {
     case '%':
       temp = eval(now->rgt);
       if (temp == 0) {
-        fatal("taking modulo of zero");
+        log::fatal("taking modulo of zero");
       }
       return (eval(now->lft) % temp);
     case LT:
@@ -508,7 +508,7 @@ int eval(Lextok *now) {
     case ASSERT:
       if (TstOnly || eval(now->lft))
         return 1;
-      non_fatal("assertion violated");
+      log::non_fatal("assertion violated");
       printf("spin: text of failed assertion: assert(");
       comment(stdout, now->lft, 0);
       printf(")\n");
@@ -535,7 +535,7 @@ int eval(Lextok *now) {
       printf("spin: bad node type %d (run)\n", now->ntyp);
       if (s_trail)
         printf("spin: trail file doesn't match spec?\n");
-      fatal("aborting");
+      log::fatal("aborting");
     }
   }
   return 0;
@@ -598,7 +598,7 @@ int interprint(FILE *fd, Lextok *n) {
             break;
           }
           if (!tmp) {
-            non_fatal("too few print args %s", s);
+            log::non_fatal("too few print args %s", s);
             break;
           }
           j = eval(tmp->lft);
@@ -637,7 +637,7 @@ int interprint(FILE *fd, Lextok *n) {
             sprintf(lbuf, "%x", j);
             break;
           default:
-            non_fatal("bad print cmd: '%s'", &s[i - 1]);
+            log::non_fatal("bad print cmd: '%s'", &s[i - 1]);
             lbuf[0] = '\0';
             break;
           }
@@ -653,7 +653,7 @@ int interprint(FILE *fd, Lextok *n) {
       dotag(fd, GBuf);
     }
   if (strlen(GBuf) >= 4096)
-    fatal("printf string too long");
+    log::fatal("printf string too long");
   return 1;
 }
 
@@ -762,7 +762,7 @@ int pc_enabled(Lextok *n) {
   RunList *Y, *oX;
 
   if (pid == X_lst->pid)
-    fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
+    log::fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
 
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == pid) {

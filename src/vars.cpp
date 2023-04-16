@@ -30,7 +30,7 @@ int getval(Lextok *sn) {
   Symbol *s = sn->sym;
 
   if (strcmp(s->name, "_") == 0) {
-    non_fatal("attempt to read value of '_'");
+    log::non_fatal("attempt to read value of '_'");
     return 0;
   }
   if (strcmp(s->name, "_last") == 0)
@@ -47,7 +47,7 @@ int getval(Lextok *sn) {
       return 0;
 
     if (old_priority_rules) {
-      non_fatal("cannot refer to _priority with -o6");
+      log::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
     return X_lst->priority;
@@ -75,15 +75,15 @@ int setval(Lextok *v, int n) {
       strcmp(v->sym->name, "_pid") == 0 ||
       strcmp(v->sym->name, "_nr_qs") == 0 ||
       strcmp(v->sym->name, "_nr_pr") == 0) {
-    non_fatal("illegal assignment to %s", v->sym->name);
+    log::non_fatal("illegal assignment to %s", v->sym->name);
   }
   if (strcmp(v->sym->name, "_priority") == 0) {
     if (old_priority_rules) {
-      non_fatal("cannot refer to _priority with -o6");
+      log::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
     if (!X_lst) {
-      non_fatal("no context for _priority");
+      log::non_fatal("no context for _priority");
       return 1;
     }
     X_lst->priority = n;
@@ -106,7 +106,7 @@ void rm_selfrefs(Symbol *s, Lextok *i) {
         strcmp(i->sym->context->name, s->context->name) == 0))) {
     lineno = i->ln;
     Fname = i->fn;
-    non_fatal("self-reference initializing '%s'", s->name);
+    log::non_fatal("self-reference initializing '%s'", s->name);
     i->ntyp = CONST;
     i->val = 0;
   } else {
@@ -124,7 +124,7 @@ int checkvar(Symbol *s, int n) {
     return 0;
 
   if (s->type == 0) {
-    non_fatal("undecl var %s (assuming int)", s->name);
+    log::non_fatal("undecl var %s (assuming int)", s->name);
     s->type = INT;
   }
   /* not a STRUCT */
@@ -186,7 +186,7 @@ int cast_val(int t, int v, int w) {
     u = (unsigned char)(v & 1);
   else if (t == UNSIGNED) {
     if (w == 0)
-      fatal("cannot happen, cast_val", (char *)0);
+      log::fatal("cannot happen, cast_val");
     /*	u = (unsigned)(v& ((1<<w)-1));		problem when w=32	*/
     u = (unsigned)(v & (~0u >> (8 * sizeof(unsigned) - w))); /* doug */
   }
@@ -194,7 +194,7 @@ int cast_val(int t, int v, int w) {
   if (v != i + s + (int)u) {
     char buf[64];
     sprintf(buf, "%d->%d (%d)", v, i + s + (int)u, t);
-    non_fatal("value (%s) truncated in assignment", buf);
+    log::non_fatal("value (%s) truncated in assignment", buf);
   }
   return (int)(i + s + (int)u);
 }

@@ -154,7 +154,7 @@ typedef Node *Nodeptr;
   {                                                                            \
     if (!(x)) {                                                                \
       tl_explain(y);                                                           \
-      Fatal(": assertion failed\n", (char *)0);                                \
+      log::fatal(": assertion failed\n", (char *)0);                                \
     }                                                                          \
   }
 

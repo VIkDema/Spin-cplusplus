@@ -66,7 +66,7 @@ static int FSM_DFS(int from, FSM_use *u) {
 
   if (!f) {
     printf("cannot find state %d\n", from);
-    fatal("fsm_dfs: cannot happen\n");
+    log::fatal("fsm_dfs: cannot happen\n");
   }
 
   if (f->seen)
@@ -183,7 +183,7 @@ static int pushbuild(FSM_trans *v) {
 static void popbuild(void) {
   BuildStack *f;
   if (!bs)
-    fatal("cannot happen, popbuild");
+    log::fatal("cannot happen, popbuild");
   f = bs;
   bs = bs->nxt;
   f->nxt = bf;
@@ -681,7 +681,7 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
     if (0)
       printf("spin: %s:%d, bad node type %d usage %d (ana_stmnt)\n",
              now->fn->name, now->ln, now->ntyp, usage);
-    fatal("aborting (ana_stmnt)");
+    log::fatal("aborting (ana_stmnt)");
   }
 }
 
@@ -756,7 +756,7 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
       s = e->n->sl->this_sequence;
       switch (s->frst->n->ntyp) {
       case DO:
-        fatal("unexpected: do at start of d_step");
+        log::fatal("unexpected: do at start of d_step");
       case IF: /* conservative: fall through */
       case 'r':
         goto markit;
@@ -824,13 +824,13 @@ static void ana_seq(Sequence *s) {
         g = get_lab(e->n, 1);
         g = huntele(g, e->status, -1);
         if (!g) {
-          fatal("unexpected error 2");
+          log::fatal("unexpected error 2");
         }
         To = g->seqno;
       } else if (e->nxt) {
         g = huntele(e->nxt, e->status, -1);
         if (!g) {
-          fatal("unexpected error 3");
+          log::fatal("unexpected error 3");
         }
         To = g->seqno;
       } else

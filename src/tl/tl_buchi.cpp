@@ -98,11 +98,11 @@ static State *findstate(char *nm) {
         if (nm[i] == '_')
           break;
       if (i >= 64)
-        Fatal("name too long %s", nm);
+        log::fatal("name too long %s", nm);
       sprintf(altnm, "accept%s", &nm[i]);
       return findstate(altnm);
     }
-    /*	Fatal("buchi: no state %s", nm); */
+    /*	log::fatal("buchi: no state %s", nm); */
   }
   return (State *)0;
 }

@@ -92,7 +92,7 @@ static void colbox(int ix, int iy, int w, int h_unused, char *color) {
 
   if (ix < 0 || ix > 255) {
     fprintf(stderr, "saw ix=%d\n", ix);
-    fatal("msc_tcl: unexpected\n");
+    log::fatal("msc_tcl: unexpected\n");
   }
 
   if (ProcLine[ix] < iy) { /* if (ProcLine[ix] > 0) */
@@ -308,7 +308,7 @@ void putprelude(void) {
 
   sprintf(snap, "%s.tcl", oFname ? oFname->name : "msc");
   if (!(pfd = fopen(snap, MFLAGS))) {
-    fatal("cannot create file '%s'", snap);
+    log::fatal("cannot create file '%s'", snap);
   }
   if (s_trail) {
     if (ntrail)
@@ -318,7 +318,7 @@ void putprelude(void) {
     if (!(fd = fopen(snap, "r"))) {
       snap[strlen(snap) - 2] = '\0';
       if (!(fd = fopen(snap, "r")))
-        fatal("cannot open trail file");
+        log::fatal("cannot open trail file");
     }
     TotSteps = 1;
     while (fgets(snap, 256, fd))
@@ -353,7 +353,7 @@ void pstext(int x, char *s) {
   } else {
     if (depth >= TotSteps || ldepth >= TotSteps) {
       fprintf(stderr, "spin: error: max nr of %d steps exceeded\n", TotSteps);
-      fatal("use -uN to limit steps");
+      log::fatal("use -uN to limit steps");
     }
     putbox(x);
     D[depth] = ldepth;

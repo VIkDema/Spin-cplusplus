@@ -32,11 +32,11 @@ void setuname(Lextok *n) {
   UType *tmp;
 
   if (!owner)
-    fatal("illegal reference inside typedef");
+    log::fatal("illegal reference inside typedef");
 
   for (tmp = Unames; tmp; tmp = tmp->nxt)
     if (!strcmp(owner->name, tmp->nm->name)) {
-      non_fatal("typename %s was defined before", tmp->nm->name);
+      log::non_fatal("typename %s was defined before", tmp->nm->name);
       return;
     }
 
@@ -79,7 +79,7 @@ Lextok *getuname(Symbol *t) {
     if (!strcmp(t->name, tmp->nm->name))
       return tmp->cn;
   }
-  fatal("%s is not a typename", t->name);
+  log::fatal("%s is not a typename", t->name);
   return (Lextok *)0;
 }
 
@@ -94,11 +94,11 @@ void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
     lineno = n->ln;
     Fname = n->fn;
     if (n->sym->type) {
-      fatal("redeclaration of '%s'", n->sym->name);
+      log::fatal("redeclaration of '%s'", n->sym->name);
     }
 
     if (n->sym->nbits > 0)
-      non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
+      log::non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
 
     if (Expand_Ok)
       n->sym->hidden |= (4 | 8 | 16); /* formal par */
@@ -118,7 +118,7 @@ void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
     n->sym->Nid = 0;       /* this is no chan  */
     n->sym->hidden |= 4;
     if (n->sym->nel <= 0)
-      non_fatal("bad array size for '%s'", n->sym->name);
+      log::non_fatal("bad array size for '%s'", n->sym->name);
   }
   lineno = oln;
   Fname = ofn;
@@ -144,10 +144,10 @@ static Symbol *do_same(Lextok *n, Symbol *v, int xinit) {
 
   if (ix >= v->nel || ix < 0) {
     printf("spin: indexing %s[%d] - size is %d\n", v->name, ix, v->nel);
-    fatal("indexing error \'%s\'", v->name);
+    log::fatal("indexing error \'%s\'", v->name);
   }
   if (!n->rgt || !n->rgt->lft) {
-    non_fatal("no subfields %s", v->name); /* i.e., wants all */
+    log::non_fatal("no subfields %s", v->name); /* i.e., wants all */
     lineno = oln;
     Fname = ofn;
     return ZS;
@@ -170,7 +170,7 @@ static Symbol *do_same(Lextok *n, Symbol *v, int xinit) {
         Fname = ofn;
         return tl->sym;
       }
-  fatal("cannot locate subfield %s", tmp->sym->name);
+  log::fatal("cannot locate subfield %s", tmp->sym->name);
   return ZS;
 }
 
@@ -187,12 +187,12 @@ int Rval_struct(Lextok *n, Symbol *v, int xinit) /* n varref, v valref */
   if (tmp->sym->type == STRUCT) {
     return Rval_struct(tmp, tl, 0);
   } else if (tmp->rgt)
-    fatal("non-zero 'rgt' on non-structure");
+    log::fatal("non-zero 'rgt' on non-structure");
 
   ix = eval(tmp->lft);
   /*	printf("%d: ix: %d (%d) %d\n", depth, ix, tl->nel, tl->val[ix]); */
   if (ix >= tl->nel || ix < 0)
-    fatal("indexing error \'%s\'", tl->name);
+    log::fatal("indexing error \'%s\'", tl->name);
 
   return cast_val(tl->type, tl->val[ix], tl->nbits);
 }
@@ -210,11 +210,11 @@ int Lval_struct(Lextok *n, Symbol *v, int xinit, int a) /* a = assigned value */
   if (tmp->sym->type == STRUCT)
     return Lval_struct(tmp, tl, 0, a);
   else if (tmp->rgt)
-    fatal("non-zero 'rgt' on non-structure");
+    log::fatal("non-zero 'rgt' on non-structure");
 
   ix = eval(tmp->lft);
   if (ix >= tl->nel || ix < 0)
-    fatal("indexing error \'%s\'", tl->name);
+    log::fatal("indexing error \'%s\'", tl->name);
 
   if (tl->nbits > 0)
     a = (a & ((1 << tl->nbits) - 1));
@@ -248,7 +248,7 @@ is_lst:
     for (tl = fp->lft; tl; tl = tl->rgt) {
       if (tl->sym->type == STRUCT) {
         if (tl->sym->nel > 1 || tl->sym->isarray)
-          fatal("array of structures in param list, %s", tl->sym->name);
+          log::fatal("array of structures in param list, %s", tl->sym->name);
         cnt += Cnt_flds(tl->sym->Slst);
       } else
         cnt += tl->sym->nel;
@@ -335,7 +335,7 @@ static Lextok *cpnn(Lextok *s, int L, int R, int S) {
       d->sym->Nid = ++Nid_nr;
   }
   if (s->sq || s->sl)
-    fatal("cannot happen cpnn");
+    log::fatal("cannot happen cpnn");
 
   return d;
 }
@@ -376,7 +376,7 @@ void validref(Lextok *p, Lextok *c) {
 
   sprintf(lbuf, "no field '%s' defined in structure '%s'\n", c->sym->name,
           p->sym->name);
-  non_fatal(lbuf);
+  log::non_fatal(lbuf);
 }
 
 void struct_name(Lextok *n, Symbol *v, int xinit, char *buf) {
@@ -551,7 +551,7 @@ static int is_explicit(Lextok *n) {
   if (!n)
     return 0;
   if (!n->sym)
-    fatal("unexpected - no symbol");
+    log::fatal("unexpected - no symbol");
   if (n->sym->type != STRUCT)
     return 1;
   if (!n->rgt)
@@ -560,7 +560,7 @@ static int is_explicit(Lextok *n) {
     lineno = n->ln;
     Fname = n->fn;
     printf("ntyp %d\n", n->rgt->ntyp);
-    fatal("unexpected %s, no '.'", n->sym->name);
+    log::fatal("unexpected %s, no '.'", n->sym->name);
   }
   return is_explicit(n->rgt->lft);
 }
@@ -614,7 +614,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
     printf("spin: saw '");
     comment(stdout, n, 0);
     printf("'\n");
-    fatal("incomplete structure ref '%s'", n->sym->name);
+    log::fatal("incomplete structure ref '%s'", n->sym->name);
   }
 
   cnt = Cnt_flds(n->sym->Slst);
@@ -622,7 +622,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
     bld = nn(ZN, ',', ZN, bld);
     if (retrieve(&(bld->lft), 0, i, n->sym->Slst, Ntyp) >= 0) {
       printf("cannot retrieve field %d\n", i);
-      fatal("bad structure %s", n->sym->name);
+      log::fatal("bad structure %s", n->sym->name);
     }
     x = cpnn(n, 1, 0, 0);
     x->rgt = nn(ZN, '.', bld->lft, ZN);
@@ -636,7 +636,7 @@ Lextok *tail_add(Lextok *a, Lextok *b) {
 
   for (t = a; t->rgt; t = t->rgt)
     if (t->ntyp != ',')
-      fatal("unexpected type - tail_add");
+      log::fatal("unexpected type - tail_add");
   t->rgt = b;
   return a;
 }
@@ -646,7 +646,7 @@ void setpname(Lextok *n) {
 
   for (tmp = Pnames; tmp; tmp = tmp->nxt)
     if (!strcmp(n->sym->name, tmp->nm->name)) {
-      non_fatal("proctype %s redefined", n->sym->name);
+      log::non_fatal("proctype %s redefined", n->sym->name);
       return;
     }
   tmp = (UType *)emalloc(sizeof(UType));

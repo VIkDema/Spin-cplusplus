@@ -99,7 +99,7 @@ void tfree(void *v) {
 
   --m;
   if ((m->size & 0xFF000000) != A_USER) {
-    Fatal("releasing a free block", (char *)0);
+    log::fatal("releasing a free block", (char *)0);
   }
 
   u = (m->size &= 0xFFFFFF);

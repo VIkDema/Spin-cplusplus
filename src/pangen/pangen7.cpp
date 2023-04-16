@@ -146,7 +146,7 @@ more:
     a = sq;
     goto more;
   }
-  fatal("cannot happen, to_render");
+  log::fatal("cannot happen, to_render");
 }
 
 static void wrap_text(char *pre, Lextok *t, char *post) {
@@ -248,7 +248,7 @@ static void state_body(OneState *s, Guard *guard) {
         {
           if (!not_printing)
             printf(" /* self-loop */\n");
-        } else { /* non_fatal("loop in state body", 0); ** maybe ok */
+        } else { /* log::non_fatal("loop in state body", 0); ** maybe ok */
         }
         continue;
       } else {
@@ -747,7 +747,7 @@ static SQueue *retrieve_state(int *s) {
     }
   }
 
-  fatal("cannot happen: retrieve_state");
+  log::fatal("cannot happen: retrieve_state");
   return (SQueue *)0;
 }
 
@@ -825,7 +825,7 @@ static void t_record(int n, Element *e, Element *g) {
 
 static void get_sub(int n, Element *e) {
   if (e->n->ntyp == D_STEP || e->n->ntyp == ATOMIC) {
-    fatal("atomic or d_step in never claim product");
+    log::fatal("atomic or d_step in never claim product");
   }
   /* NON_ATOMIC */
   e->n->sl->this_sequence->last->nxt = e->nxt;
@@ -870,7 +870,7 @@ static void get_seq(int n, Sequence *s) {
     e->status |= DONE;
 
     if (e->n->ntyp == UNLESS) {
-      fatal("unless stmnt in never claim product");
+      log::fatal("unless stmnt in never claim product");
     }
 
     if (e->sub) /* IF or DO */
@@ -888,7 +888,7 @@ static void get_seq(int n, Sequence *s) {
           continue;
         }
         if (t->ntyp != 'c') {
-          fatal("product, 'else' combined with non-condition");
+          log::fatal("product, 'else' combined with non-condition");
         }
 
         if (t->lft->ntyp == CONST /* true */

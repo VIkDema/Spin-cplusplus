@@ -241,7 +241,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     if (n->sym->type && !(n->sym->hidden & 32)) {
       lineno = n->ln;
       Fname = n->fn;
-      fatal("redeclaration of '%s'", n->sym->name);
+      log::fatal("redeclaration of '%s'", n->sym->name);
       lineno = oln;
     }
     n->sym->type = (short)t;
@@ -249,7 +249,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     if (mtype_name && t != MTYPE) {
       lineno = n->ln;
       Fname = n->fn;
-      fatal("missing semi-colon after '%s'?", mtype_name->sym->name);
+      log::fatal("missing semi-colon after '%s'?", mtype_name->sym->name);
       lineno = oln;
     }
 
@@ -259,7 +259,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
               n->fn->name, n->ln, n->sym->name, mtype_name->sym->name,
               n->sym->mtype_name->name);
-      non_fatal("type error");
+      log::non_fatal("type error");
     }
 
     n->sym->mtype_name =
@@ -273,13 +273,13 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
 
     if (t == UNSIGNED) {
       if (n->sym->nbits < 0 || n->sym->nbits >= 32)
-        fatal("(%s) has invalid width-field", n->sym->name);
+        log::fatal("(%s) has invalid width-field", n->sym->name);
       if (n->sym->nbits == 0) {
         n->sym->nbits = 16;
-        non_fatal("unsigned without width-field");
+        log::non_fatal("unsigned without width-field");
       }
     } else if (n->sym->nbits > 0) {
-      non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
+      log::non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
     }
 
     if (vis) {
@@ -287,7 +287,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
         n->sym->hidden |= 1;
         has_hidden++;
         if (t == BIT)
-          fatal("bit variable (%s) cannot be hidden", n->sym->name);
+          log::fatal("bit variable (%s) cannot be hidden", n->sym->name);
       } else if (strncmp(vis->sym->name, ":show:", (size_t)6) == 0) {
         n->sym->hidden |= 2;
       } else if (strncmp(vis->sym->name, ":local:", (size_t)7) == 0) {
@@ -302,14 +302,14 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
       if (n->sym->ini && n->sym->ini->ntyp == CHAN) {
         Fname = n->fn;
         lineno = n->ln;
-        fatal("chan initializer for non-channel %s", n->sym->name);
+        log::fatal("chan initializer for non-channel %s", n->sym->name);
       }
     }
 
     if (n->sym->nel <= 0) {
       lineno = n->ln;
       Fname = n->fn;
-      non_fatal("bad array size for '%s'", n->sym->name);
+      log::non_fatal("bad array size for '%s'", n->sym->name);
       lineno = oln;
     }
 
@@ -324,7 +324,7 @@ static void setonexu(Symbol *sp, int t) {
     if (sp->xup[t - 1] && strcmp(sp->xup[t - 1]->name, context->name)) {
       printf("error: x[rs] claims from %s and %s\n", sp->xup[t - 1]->name,
              context->name);
-      non_fatal("conflicting claims on chan '%s'", sp->name);
+      log::non_fatal("conflicting claims on chan '%s'", sp->name);
     }
     sp->xup[t - 1] = context;
   }
@@ -358,7 +358,7 @@ void setxus(Lextok *p, int t) {
   if (!context) {
     lineno = p->ln;
     Fname = p->fn;
-    fatal("non-local x[rs] assertion", (char *)0);
+    log::fatal("non-local x[rs] assertion");
   }
   for (m = p; m; m = m->rgt) {
     Lextok *Xu_new = (Lextok *)emalloc(sizeof(Lextok));
@@ -378,7 +378,7 @@ void setxus(Lextok *p, int t) {
       int oln = lineno;
       lineno = n->ln;
       Fname = n->fn;
-      non_fatal("xr or xs of non-chan '%s'", n->sym->name);
+      log::non_fatal("xr or xs of non-chan '%s'", n->sym->name);
       lineno = oln;
     }
   }
@@ -433,7 +433,7 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
   {
     if (!n->lft || !n->lft->sym || n->lft->ntyp != NAME ||
         n->lft->lft) /* indexed variable */
-      fatal("bad mtype definition", (char *)0);
+      log::fatal("bad mtype definition");
 
     /* label the name */
     if (n->lft->sym->type != MTYPE) {
@@ -442,14 +442,14 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
       n->lft->sym->ini = nn(ZN, CONST, ZN, ZN);
       n->lft->sym->ini->val = cnt;
     } else if (n->lft->sym->ini->val != cnt) {
-      non_fatal("name %s appears twice in mtype declaration",
+      log::non_fatal("name %s appears twice in mtype declaration",
                 n->lft->sym->name);
     }
   }
 
   lineno = oln;
   if (cnt > 256) {
-    fatal("too many mtype elements (>255)");
+    log::fatal("too many mtype elements (>255)");
   }
 }
 

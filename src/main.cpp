@@ -1058,7 +1058,7 @@ int main(int argc, char *argv[]) {
         Srand((unsigned int)T);
       samecase:
         if (buzzed != 0) {
-          fatal("cannot combine -x with -run -replay or -search", (char *)0);
+          log::fatal("cannot combine -x with -run -replay or -search");
         }
         buzzed = 2;
         analyze = 1;
@@ -1157,7 +1157,7 @@ int main(int argc, char *argv[]) {
       break;  /* 6.4.7: for swarm/biterate */
     case 'x': /* internal - reserved use */
       if (buzzed != 0) {
-        fatal("cannot combine -x with -run -search or -replay", (char *)0);
+        log::fatal("cannot combine -x with -run -search or -replay");
       }
       buzzed = 1; /* implies also -a -o3 */
       pan_runtime = "-d";
@@ -1312,7 +1312,7 @@ int main(int argc, char *argv[]) {
     Symbol *r;
     fclose(fd_ltl);
     if (!(yyin = fopen(ltl_claims, "r"))) {
-      fatal("cannot open %s", ltl_claims);
+      log::fatal("cannot open %s", ltl_claims);
     }
     r = oFname;
     oFname = Fname = lookup(ltl_claims);
@@ -1354,7 +1354,7 @@ void ltl_list(char *nm, char *fm) {
     if (!ltl_claims) {
       ltl_claims = "_spin_nvr.tmp";
       if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
-        fatal("cannot open tmp file %s", ltl_claims);
+        log::fatal("cannot open tmp file %s", ltl_claims);
       }
       tl_out = fd_ltl;
     }
@@ -1384,7 +1384,7 @@ char *emalloc(size_t n) {
   if (!(tmp = (char *)malloc(n))) {
     printf("spin: allocated %ld Gb, wanted %d bytes more\n",
            cnt / (1024 * 1024 * 1024), (int)n);
-    fatal("not enough memory", (char *)0);
+    log::fatal("not enough memory");
   }
   cnt += (unsigned long)n;
   memset(tmp, 0, n);
@@ -1395,7 +1395,7 @@ void trapwonly(Lextok *n /* , char *unused */) {
   short i;
 
   if (!n) {
-    fatal("unexpected error,", (char *)0);
+    log::fatal("unexpected error,");
   }
 
   i = (n->sym) ? n->sym->type : 0;
@@ -1469,7 +1469,7 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
       break;
     case 'r':
     case 's':
-      non_fatal("never claim contains i/o stmnts");
+      log::non_fatal("never claim contains i/o stmnts");
       break;
     case TIMEOUT:
       /* never claim polls timeout */
@@ -1505,14 +1505,14 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
       printf("spin: never, saw ");
       explain(t);
       printf("\n");
-      fatal("incompatible with separate compilation", (char *)0);
+      log::fatal("incompatible with separate compilation");
     }
   } else if ((t == ENABLED || t == PC_VAL) && !(warn_nn & t)) {
     printf("spin: Warning, using %s outside never claim\n",
            (t == ENABLED) ? "enabled()" : "pc_value()");
     warn_nn |= t;
   } else if (t == NONPROGRESS) {
-    fatal("spin: Error, using np_ outside never claim\n", (char *)0);
+    log::fatal("spin: Error, using np_ outside never claim\n");
   }
   return n;
 }

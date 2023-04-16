@@ -13,7 +13,10 @@ extern Symbol *oFname;
 extern int nr_errs;
 extern int lineno;
 extern int verbose;
+extern int yychar;
+extern char yytext[];
 
+namespace log {
 static constexpr std::string_view kOperator = "operator: ";
 static constexpr std::string_view kKeyword = "keyword: ";
 static constexpr std::string_view kFunction = "function-name: ";
@@ -22,8 +25,7 @@ std::string explainToString(int n);
 
 void non_fatal(const std::string_view &s1,
                const std::optional<std::string> &s2) {
-  extern int yychar;
-  extern char yytext[];
+
 
   std::string fname =
       Fname ? Fname->name : (oFname ? oFname->name : "nofilename");
@@ -357,3 +359,4 @@ std::string explainToString(int n) {
   }
   return ss.str();
 }
+} // namespace log

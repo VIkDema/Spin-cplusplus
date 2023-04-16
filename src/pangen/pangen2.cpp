@@ -135,7 +135,7 @@ static int fproc(char *s) {
     if (strcmp(p->n->name, s) == 0)
       return p->tn;
 
-  fatal("proctype %s not found", s);
+  log::fatal("proctype %s not found", s);
   return -1;
 }
 
@@ -700,7 +700,7 @@ doless:
     genconditionals();
     gensvmap();
     if (!run_lst)
-      fatal("no runable process", (char *)0);
+      log::fatal("no runable process");
     fprintf(fd_tc, "void\n");
     fprintf(fd_tc, "active_procs(void)\n{\n");
 
@@ -1139,7 +1139,7 @@ static int getNid(Lextok *n) {
 
   if (!n->sym || n->sym->Nid == 0) {
     char *no_name = "no name";
-    fatal("bad channel name '%s'", (n->sym) ? n->sym->name : no_name);
+    log::fatal("bad channel name '%s'", (n->sym) ? n->sym->name : no_name);
   }
   return n->sym->Nid;
 }
@@ -1635,7 +1635,7 @@ static int dobackward(Element *e, int casenr) {
     CnT[YZcnt]--;
     YZmax--;
     if (YZmax < 0)
-      fatal("cannot happen, dobackward", (char *)0);
+      log::fatal("cannot happen, dobackward");
     fprintf(fd_tb, ";\n\t/* %d */\t", YZmax);
     putname(fd_tb, "", &YZ[YZmax], 0, " = trpt->bup.oval");
     if (multi_oval > 0) {
@@ -1709,7 +1709,7 @@ static void lab_transfer(Element *to, Element *from) {
   context = oc; /* restore */
   if (usedit) {
     if (modifier++ > 990)
-      fatal("modifier overflow error");
+      log::fatal("modifier overflow error");
   }
 }
 
@@ -1769,13 +1769,13 @@ static int case_cache(Element *e, int a) {
           e->merge_in);
 
   if (nrbups > MAXMERGE - 1)
-    fatal("merge requires more than 256 bups", (char *)0);
+    log::fatal("merge requires more than 256 bups");
 
   if (e->n->ntyp != 'r' && !pid_is_claim(Pid_nr) && Pid_nr != eventmapnr)
     fprintf(fd_tm, "IfNotBlocked\n\t\t");
 
   if (multi_needed != 0 || multi_undo != 0)
-    fatal("cannot happen, case_cache");
+    log::fatal("cannot happen, case_cache");
 
   if (nrbups > 1) {
     multi_oval = 1;
@@ -2168,7 +2168,7 @@ static Element *find_target(Element *e) {
     return e;
 
   if (t_cyc++ > 32) {
-    fatal("cycle of goto jumps");
+    log::fatal("cycle of goto jumps");
   }
   switch (e->n->ntyp) {
   case GOTO:
@@ -2331,7 +2331,7 @@ int has_global(Lextok *n) {
     if (strcmp(n->sym->name, "_priority") == 0) {
       if (old_priority_rules) {
         if (n_seen != n->sym)
-          fatal("cannot refer to _priority with -o6");
+          log::fatal("cannot refer to _priority with -o6");
         n_seen = n->sym;
       }
       return 0;
@@ -2555,14 +2555,14 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
   case RUN:
     if (now->sym == NULL)
-      fatal("internal error pangen2.c");
+      log::fatal("internal error pangen2.c");
     if (claimproc && strcmp(now->sym->name, claimproc) == 0)
-      fatal("claim %s, (not runnable)", claimproc);
+      log::fatal("claim %s, (not runnable)", claimproc);
     if (eventmap && strcmp(now->sym->name, eventmap) == 0)
-      fatal("eventmap %s, (not runnable)", eventmap);
+      log::fatal("eventmap %s, (not runnable)", eventmap);
 
     if (GenCode)
-      fatal("'run' in d_step sequence (use atomic)", (char *)0);
+      log::fatal("'run' in d_step sequence (use atomic)");
 
     fprintf(fd, "addproc(II, %d, %d",
             (now->val > 0 && !old_priority_rules) ? now->val : 1,
@@ -2574,7 +2574,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
     if (i > Npars) { /* printf("\t%d parameters used, max %d expected\n", i,
                         Npars); */
-      fatal("too many parameters in run %s(...)", now->sym->name);
+      log::fatal("too many parameters in run %s(...)", now->sym->name);
     }
     for (; i < Npars; i++)
       fprintf(fd, ", 0");
@@ -2588,7 +2588,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 #endif
     if (now->val < 0 || now->val > 255) /* 0 itself is allowed */
     {
-      fatal("bad process in run %s, valid range: 1..255", now->sym->name);
+      log::fatal("bad process in run %s, valid range: 1..255", now->sym->name);
     }
     break;
 
@@ -2769,7 +2769,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       putname(stdout, "channel name: ", now->lft, m, "\n");
       terse--;
       printf("	%d msg parameters sent, %d expected\n", i, Mpars);
-      fatal("too many pars in send", "");
+      log::fatal("too many pars in send", "");
     }
     for (j = i; i < Mpars; i++) {
       fprintf(fd, ", 0");
@@ -3056,7 +3056,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
               && strcmp(v->lft->sym->name, "_") != 0)
             for (w = v->rgt; w; w = w->rgt)
               if (v->lft->sym == w->lft->sym) {
-                fatal("cannot use var ('%s') in multiple msg fields",
+                log::fatal("cannot use var ('%s') in multiple msg fields",
                       v->lft->sym->name);
               }
         }
@@ -3309,7 +3309,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (now->lft->sym && now->lft->sym->type == PREDEF &&
         strcmp(now->lft->sym->name, "_") != 0 &&
         strcmp(now->lft->sym->name, "_priority") != 0) {
-      fatal("invalid assignment to %s", now->lft->sym->name);
+      log::fatal("invalid assignment to %s", now->lft->sym->name);
     }
 
     nocast = 1;
@@ -3320,7 +3320,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (now->lft->sym->isarray && now->rgt->ntyp == ',') /* array initializer */
     {
       putstmnt(fd, now->rgt->lft, m);
-      non_fatal("cannot use an array list initializer here");
+      log::non_fatal("cannot use an array list initializer here");
     } else {
       putstmnt(fd, now->rgt, m);
     }
@@ -3414,7 +3414,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (now->sym)
       plunk_inline(fd, now->sym->name, 1, GenCode);
     else
-      fatal("internal error pangen2.c");
+      log::fatal("internal error pangen2.c");
 
     if (!GenCode) {
       fprintf(fd, "\n"); /* state changed, capture it */
@@ -3485,7 +3485,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
   Fname = n->fn;
 
   if (!s)
-    fatal("no name - putname");
+    log::fatal("no name - putname");
 
   if (s->context && context && s->type)
     s = findloc(s); /* it's a local var */
@@ -3500,12 +3500,12 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
 
   if (!s->type) {
     if (strcmp(pre, ".") != 0)
-      fatal("undeclared variable '%s'", s->name);
+      log::fatal("undeclared variable '%s'", s->name);
     s->type = INT;
   }
 
   if (s->type == PROCTYPE)
-    fatal("proctype-name '%s' used as array-name", s->name);
+    log::fatal("proctype-name '%s' used as array-name", s->name);
 
   fprintf(fd, pre, 0);
   if (!terse && !s->owner && evalindex != 1) {
@@ -3521,7 +3521,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
         if (!(s->hidden & 1) && x != 0)
           fprintf(fd, "now.");
         if (x == 0 && _isok == 0)
-          fatal("attempt to read value of '_'");
+          log::fatal("attempt to read value of '_'");
       }
     }
   }
@@ -3550,7 +3550,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
 
   if (s->nel > 1 || s->isarray == 1) {
     if (no_arrays) {
-      non_fatal("ref to array element invalid in this context", (char *)0);
+      log::non_fatal("ref to array element invalid in this context");
       printf("\thint: instead of, e.g., x[rs] qu[3], use\n");
       printf("\tchan nm_3 = qu[3]; x[rs] nm_3;\n");
       printf("\tand use nm_3 in sends/recvs instead of qu[3]\n");
@@ -3593,7 +3593,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
   } else {
     if (n->lft /* effectively a scalar, but with an index */
         && (n->lft->ntyp != CONST || n->lft->val != 0)) {
-      fatal("ref to scalar '%s' using array index", (char *)ptr);
+      log::fatal("ref to scalar '%s' using array index", (char *)ptr);
     }
   }
 
@@ -3696,14 +3696,14 @@ void count_runs(Lextok *n) {
   runcount = opcount = 0;
   do_count(n, 1);
   if (runcount > 1)
-    fatal("more than one run operator in expression", "");
+    log::fatal("more than one run operator in expression", "");
   if (runcount == 1 && opcount > 1)
-    fatal("use of run operator in compound expression", "");
+    log::fatal("use of run operator in compound expression", "");
 }
 
 void any_runs(Lextok *n) {
   runcount = opcount = 0;
   do_count(n, 0);
   if (runcount >= 1)
-    fatal("run operator used in invalid context", "");
+    log::fatal("run operator used in invalid context", "");
 }

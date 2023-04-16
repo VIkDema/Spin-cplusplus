@@ -28,7 +28,7 @@ static void Sourced(int n, int special) {
     if (Tojump[i] == n)
       return;
   if (Tj >= MAXDSTEP)
-    fatal("d_step sequence too long", (char *)0);
+    log::fatal("d_step sequence too long");
   Special[Tj] = special;
   Tojump[Tj++] = n;
 }
@@ -42,7 +42,7 @@ static void Dested(int n) {
     if (Jumpto[i] == n)
       return;
   if (Jt >= MAXDSTEP)
-    fatal("d_step sequence too long", (char *)0);
+    log::fatal("d_step sequence too long");
   Jumpto[Jt++] = n;
   LastGoto = 1;
 }
@@ -61,7 +61,7 @@ static void Mopup(FILE *fd) {
           fprintf(fd, "S_%.3d_0:	/* break-dest */\n", OkBreak);
       } else {
         sprintf(buf, "S_%.3d_0", Jumpto[i]);
-        non_fatal("goto %s breaks from d_step seq", buf);
+        log::non_fatal("goto %s breaks from d_step seq", buf);
       }
     }
   }
@@ -77,7 +77,7 @@ static void Mopup(FILE *fd) {
   for (j = i = 0; j < Tj; j++)
     if (Special[j]) {
       if (i >= MAXDSTEP) {
-        fatal("cannot happen (dstep.c)", (char *)0);
+        log::fatal("cannot happen (dstep.c)");
       }
       Tojump[i] = Tojump[j];
       Special[i] = 2;
@@ -99,7 +99,7 @@ static void illegal(Element *e, char *str) {
   printf("illegal operator in 'd_step:' '");
   comment(stdout, e->n, 0);
   printf("'\n");
-  fatal("'%s'", str);
+  log::fatal("'%s'", str);
 }
 
 static void filterbad(Element *e) {
@@ -219,7 +219,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
 
   switch (s->frst->n->ntyp) {
   case UNLESS:
-    non_fatal("'unless' inside d_step - ignored");
+    log::non_fatal("'unless' inside d_step - ignored");
     return putcode(fd, s->frst->n->sl->this_sequence, nxt, 0, ln, seqno);
   case NON_ATOMIC:
     (void)putcode(fd, s->frst->n->sl->this_sequence, ZE, 1, ln, seqno);
@@ -379,7 +379,7 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
             fprintf(fd, " /* NEXT */\n");
             Dested(next->Seqno);
           } else
-            fatal("cannot interpret d_step");
+            log::fatal("cannot interpret d_step");
         }
         break;
       case GOTO:

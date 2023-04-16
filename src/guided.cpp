@@ -140,7 +140,7 @@ void match_trail(void) {
     if (strlen(*trailfilename) < sizeof(snap)) {
       strcpy(snap, (const char *)*trailfilename);
     } else {
-      fatal("filename %s too long", *trailfilename);
+      log::fatal("filename %s too long", *trailfilename);
     }
   } else {
     if (ntrail)

@@ -57,7 +57,7 @@ void runnable(ProcList *p, int weight, int noparams) {
   }
   if (!p->s) {
     char *p_n_name = "--";
-    fatal("parsing error, no sequence %s", p->n ? p->n->name : p_n_name);
+    log::fatal("parsing error, no sequence %s", p->n ? p->n->name : p_n_name);
   }
 
   r->pc = huntele(p->s->frst, p->s->frst->status, -1);
@@ -69,7 +69,7 @@ void runnable(ProcList *p, int weight, int noparams) {
   r->nxt = run_lst;
   r->prov = p->prov;
   if (weight < 1 || weight > 255) {
-    fatal("bad process priority, valid range: 1..255");
+    log::fatal("bad process priority, valid range: 1..255");
   }
 
   if (noparams)
@@ -128,7 +128,7 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
 
   if (!p) {
     char *pnm_sym_name_default = "?";
-    fatal("cannot find proctype '%s'",
+    log::fatal("cannot find proctype '%s'",
           (pnm && pnm->sym) ? pnm->sym->name : pnm_sym_name_default);
   }
 
@@ -148,14 +148,14 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
         t = "_unnamed_";
       }
       if (at->lft->ntyp != CONST) {
-        fatal("wrong arg type '%s'", at->lft->sym->name);
+        log::fatal("wrong arg type '%s'", at->lft->sym->name);
       }
       s = which_mtype(at->lft->sym->name);
       if (s && strcmp(s, t) != 0) {
         printf(
             "spin: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
             pnm->fn->name, pnm->ln, at->lft->sym->name, s, t);
-        fatal("wrong arg type '%s'", at->lft->sym->name);
+        log::fatal("wrong arg type '%s'", at->lft->sym->name);
       }
     }
 }
@@ -268,7 +268,7 @@ void check_param_count(int i, Lextok *m) {
         }
       if (i != cnt) {
         printf("spin: saw %d parameters, expected %d\n", i, cnt);
-        non_fatal("wrong number of parameters");
+        log::non_fatal("wrong number of parameters");
       }
       break;
     }
@@ -448,7 +448,7 @@ static RunList *pickproc(RunList *Y) {
           break;
       }
       if (X_lst == NULL) {
-        fatal("unexpected, pickproc", (char *)0);
+        log::fatal("unexpected, pickproc");
       }
       j = nproc - nstop;
       while (j-- > 0) {
@@ -461,7 +461,7 @@ static RunList *pickproc(RunList *Y) {
       return Y;
     }
     if (Priority_Sum < nproc - nstop)
-      fatal("cannot happen - weights", (char *)0);
+      log::fatal("cannot happen - weights");
     j = (int)Rand() % Priority_Sum;
 
     while (j - X_lst->priority >= 0) {
@@ -759,7 +759,7 @@ void sched(void) {
     } else {
       depth--;
       if (oX->pc && (oX->pc->status & D_ATOM)) {
-        non_fatal("stmnt in d_step blocks");
+        log::non_fatal("stmnt in d_step blocks");
       }
       if (X_lst->pc && X_lst->pc->n && X_lst->pc->n->ntyp == '@' &&
           X_lst->pid == (nproc - nstop - 1)) {
@@ -816,7 +816,7 @@ int complete_rendez(void) {
   if (s_trail)
     return 1;
   if (orun->pc->status & D_ATOM)
-    fatal("rv-attempt in d_step sequence", (char *)0);
+    log::fatal("rv-attempt in d_step sequence");
   Rvous = 1;
   interactive = 0;
 
@@ -909,7 +909,7 @@ static void addsymbol(RunList *r, Symbol *s) {
     }
   } else {
     if (s->Sval)
-      fatal("saw preinitialized struct %s", s->name);
+      log::fatal("saw preinitialized struct %s", s->name);
     t->Slst = s->Slst;
     t->Snm = s->Snm;
     t->owner = s->owner;
@@ -933,7 +933,7 @@ static void setlocals(RunList *r) {
          sp->type == BYTE || sp->type == CHAN || sp->type == SHORT ||
          sp->type == INT || sp->type == STRUCT)) {
       if (!findloc(sp))
-        non_fatal("setlocals: cannot happen '%s'", sp->name);
+        log::non_fatal("setlocals: cannot happen '%s'", sp->name);
     }
   }
   X_lst = oX;
@@ -945,9 +945,9 @@ static void oneparam(RunList *r, Lextok *t, Lextok *a, ProcList *p) {
   RunList *oX = X_lst;
 
   if (!a)
-    fatal("missing actual parameters: '%s'", p->n->name);
+    log::fatal("missing actual parameters: '%s'", p->n->name);
   if (t->sym->nel > 1 || t->sym->isarray)
-    fatal("array in parameter list, %s", t->sym->name);
+    log::fatal("array in parameter list, %s", t->sym->name);
   k = eval(a->lft);
 
   at = Sym_typ(a->lft);
@@ -960,7 +960,7 @@ static void oneparam(RunList *r, Lextok *t, Lextok *a, ProcList *p) {
     (void)sputtype(tag2, at);
     sprintf(buf, "type-clash in params of %s(..), (%s<-> %s)", p->n->name, tag1,
             tag2);
-    non_fatal("%s", buf);
+    log::non_fatal("%s", buf);
   }
   t->ntyp = NAME;
   addsymbol(r, t->sym);
@@ -989,7 +989,7 @@ static void setparams(RunList *r, ProcList *p, Lextok *q) {
 Symbol *findloc(Symbol *s) {
   Symbol *r;
 
-  if (!X_lst) { /* fatal("error, cannot eval '%s' (no proc)", s->name); */
+  if (!X_lst) { /* log::fatal("error, cannot eval '%s' (no proc)", s->name); */
     return ZS;
   }
   for (r = X_lst->symtab; r; r = r->next) {
@@ -1012,7 +1012,7 @@ int in_bound(Symbol *r, int n) {
 
   if (n >= r->nel || n < 0) {
     printf("spin: indexing %s[%d] - size is %d\n", r->name, n, r->nel);
-    non_fatal("indexing array \'%s\'", r->name);
+    log::non_fatal("indexing array \'%s\'", r->name);
     return 0;
   }
   return 1;
@@ -1134,14 +1134,14 @@ int remotelab(Lextok *n) {
   Fname = n->fn;
   if (n->sym->type != 0 && n->sym->type != LABEL) {
     printf("spin: error, type: %d\n", n->sym->type);
-    fatal("not a labelname: '%s'", n->sym->name);
+    log::fatal("not a labelname: '%s'", n->sym->name);
   }
   if (n->indstep >= 0) {
-    fatal("remote ref to label '%s' inside d_step", n->sym->name);
+    log::fatal("remote ref to label '%s' inside d_step", n->sym->name);
   }
   if ((i = find_lab(n->sym, n->lft->sym, 1)) == 0) /* remotelab */
   {
-    fatal("unknown labelname: %s", n->sym->name);
+    log::fatal("unknown labelname: %s", n->sym->name);
   }
   return i;
 }
@@ -1184,7 +1184,7 @@ int remotevar(Lextok *n) {
       if (strcmp(Y->n->name, n->lft->sym->name) != 0) {
         printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name,
                prno - added);
-        non_fatal("refers to wrong proctype '%s'", Y->n->name);
+        log::non_fatal("refers to wrong proctype '%s'", Y->n->name);
       }
       if (strcmp(n->sym->name, "_p") == 0) {
         if (Y->pc) {
@@ -1219,7 +1219,7 @@ int remotevar(Lextok *n) {
       return i;
     }
   printf("remote ref: %s[%d] ", n->lft->sym->name, prno - added);
-  non_fatal("%s not found", n->sym->name);
+  log::non_fatal("%s not found", n->sym->name);
   printf("have only:\n");
   i = nproc - nstop - 1;
   for (Y = run_lst; Y; Y = Y->nxt, i--)

@@ -137,7 +137,7 @@ static void addcan(int tok, Node *n) {
 
   s = DoDump(N);
   if (!s) {
-    fatal("unexpected error 6");
+    log::fatal("unexpected error 6");
   }
   if (can->ntyp != tok) /* only one element in list so far */
   {
@@ -300,7 +300,7 @@ out:
 #endif
   if (!can) {
     if (!dflt)
-      fatal("cannot happen, Canonical");
+      log::fatal("cannot happen, Canonical");
     return dflt;
   }
 

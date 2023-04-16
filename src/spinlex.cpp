@@ -95,7 +95,7 @@ static char pushedback[4096];
 
 static void push_back(char *s) {
   if (PushedBack + strlen(s) > 4094) {
-    fatal("select statement too large");
+    log::fatal("select statement too large");
   }
   strcat(pushedback, s);
   PushedBack += strlen(s);
@@ -196,7 +196,7 @@ static void def_inline(Symbol *s, int ln, char *ptr, char *prc, Lextok *nms) {
 
   for (tmp = seqnames; tmp; cnt++, tmp = tmp->nxt)
     if (!strcmp(s->name, tmp->nm->name)) {
-      non_fatal("procedure name %s redefined", tmp->nm->name);
+      log::non_fatal("procedure name %s redefined", tmp->nm->name);
       tmp->cn = (Lextok *)nw;
       tmp->params = nms;
       tmp->dln = ln;
@@ -287,7 +287,7 @@ Lextok *return_statement(Lextok *n) {
     g->sym = lookup("rv_");
     return nn(h, ASGN, h, n);
   } else {
-    fatal("return statement outside inline");
+    log::fatal("return statement outside inline");
   }
   return ZN;
 }
@@ -331,7 +331,7 @@ int is_inline(void) {
   if (Inlining < 0)
     return 0; /* i.e., not an inline */
   if (Inline_stub[Inlining] == NULL)
-    fatal("unexpected, inline_stub not set");
+    log::fatal("unexpected, inline_stub not set");
   return Inline_stub[Inlining]->uiid;
 }
 
@@ -342,7 +342,7 @@ IType *find_inline(char *s) {
     if (!strcmp(s, tmp->nm->name))
       break;
   if (!tmp)
-    fatal("cannot happen, missing inline def %s", s);
+    log::fatal("cannot happen, missing inline def %s", s);
 
   return tmp;
 }
@@ -388,7 +388,7 @@ void c_track(Symbol *s, Symbol *t, Symbol *stackonly) /* name, size */
     else if (strcmp(stackonly->name, "\"UnMatched\"") != 0 &&
              strcmp(stackonly->name, "\"unMatched\"") != 0 &&
              strcmp(stackonly->name, "\"StackOnly\"") != 0)
-      non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
+      log::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
     else
       has_stack = 1; /* unmatched stack */
   }
@@ -399,7 +399,7 @@ char *skip_white(char *p) {
     while (*p == ' ' || *p == '\t')
       p++;
   } else {
-    fatal("bad format - 1");
+    log::fatal("bad format - 1");
   }
   return p;
 }
@@ -409,7 +409,7 @@ char *skip_nonwhite(char *p) {
     while (*p != ' ' && *p != '\t')
       p++;
   } else {
-    fatal("bad format - 2");
+    log::fatal("bad format - 2");
   }
   return p;
 }
@@ -449,7 +449,7 @@ static char *jump_etc(C_Added *r) {
     if (q) {
       p = q; /* unsigned with implied 'int' */
     } else {
-      fatal("c_state format (%s)", op);
+      log::fatal("c_state format (%s)", op);
     }
   }
 
@@ -457,7 +457,7 @@ static char *jump_etc(C_Added *r) {
       (!r->ival || !r->ival->name ||
        !strchr(r->ival->name, '{'))) /* was !strchr(p, '{')) */
   {
-    non_fatal("array initialization error, c_state (%s)", p);
+    log::non_fatal("array initialization error, c_state (%s)", p);
     p = (char *)0;
   }
 
@@ -703,7 +703,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
       continue;
 
     if (strchr(r->s->name, '&'))
-      fatal("dereferencing state object: %s", r->s->name);
+      log::fatal("dereferencing state object: %s", r->s->name);
 
     fprintf(fd, "extern %s %s;\n", r->t->name, r->s->name);
   }
@@ -871,7 +871,7 @@ static void check_inline(IType *tmp) {
     if (strstr((char *)tmp->cn, buf)) {
       printf("spin: in proctype %s, ref to object in proctype %s\n",
              X_lst->n->name, p->n->name);
-      fatal("invalid variable ref in '%s'", tmp->nm->name);
+      log::fatal("invalid variable ref in '%s'", tmp->nm->name);
     }
   }
 }
@@ -1009,7 +1009,7 @@ void no_side_effects(char *s) {
   bad:
     lineno = tmp->dln;
     Fname = tmp->dfn;
-    non_fatal("c_expr %s has side-effects", s);
+    log::non_fatal("c_expr %s has side-effects", s);
     return;
   }
   while ((t = strchr(t, '=')) != NULL) {
@@ -1033,7 +1033,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   tmp = find_inline(t->name);
 
   if (++Inlining >= MAXINL)
-    fatal("inlines nested too deeply");
+    log::fatal("inlines nested too deeply");
   tmp->cln = lineno; /* remember calling point */
   tmp->cfn = Fname;  /* and filename */
   tmp->rval = rval;
@@ -1041,7 +1041,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   for (p = apars, q = tmp->params, j = 0; p && q; p = p->rgt, q = q->rgt)
     j++; /* count them */
   if (p || q)
-    fatal("wrong nr of params on call of '%s'", t->name);
+    log::fatal("wrong nr of params on call of '%s'", t->name);
 
   tmp->anms = (char **)emalloc(j * sizeof(char *));
   for (p = apars, j = 0; p; p = p->rgt, j++) {
@@ -1060,7 +1060,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
 #endif
   for (j = 0; j < Inlining; j++) {
     if (Inline_stub[j] == Inline_stub[Inlining]) {
-      fatal("cyclic inline attempt on: %s", t->name);
+      log::fatal("cyclic inline attempt on: %s", t->name);
     }
   }
   last_token = SEMI; /* avoid insertion of extra semi */
@@ -1077,10 +1077,10 @@ static void do_directive(int first) {
     goto done;
 
   if ((c = Getchar()) != ' ')
-    fatal("malformed preprocessor directive - # .");
+    log::fatal("malformed preprocessor directive - # .");
 
   if (!isdigit_(c = Getchar()))
-    fatal("malformed preprocessor directive - # .lineno");
+    log::fatal("malformed preprocessor directive - # .lineno");
 
   getword(c, isdigit_);
   lineno = atoi(yytext); /* pickup the line number */
@@ -1089,16 +1089,16 @@ static void do_directive(int first) {
     return; /* no filename */
 
   if (c != ' ')
-    fatal("malformed preprocessor directive - .fname");
+    log::fatal("malformed preprocessor directive - .fname");
 
   if ((c = Getchar()) != '\"') {
     printf("got %c, expected \" -- lineno %d\n", c, lineno);
-    fatal("malformed preprocessor directive - .fname (%s)", yytext);
+    log::fatal("malformed preprocessor directive - .fname (%s)", yytext);
   }
 
   getword(Getchar(), notquote); /* was getword(c, notquote); */
   if (Getchar() != '\"')
-    fatal("malformed preprocessor directive - fname.");
+    log::fatal("malformed preprocessor directive - fname.");
 
   /* strcat(yytext, "\""); */
   Fname = lookup(yytext);
@@ -1128,7 +1128,7 @@ void precondition(char *q) {
       break;
     }
   }
-  fatal("cannot happen"); /* unreachable */
+  log::fatal("cannot happen"); /* unreachable */
 }
 
 Symbol *prep_inline(Symbol *s, Lextok *nms) {
@@ -1142,7 +1142,7 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
     if (t->lft) {
       if (t->lft->ntyp != NAME) {
         char *s_s_name = "--";
-        fatal("bad param to inline %s", s ? s->name : s_s_name);
+        log::fatal("bad param to inline %s", s ? s->name : s_s_name);
       }
       t->lft->sym->hidden |= 32;
     }
@@ -1181,7 +1181,7 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
     default:
       printf("spin: saw char '%c'\n", c);
     bad:
-      fatal("bad inline: %s", s->name);
+      log::fatal("bad inline: %s", s->name);
     }
     break;
   }
@@ -1203,7 +1203,7 @@ more:
   c = Getchar();
   *p++ = (char)c;
   if (p - Buf1 >= SOMETHINGBIG)
-    fatal("inline text too long");
+    log::fatal("inline text too long");
   switch (c) {
   case '\n':
     lineno++;
@@ -1250,7 +1250,7 @@ more:
         *p++ = (char)Getchar();
       }
       if (p - Buf1 >= SOMETHINGBIG) {
-        fatal("inline text too long");
+        log::fatal("inline text too long");
       }
     } while (c != '"'); /* end of string */
     /* *p = '\0'; */
@@ -1330,7 +1330,7 @@ int get_deferred(void) {
 
   defer_fd = fopen(TMP_FILE2, "r");
   if (!defer_fd) {
-    non_fatal("cannot retrieve deferred ltl formula");
+    log::non_fatal("cannot retrieve deferred ltl formula");
     return 0;
   }
   fclose(yyin);
@@ -1345,7 +1345,7 @@ int put_deferred(void) {
   if (!defer_fd) {
     defer_fd = fopen(TMP_FILE2, "w+");
     if (!defer_fd) {
-      non_fatal("cannot defer ltl expansion");
+      log::non_fatal("cannot defer ltl expansion");
       return 0;
     }
   }
@@ -1393,7 +1393,7 @@ static int scan_to(int stop, int (*tst)(int), char *buf, int bufsz) {
       buf[i++] = c;
     } else if (buf && i >= bufsz - 1) {
       buf[bufsz - 1] = '\0';
-      fatal("name too long", buf);
+      log::fatal("name too long", buf);
     }
     if (tst && !tst(c) && c != ' ' && c != '\t') {
       break;
@@ -1402,7 +1402,7 @@ static int scan_to(int stop, int (*tst)(int), char *buf, int bufsz) {
 
   if (buf) {
     if (i <= 0) {
-      fatal("input error");
+      log::fatal("input error");
     }
     buf[i - 1] = '\0';
   }
@@ -1419,7 +1419,7 @@ static int scan_to(int stop, int (*tst)(int), char *buf, int bufsz) {
       }
       return 0; /* internal expansion fails */
     } else {
-      fatal("expecting select ( name : constant .. constant )");
+      log::fatal("expecting select ( name : constant .. constant )");
     }
   }
   return 1; /* success */
@@ -1495,13 +1495,13 @@ again:
   case '\"':
     getword(c, notquote);
     if (Getchar() != '\"')
-      fatal("string not terminated", yytext);
+      log::fatal("string not terminated", yytext);
     strcat(yytext, "\"");
   SymToken(lookup(yytext), STRING)
 
       case '$':
     getword('\"', notdollar);
-    if (Getchar() != '$') fatal("ltl definition not terminated", yytext);
+    if (Getchar() != '$') log::fatal("ltl definition not terminated", yytext);
     strcat(yytext, "\"");
   SymToken(lookup(yytext), STRING)
 
@@ -1519,7 +1519,7 @@ again:
         c = '\f';
     }
     if (Getchar() != '\'' && !in_comment)
-      fatal("character quote missing: %s", yytext);
+      log::fatal("character quote missing: %s", yytext);
     ValToken(c, CONST)
 
         default : break;
@@ -1568,7 +1568,7 @@ again:
           printf("Select %s from %d to %d\n", name, a, b);
         }
         if (a > b) {
-          non_fatal("bad range in select statement");
+          log::non_fatal("bad range in select statement");
           goto again;
         }
         if (b - a <= 32) {
@@ -1864,7 +1864,7 @@ static int check_name(char *s) {
             printf("spin: %s:%d replacement value: %s\n",
                    oFname->name ? oFname->name : "--", lineno,
                    tt->lft->sym->name);
-            fatal("formal par of %s contains replacement value",
+            log::fatal("formal par of %s contains replacement value",
                   Inline_stub[Inlining]->nm->name);
             yylval->ntyp = tt->lft->ntyp;
             yylval->sym = lookup(tt->lft->sym->name);
@@ -1878,7 +1878,7 @@ static int check_name(char *s) {
           while ((ptr = strstr(ptr, s)) != NULL) {
             if ((ptr > optr && *(ptr - 1) == '.') ||
                 *(ptr + strlen(s)) == '.') {
-              fatal("formal par of %s used in structure name",
+              log::fatal("formal par of %s used in structure name",
                     Inline_stub[Inlining]->nm->name);
             }
             ptr++;

@@ -63,10 +63,10 @@ int qmake(Symbol *s) {
   if (nrqs >= MAXQ) {
     lineno = s->ini->ln;
     Fname = s->ini->fn;
-    fatal("too many queues (%s)", s->name);
+    log::fatal("too many queues (%s)", s->name);
   }
   if (analyze && nrqs >= 255) {
-    fatal("too many channel types", (char *)0);
+    log::fatal("too many channel types");
   }
 
   if (s->ini->ntyp != CHAN)
@@ -208,7 +208,7 @@ int qrecv(Lextok *n, int full) {
             return 0; /* no char available */
           (void)setval(m->lft, c);
         } else {
-          fatal("invalid use of STDIN", (char *)0);
+          log::fatal("invalid use of STDIN");
         }
       return 1;
     }
@@ -258,7 +258,7 @@ void typ_ck(int ft, int at, char *s) {
     (void)sputtype(tag1, ft);
     (void)sputtype(tag2, at);
     sprintf(buf, "type-clash in %s, (%s<-> %s)", s, tag1, tag2);
-    non_fatal("%s", buf);
+    log::non_fatal("%s", buf);
   }
 }
 
@@ -291,7 +291,7 @@ static void mtype_ck(char *p, Lextok *arg) {
     printf("spin: %s:%d, Error: '%s' is type '%s', but ",
            arg->fn ? arg->fn->name : "", arg->ln, arg->sym->name, t);
     printf("should be type '%s'\n", s);
-    non_fatal("incorrect type of '%s'", arg->sym->name);
+    log::non_fatal("incorrect type of '%s'", arg->sym->name);
   }
 }
 
@@ -497,7 +497,7 @@ static int s_snd(Queue *q, Lextok *n) {
     X_lst = rX; /* restore receiver's context */
     if (!s_trail) {
       if (!n_rem || !q_rem)
-        fatal("cannot happen, s_snd");
+        log::fatal("cannot happen, s_snd");
       m = n_rem->rgt;
       for (j = 0; m && j < q->nflds; m = m->rgt, j++) {
         if (q->fld_width[j] == MTYPE) {
@@ -697,7 +697,7 @@ void sr_buf(int v, int j, const char *s) {
   for (n = Mtype; n && j; n = n->rgt, cnt++) {
     if (cnt == v) {
       if (strlen(n->lft->sym->name) >= sizeof(lbuf)) {
-        non_fatal("mtype name %s too long", n->lft->sym->name);
+        log::non_fatal("mtype name %s too long", n->lft->sym->name);
         break;
       }
       sprintf(lbuf, "%s", n->lft->sym->name);
@@ -771,7 +771,7 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
     setaccess(p->sym, ZS, 0, 'L');
 
     if (n && n->ntyp == CONST)
-      fatal("invalid asgn to chan");
+      log::fatal("invalid asgn to chan");
 
     if (n && n->sym && n->sym->type == CHAN) {
       setaccess(n->sym, ZS, 0, 'V');
@@ -799,7 +799,7 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
               "spin: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
               p->fn->name, p->ln, p->sym ? p->sym->name : "?", lhs,
               n->sym ? n->sym->name : "?", rhs);
-      non_fatal("type error");
+      log::non_fatal("type error");
     }
   }
 
@@ -811,7 +811,7 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
 
   if (n->sym && n->sym->type == CHAN) {
     if (d == 1)
-      fatal("invalid use of chan name");
+      log::fatal("invalid use of chan name");
     else
       setaccess(n->sym, ZS, 0, 'V');
   }
@@ -875,7 +875,7 @@ void checkindex(char *s, char *t) {
   for (b = bsn; b; b = b->nxt) {
     /*		printf("	%s\n", b->str);	*/
     if (strcmp(b->str, s) == 0) {
-      non_fatal("do not index an array with itself (%s)", t);
+      log::non_fatal("do not index an array with itself (%s)", t);
       break;
     }
   }
@@ -894,7 +894,7 @@ void scan_tree(Lextok *t, char *mn, char *mx) {
   if (t->ntyp == NAME) {
     if (strlen(t->sym->name) + strlen(mn) > 256) // conservative
     {
-      fatal("name too long", t->sym->name);
+      log::fatal("name too long", t->sym->name);
     }
 
     strcat(mn, t->sym->name);
@@ -957,7 +957,7 @@ void no_internals(Lextok *n) {
   if ((strlen(sp) == strlen("_nr_pr") && strcmp(sp, "_nr_pr") == 0) ||
       (strlen(sp) == strlen("_pid") && strcmp(sp, "_pid") == 0) ||
       (strlen(sp) == strlen("_p") && strcmp(sp, "_p") == 0)) {
-    fatal("invalid assignment to %s", sp);
+    log::fatal("invalid assignment to %s", sp);
   }
 
   no_nested_array_refs(n);

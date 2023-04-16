@@ -80,7 +80,7 @@ void cross_dsteps(Lextok *a, Lextok *b) {
     lineno = a->ln;
     Fname = a->fn;
     if (!s_trail)
-      fatal("jump into d_step sequence");
+      log::fatal("jump into d_step sequence");
   }
 }
 
@@ -190,13 +190,13 @@ Sequence *close_seq(int nottop) {
   }
 
   if (nottop == 4 && !Rjumpslocal(s->frst, s->last))
-    fatal("non_local jump in d_step sequence");
+    log::fatal("non_local jump in d_step sequence");
 
   cur_s = cur_s->nxt;
   s->maxel = Elcnt;
   s->extent = s->last;
   if (!s->last)
-    fatal("sequence must have at least one statement");
+    log::fatal("sequence must have at least one statement");
   return s;
 }
 
@@ -325,7 +325,7 @@ void loose_ends(void) /* properly tie-up ends of sub-sequences */
       else {
         if (e->n->sl->this_sequence->last->nxt->n->ntyp != GOTO) {
           if (!f || e->n->sl->this_sequence->last->nxt->seqno != f->seqno)
-            non_fatal("unexpected: loose ends");
+            log::non_fatal("unexpected: loose ends");
         } else
           e->n->sl->this_sequence->last = e->n->sl->this_sequence->last->nxt;
         /*
@@ -341,7 +341,7 @@ void loose_ends(void) /* properly tie-up ends of sub-sequences */
 
 void popbreak(void) {
   if (!breakstack)
-    fatal("cannot happen, breakstack");
+    log::fatal("cannot happen, breakstack");
 
   breakstack = breakstack->nxt; /* pop stack */
 }
@@ -372,7 +372,7 @@ static Element *if_seq(Lextok *n) {
       continue;
     if (z->this_sequence->frst->n->ntyp == ELSE) {
       if (move_else)
-        fatal("duplicate `else'");
+        log::fatal("duplicate `else'");
       if (z->nxt) /* is not already at the end */
       {
         move_else = z;
@@ -390,7 +390,7 @@ static Element *if_seq(Lextok *n) {
     move_else->nxt = (SeqList *)0;
     /* if there is no prev, then else was at the end */
     if (!prev_z)
-      fatal("cannot happen - if_seq");
+      log::fatal("cannot happen - if_seq");
     prev_z->nxt = move_else;
     prev_z = move_else;
   }
@@ -398,10 +398,10 @@ static Element *if_seq(Lextok *n) {
     prev_z->this_sequence->frst->n->val = 1;
     has_badelse++;
     if (has_xu) {
-      fatal("invalid use of 'else' combined with i/o and xr/xs assertions,",
+      log::fatal("invalid use of 'else' combined with i/o and xr/xs assertions,",
             (char *)0);
     } else {
-      non_fatal("dubious use of 'else' combined with i/o,");
+      log::non_fatal("dubious use of 'else' combined with i/o,");
     }
     nr_errs--;
   }
@@ -487,7 +487,7 @@ static Element *unless_seq(Lextok *n) {
 
   /* need 2 sequences: normal execution and escape */
   if (!s || !s->nxt || s->nxt->nxt)
-    fatal("unexpected unless structure", (char *)0);
+    log::fatal("unexpected unless structure");
 
   /* append the target state to both */
   for (z = s; z; z = z->nxt)
@@ -577,7 +577,7 @@ void set_lab(Symbol *s, Element *e) {
         (old_scope_rules ||
          strcmp((const char *)s->bscp, (const char *)l->s->bscp) == 0) &&
         l->uiid == cur_uiid) {
-      non_fatal("label %s redeclared", s->name);
+      log::non_fatal("label %s redeclared", s->name);
       break;
     }
   }
@@ -636,7 +636,7 @@ Element *get_lab(Lextok *n, int md) {
   if (md) {
     lineno = n->ln;
     Fname = n->fn;
-    fatal("undefined label %s", n->sym->name);
+    log::fatal("undefined label %s", n->sym->name);
   }
   return ZE;
 }
@@ -667,7 +667,7 @@ static void mov_lab(Symbol *z, Element *e, Element *y) {
     lineno = e->n->ln;
     Fname = e->n->fn;
   }
-  fatal("cannot happen - mov_lab %s", z->name);
+  log::fatal("cannot happen - mov_lab %s", z->name);
 }
 
 void fix_dest(Symbol *c, Symbol *a) /* c:label name, a:proctype name */
@@ -689,13 +689,13 @@ void fix_dest(Symbol *c, Symbol *a) /* c:label name, a:proctype name */
   }
   if (!l) {
     printf("spin: label '%s' (proctype %s)\n", c->name, a->name);
-    non_fatal("unknown label '%s'", c->name);
+    log::non_fatal("unknown label '%s'", c->name);
     if (context == a)
       printf("spin: cannot remote ref a label inside the same proctype\n");
     return;
   }
   if (!l->e || !l->e->n)
-    fatal("fix_dest error (%s)", c->name);
+    log::fatal("fix_dest error (%s)", c->name);
   if (l->e->n->ntyp == GOTO) {
     Element *y = (Element *)emalloc(sizeof(Element));
     int keep_ln = l->e->n->ln;
@@ -773,7 +773,7 @@ void pushbreak(void) {
 
 Symbol *break_dest(void) {
   if (!breakstack)
-    fatal("misplaced break statement", (char *)0);
+    log::fatal("misplaced break statement");
   return breakstack->l;
 }
 
@@ -842,7 +842,7 @@ dump_sym(Symbol *z, char *s)
 		{	/* dump_sym(z->ini->rgt->sym, "\n:I:"); -- could also be longer list */
 			if (z->ini->rgt->rgt
 			|| !z->ini->rgt->sym)
-			fatal("chan %s in for should have only one field (a typedef)", z->name);
+			log::fatal("chan %s in for should have only one field (a typedef)", z->name);
 			printf(" -- %s %p -- ", z->ini->rgt->sym->name, z->ini->rgt->sym);
 		}
 	} else if (z->type == STRUCT)
@@ -863,7 +863,7 @@ dump_sym(Symbol *z, char *s)
 int match_struct(Symbol *s, Symbol *t) {
   if (!t || !t->ini || !t->ini->rgt || !t->ini->rgt->sym || t->ini->rgt->rgt) {
     char *t_name = "--";
-    fatal("chan %s in for should have only one field (a typedef)", t_name);
+    log::fatal("chan %s in for should have only one field (a typedef)", t_name);
   }
   /* we already know that s is a STRUCT */
   if (0) {
@@ -877,14 +877,14 @@ int match_struct(Symbol *s, Symbol *t) {
 
 void valid_name(Lextok *a3, Lextok *a5, Lextok *a8, char *tp) {
   if (a3->ntyp != NAME) {
-    fatal("%s ( .name : from .. to ) { ... }", tp);
+    log::fatal("%s ( .name : from .. to ) { ... }", tp);
   }
   if (a3->sym->type == CHAN || a3->sym->type == STRUCT ||
       a3->sym->isarray != 0) {
-    fatal("bad index in for-construct %s", a3->sym->name);
+    log::fatal("bad index in for-construct %s", a3->sym->name);
   }
   if (a5->ntyp == CONST && a8->ntyp == CONST && a5->val > a8->val) {
-    non_fatal("start value for %s exceeds end-value", a3->sym->name);
+    log::non_fatal("start value for %s exceeds end-value", a3->sym->name);
   }
 }
 
@@ -904,25 +904,25 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
   /* for ( a3 in a5 ) { ... } */
 
   if (a3->ntyp != NAME) {
-    fatal("for ( .name in name ) { ... }");
+    log::fatal("for ( .name in name ) { ... }");
   }
 
   if (a5->ntyp != NAME) {
-    fatal("for ( %s in .name ) { ... }", a3->sym->name);
+    log::fatal("for ( %s in .name ) { ... }", a3->sym->name);
   }
 
   if (a3->sym->type == STRUCT) {
     if (a5->sym->type != CHAN) {
-      fatal("for ( %s in .channel_name ) { ... }", a3->sym->name);
+      log::fatal("for ( %s in .channel_name ) { ... }", a3->sym->name);
     }
     z0 = a5->sym->ini;
     if (!z0 || z0->val <= 0 || z0->rgt->ntyp != STRUCT ||
         z0->rgt->rgt != NULL) {
-      fatal("bad channel type %s in for", a5->sym->name);
+      log::fatal("bad channel type %s in for", a5->sym->name);
     }
 
     if (!match_struct(a3->sym, a5->sym)) {
-      fatal("type of %s does not match chan", a3->sym->name);
+      log::fatal("type of %s does not match chan", a3->sym->name);
     }
 
     z1 = nn(ZN, CONST, ZN, ZN);
@@ -963,10 +963,10 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
       // printf("%s %d\n", leaf->sym->name, leaf->sym->isarray);
     }
     if (!leaf) {
-      fatal("unexpected type of for-loop");
+      log::fatal("unexpected type of for-loop");
     }
     if (leaf->sym->isarray == 0 || leaf->sym->nel <= 0) {
-      fatal("bad arrayname %s", leaf->sym->name);
+      log::fatal("bad arrayname %s", leaf->sym->name);
     }
     z1 = nn(ZN, CONST, ZN, ZN);
     z1->val = 0;

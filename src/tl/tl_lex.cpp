@@ -84,7 +84,7 @@ static int is_predicate(int z) {
       c = 0; /* make sure we don't match on z or want on the peekahead */
       if (j >= (int)sizeof(peek_buf)) {
         peek_buf[j - 1] = '\0';
-        fatal("name '%s' in ltl formula too long", peek_buf);
+        log::fatal("name '%s' in ltl formula too long", peek_buf);
       }
       peek_buf[j] = '\0';
       if (strcmp(peek_buf, "always") == 0 ||
@@ -155,7 +155,7 @@ static int tl_lex(void) {
       read_upto_closing(c);
       tl_yylval = tl_nn(PREDICATE, ZN, ZN);
       if (!tl_yylval) {
-        fatal("unexpected error 4");
+        log::fatal("unexpected error 4");
       }
       tl_yylval->sym = tl_lookup(yytext);
       return PREDICATE;
@@ -195,7 +195,7 @@ static int tl_lex(void) {
     }
     tl_yylval = tl_nn(PREDICATE, ZN, ZN);
     if (!tl_yylval) {
-      fatal("unexpected error 5");
+      log::fatal("unexpected error 5");
     }
     tl_yylval->sym = tl_lookup(yytext);
     return PREDICATE;

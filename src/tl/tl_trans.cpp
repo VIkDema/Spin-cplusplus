@@ -193,7 +193,7 @@ static void mk_red(Node *n) {
   for (p = Nodes_Set; p; p = p->nxt) {
     if (p->outgoing && has_clause(0, p, n)) {
       if (p->redcnt >= 63)
-        Fatal("too many Untils", (char *)0);
+        log::fatal("too many Untils", (char *)0);
       p->isred[p->redcnt++] = (unsigned char)Red_cnt;
       Lab_cnt++;
       Max_Red = Red_cnt;

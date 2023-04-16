@@ -565,7 +565,7 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
             break;
           default:
             printf("type = %d\n", t->step->n->ntyp);
-            non_fatal("unexpected chan def type");
+            log::non_fatal("unexpected chan def type");
             break;
           }
         }
@@ -747,7 +747,7 @@ static void AST_dorelevant(void) {
         break;
       }
     if (!a)
-      fatal("cannot find proctype %s", r->rn->name);
+      log::fatal("cannot find proctype %s", r->rn->name);
   }
 }
 
@@ -768,7 +768,7 @@ static int AST_proc_isrel(char *s) {
   for (a = ast; a; a = a->nxt)
     if (strcmp(a->p->n->name, s) == 0)
       return (a->relevant & 1);
-  non_fatal("cannot happen, missing proc in ast");
+  log::non_fatal("cannot happen, missing proc in ast");
   return 0;
 }
 

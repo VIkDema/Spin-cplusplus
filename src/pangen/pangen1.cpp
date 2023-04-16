@@ -672,7 +672,7 @@ void c_var(FILE *fd, char *pref, Symbol *sp) {
   int i;
 
   if (!sp) {
-    fatal("cannot happen - c_var");
+    log::fatal("cannot happen - c_var");
   }
 
   ptr = sp->name;
@@ -859,9 +859,9 @@ static void dohidden(void) {
       sp = walk->entry;
       if ((sp->hidden & 1) && sp->type == Types[j]) {
         if (sp->context || sp->owner)
-          fatal("cannot hide non-globals (%s)", sp->name);
+          log::fatal("cannot hide non-globals (%s)", sp->name);
         if (sp->type == CHAN)
-          fatal("cannot hide channels (%s)", sp->name);
+          log::fatal("cannot hide channels (%s)", sp->name);
         fprintf(fd_th, "/* hidden variable: */");
         typ2c(sp);
       }
@@ -874,7 +874,7 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
   char *ptr = const_cast<char *>(sp ? sp->name : "");
 
   if (!sp) {
-    fatal("cannot happen - do_var");
+    log::fatal("cannot happen - do_var");
   }
 
   switch (dowhat) {
@@ -1024,7 +1024,7 @@ static void put_ptype(char *s, int i, int m0, int m1, enum btypes b) {
       fprintf(fd_th, "int)");
       break;
     default:
-      fatal("cannot happen Air %s", LstSet->name);
+      log::fatal("cannot happen Air %s", LstSet->name);
     }
   done:
     fprintf(fd_th, ")\n\n");
@@ -1152,14 +1152,14 @@ static void put_pinit(ProcList *P) {
       if (t->sym->nel > 1 || t->sym->isarray) {
         lineno = t->ln;
         Fname = t->fn;
-        fatal("array in parameter list, %s", t->sym->name);
+        log::fatal("array in parameter list, %s", t->sym->name);
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->sym->type == STRUCT) {
         if (full_name(fd_tc, t, t->sym, 1)) {
           lineno = t->ln;
           Fname = t->fn;
-          fatal("hidden array in parameter %s", t->sym->name);
+          log::fatal("hidden array in parameter %s", t->sym->name);
         }
       } else
         fprintf(fd_tc, "%s", t->sym->name);
@@ -1199,7 +1199,7 @@ Element *huntstart(Element *f) {
 
   if (cnt >= 200 || !e) {
     lineno = (f && f->n) ? f->n->ln : lineno;
-    fatal("confusing control. structure");
+    log::fatal("confusing control. structure");
   }
   return e;
 }
@@ -1218,7 +1218,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
         g = get_lab(e->n, 1);
         if (e == g) {
           lineno = (f && f->n) ? f->n->ln : lineno;
-          fatal("infinite goto loop");
+          log::fatal("infinite goto loop");
         }
         cross_dsteps(e->n, g->n);
         break;
@@ -1231,7 +1231,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       case UNLESS:
         g = huntele(e->sub->this_sequence->frst, o, stopat);
         if (!g) {
-          fatal("unexpected error 1");
+          log::fatal("unexpected error 1");
         }
         break;
       case D_STEP:
@@ -1246,7 +1246,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
     }
   if (cnt >= 500 || !e) {
     lineno = (f && f->n) ? f->n->ln : lineno;
-    fatal("confusing control structure");
+    log::fatal("confusing control structure");
   }
   return e;
 }
@@ -1294,7 +1294,7 @@ void typ2c(Symbol *sp) {
     break;
   case STRUCT:
     if (!sp->Snm)
-      fatal("undeclared structure element %s", sp->name);
+      log::fatal("undeclared structure element %s", sp->name);
     fprintf(fd_th, "\tstruct %s %s", sp->Snm->name, sp->name);
     LstSet = ZS;
     break;
@@ -1302,7 +1302,7 @@ void typ2c(Symbol *sp) {
   case PREDEF:
     return;
   default:
-    fatal("variable %s undeclared", sp->name);
+    log::fatal("variable %s undeclared", sp->name);
   }
 
   if (sp->nel > 1 || sp->isarray)
@@ -1379,7 +1379,7 @@ void genaddqueue(void) {
         fprintf(fd_th, "\t\tint fld%d;\n", j);
         break;
       default:
-        fatal("bad channel spec", "");
+        log::fatal("bad channel spec", "");
       }
     }
     fprintf(fd_th, "	} contents[%d];\n", max(1, q->nslots));
