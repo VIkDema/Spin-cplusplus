@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(spin)
+project(spin VERSION 1.0.0)
 
 # Compiler settings
 set(CMAKE_CXX_COMPILER g++)
@@ -33,7 +33,9 @@ set(SPIN_SOURCES
     src/dstep.cpp
     src/structs.cpp
     src/reprosrc.cpp
+    src/version/version.hpp.in
 )
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 
 set(TL_SOURCES
     src/tl/tl_parse.cpp
