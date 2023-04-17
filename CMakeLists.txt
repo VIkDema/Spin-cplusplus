@@ -36,6 +36,8 @@ set(SPIN_SOURCES
     src/version/version.hpp.in
     src/fatal/fatal.hpp
     src/fatal/fatal.cpp
+    src/utils/format/format.hpp
+    src/utils/format/format.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

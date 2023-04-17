@@ -6,6 +6,7 @@
  * Tool documentation is available at http://spinroot.com
  */
 
+#include "utils/format/format.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
@@ -1042,7 +1043,9 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       if (argv[1][2] == 'p') {
-        pretty_print();
+        // TODO: add PrettyPrint
+        format::PrettyPrint pp;
+        pp.format();
         alldone(0);
       }
       verbose += 4;

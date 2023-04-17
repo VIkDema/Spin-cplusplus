@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <optional>
 #include <stdlib.h>
 
 #define MAXINL 16  /* max recursion depth inline fcts */
@@ -120,13 +121,6 @@ static int Getchar(void) {
   } else {
     c = getinline();
   }
-#if 0
-	if (0)
-	{	printf("<%c:%d>[%d] ", c, c, Inlining);
-	} else
-	{	printf("%c", c);
-	}
-#endif
   return c;
 }
 
@@ -1066,8 +1060,6 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   last_token = SEMI; /* avoid insertion of extra semi */
 }
 
-extern int pp_mode;
-
 static void do_directive(int first) {
   int c = first; /* handles lines starting with pound */
 
@@ -1426,7 +1418,7 @@ static int scan_to(int stop, int (*tst)(int), char *buf, int bufsz) {
 }
 #endif
 
-int lex(void) {
+int lex(std::optional<bool> pp_mode) {
   int c;
 again:
   c = Getchar();
@@ -1485,7 +1477,7 @@ again:
   case '#': /* preprocessor directive */
     if (in_comment)
       goto again;
-    if (pp_mode) {
+    if (pp_mode.value_or(false)) {
       last_token = PREPROC;
       return pre_proc();
     }

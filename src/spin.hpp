@@ -10,6 +10,7 @@
 #define SEEN_SPIN_H
 
 #include <ctype.h>
+#include <optional>
 #include <stdio.h>
 #include <string.h>
 #if !defined(WIN32) && !defined(WIN64)
@@ -263,6 +264,9 @@ typedef Lextok *Lexptr;
 #define MFLAGS "w"
 #endif
 
+/** NEW**/
+int lex(std::optional<bool> pp_mode=std::nullopt);
+
 /***** prototype definitions *****/
 Element *eval_sub(Element *);
 Element *get_lab(Lextok *, int);
@@ -346,7 +350,6 @@ int tl_main(int, char *[]);
 int Width_set(int *, int, Lextok *);
 int yyparse(void);
 int yylex(void);
-
 void AST_track(Lextok *, int);
 void add_seq(Lextok *);
 void alldone(int);
@@ -403,7 +406,6 @@ void plunk_expr(FILE *, char *);
 void plunk_inline(FILE *, char *, int, int);
 void prehint(Symbol *);
 void preruse(FILE *, Lextok *);
-void pretty_print(void);
 void prune_opts(Lextok *);
 void pstext(int, char *);
 void pushbreak(void);
