@@ -20,6 +20,7 @@ void PreprocessedFileViewer::doindent() {
   }
 }
 
+//TODO: fix name variable
 void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
   Symbol *v;
   SeqList *h;
