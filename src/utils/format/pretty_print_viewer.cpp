@@ -1,4 +1,4 @@
-#include "format.hpp"
+#include "pretty_print_viewer.hpp"
 
 #include "../../spin.hpp"
 #include "y.tab.h"
@@ -13,15 +13,15 @@ extern YYSTYPE yylval;
 
 namespace format {
 
-void PrettyPrint::doindent() {
+void PrettyPrintViewer::doindent() {
   for (int i = 0; i < indent; i++) {
     std::cout << "   ";
   }
 }
-void PrettyPrint::decrease_indentation() { indent--; }
-void PrettyPrint::increase_indentation() { indent++; }
+void PrettyPrintViewer::decrease_indentation() { indent--; }
+void PrettyPrintViewer::increase_indentation() { indent++; }
 
-bool PrettyPrint::should_start_new_line(int current_token, int last_token) {
+bool PrettyPrintViewer::should_start_new_line(int current_token, int last_token) {
   return (current_token == C_DECL || current_token == C_STATE ||
           current_token == C_TRACK || current_token == SEP ||
           current_token == DO || current_token == IF ||
@@ -31,7 +31,7 @@ bool PrettyPrint::should_start_new_line(int current_token, int last_token) {
           last_token != C_CODE && last_token != C_DECL && last_token != C_EXPR);
 }
 
-void PrettyPrint::start_new_line(std::string &buf) {
+void PrettyPrintViewer::start_new_line(std::string &buf) {
   if (buf.size() == 0)
     return;
 
@@ -54,7 +54,7 @@ void PrettyPrint::start_new_line(std::string &buf) {
   in_c_decl = 0;
 }
 
-void PrettyPrint::append_space_if_needed(int current_token, int last_token,
+void PrettyPrintViewer::append_space_if_needed(int current_token, int last_token,
                                          std::string &buffer) {
   if (current_token != ':' && current_token != SEMI && current_token != ',' &&
       current_token != '(' && current_token != '#' && last_token != '#' &&
@@ -74,7 +74,7 @@ void PrettyPrint::append_space_if_needed(int current_token, int last_token,
   }
 }
 
-void PrettyPrint::format() {
+void PrettyPrintViewer::view() {
   std::string buffer = "";
   int current_token, last_token = 0;
 
@@ -124,7 +124,7 @@ void PrettyPrint::format() {
   start_new_line(buffer);
 }
 
-void PrettyPrint::map_token_to_string(int n, std::string &buf) {
+void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
   std::stringstream mtxt;
 
   switch (n) {

@@ -6,7 +6,9 @@
  * Tool documentation is available at http://spinroot.com
  */
 
-#include "utils/format/format.hpp"
+#include "utils/format/preprocessed_file_viewer.hpp"
+#include "utils/format/pretty_print_viewer.hpp"
+
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
@@ -1043,9 +1045,8 @@ int main(int argc, char *argv[]) {
       break;
     case 'p':
       if (argv[1][2] == 'p') {
-        // TODO: add PrettyPrint
-        format::PrettyPrint pp;
-        pp.format();
+        format::PrettyPrintViewer pp;
+        pp.view();
         alldone(0);
       }
       verbose += 4;
@@ -1329,7 +1330,8 @@ int main(int argc, char *argv[]) {
   loose_ends();
 
   if (inlineonly) {
-    repro_src();
+    format::PreprocessedFileViewer viewer;
+    viewer.view();
     return 0;
   }
 

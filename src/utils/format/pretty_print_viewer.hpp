@@ -3,9 +3,9 @@
 
 namespace format {
 // считывает stdin и выводит в stdout
-class PrettyPrint {
+class PrettyPrintViewer {
 public:
-  void format();
+  void view();
 
 private:
   void start_new_line(std::string &buf);

@@ -32,12 +32,13 @@ set(SPIN_SOURCES
     src/guided.cpp
     src/dstep.cpp
     src/structs.cpp
-    src/reprosrc.cpp
     src/version/version.hpp.in
     src/fatal/fatal.hpp
     src/fatal/fatal.cpp
-    src/utils/format/format.hpp
-    src/utils/format/format.cpp
+    src/utils/format/pretty_print_viewer.hpp
+    src/utils/format/pretty_print_viewer.cpp
+    src/utils/format/preprocessed_file_viewer.hpp
+    src/utils/format/preprocessed_file_viewer.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 
