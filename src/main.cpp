@@ -1500,7 +1500,7 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
       break;
     }
     if (forbidden) {
-      std::cout << "spin: never, saw " << log::explainToString(t)<<std::endl;
+      std::cout << "spin: never, saw " << log::explainToString(t) << std::endl;
       log::fatal("incompatible with separate compilation");
     }
   } else if ((t == ENABLED || t == PC_VAL) && !(warn_nn & t)) {
