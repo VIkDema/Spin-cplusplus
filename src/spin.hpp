@@ -426,7 +426,6 @@ void setptype(Lextok *, Lextok *, int, Lextok *);
 void setuname(Lextok *);
 void setutype(Lextok *, Symbol *, Lextok *);
 void setxus(Lextok *, int);
-void Srand(unsigned);
 void start_claim(int);
 void struct_name(Lextok *, Symbol *, int, char *);
 void symdump(void);

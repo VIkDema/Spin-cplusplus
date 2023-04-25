@@ -7,6 +7,7 @@
  */
 
 #include "fatal/fatal.hpp"
+#include "utils/seed/seed.hpp"
 #include "spin.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
@@ -19,7 +20,6 @@ extern int TstOnly, verbose, s_trail, xspin, jumpsteps, depth;
 extern int analyze, nproc, nstop, no_print, like_java, old_priority_rules;
 extern short Have_claim;
 
-static long Seed = 1;
 static int E_Check = 0, Escape_Check = 0;
 
 static int eval_sync(Element *);
@@ -28,9 +28,11 @@ static int get_priority(Lextok *n);
 static void set_priority(Lextok *n, Lextok *m);
 extern void sr_buf(int, int, const char *);
 
-void Srand(unsigned int s) { Seed = s; }
 
 long Rand(void) { /* CACM 31(10), Oct 1988 */
+  auto& seed = utils::seed::Seed::getInstance();
+  auto Seed = seed.GetSeed();
+
   Seed = 16807 * (Seed % 127773) - 2836 * (Seed / 127773);
   if (Seed <= 0)
     Seed += 2147483647;

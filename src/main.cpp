@@ -8,7 +8,7 @@
 
 #include "utils/format/preprocessed_file_viewer.hpp"
 #include "utils/format/pretty_print_viewer.hpp"
-
+#include "utils/seed/seed.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
@@ -67,7 +67,7 @@ short replay;
 int merger = 1, deadvar = 1, implied_semis = 1;
 int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
-static int preprocessonly, SeedUsed, itsr, itsr_n, sw_or_bt;
+static int preprocessonly, itsr, itsr_n, sw_or_bt;
 static int seedy;      /* be verbose about chosen seed */
 static int inlineonly; /* show inlined code */
 static int dataflow = 1;
@@ -83,9 +83,6 @@ meaning of flags on verbose:
 	64	-w very verbose
 #endif
 
-static char Operator[] = "operator: ";
-static char Keyword[] = "keyword: ";
-static char Function[] = "function-name: ";
 static char **add_ltl = (char **)0;
 static char **ltl_file = (char **)0;
 static char **nvr_file = (char **)0;
@@ -130,9 +127,8 @@ char **trailfilename; /* new option 'k' */
 #endif
 
 static char PreProc[512];
-extern int depth; /* at least some steps were made */
 
-int WhatSeed(void) { return SeedUsed; }
+extern int depth; /* at least some steps were made */
 
 void final_fiddle(void) {
   char *has_a, *has_l, *has_f;
@@ -279,10 +275,11 @@ void alldone(int estatus) {
 
   (void)unlink(TMP_FILE1);
   (void)unlink(TMP_FILE2);
+  auto& seed = utils::seed::Seed::getInstance();
 
   if (!buzzed && seedy && !analyze && !export_ast && !s_trail &&
       !preprocessonly && depth > 0) {
-    printf("seed used: %d\n", SeedUsed);
+    printf("seed used: %d\n", seed.GetSeed());
   }
 
   if (!buzzed && xspin && (analyze || s_trail)) {
@@ -299,7 +296,7 @@ void alldone(int estatus) {
     int i;
 
     pan_runtime = (char *)emalloc(2048); /* more than enough */
-    sprintf(pan_runtime, "-n%d ", SeedUsed);
+    sprintf(pan_runtime, "-n%d ", seed.GetSeed());
     if (jumpsteps) {
       sprintf(&pan_runtime[strlen(pan_runtime)], "-j%d ", jumpsteps);
     }
@@ -934,7 +931,9 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 #endif
 
 int main(int argc, char *argv[]) {
-  int T = (int)time((time_t *)0);
+  auto& seed = utils::seed::Seed::getInstance();
+  seed.GenerateSeed();
+
   int usedopts = 0;
 
   yyin = stdin;
@@ -1030,7 +1029,7 @@ int main(int argc, char *argv[]) {
       argv++;
       break;
     case 'n':
-      T = atoi(&argv[1][2]);
+      seed.SetSeed(atoi(&argv[1][2]));
       tl_terse = 1;
       break;
     case 'O':
@@ -1057,7 +1056,6 @@ int main(int argc, char *argv[]) {
       break;
     case 'r':
       if (strcmp(&argv[1][1], "run") == 0) {
-        Srand((unsigned int)T);
       samecase:
         if (buzzed != 0) {
           log::fatal("cannot combine -x with -run -replay or -search");
@@ -1289,9 +1287,6 @@ int main(int argc, char *argv[]) {
   if (columns == 2 && limited_vis) {
     verbose += (1 + 4);
   }
-
-  Srand((unsigned int)T); /* defined in run.c */
-  SeedUsed = T;
 
   Symbol *s;
   s = lookup("_");

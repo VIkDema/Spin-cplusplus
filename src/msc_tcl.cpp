@@ -7,6 +7,7 @@
  */
 
 #include "fatal/fatal.hpp"
+#include "utils/seed/seed.hpp"
 #include "spin.hpp"
 #include "version/version.hpp"
 #include <stdlib.h>
@@ -285,17 +286,17 @@ static void putbox(int x) {
 
 /* functions called externally: */
 
-extern int WhatSeed(void);
 
 void putpostlude(void) {
   char cmd[512];
+  auto& seed = utils::seed::Seed::getInstance();
 
   putpages();
   fprintf(pfd, ".c lower grid\n");
   fprintf(pfd, ".c raise mesg\n");
   fclose(pfd);
 
-  fprintf(stderr, "seed used: -n%d\n", WhatSeed());
+  fprintf(stderr, "seed used: -n%d\n", seed.GetSeed());
   sprintf(cmd, "wish -f %s.tcl &", oFname ? oFname->name : "msc");
   fprintf(stderr, "%s\n", cmd);
   (void)unlink("pan.pre");
