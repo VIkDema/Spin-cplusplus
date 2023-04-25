@@ -68,7 +68,6 @@ int merger = 1, deadvar = 1, implied_semis = 1;
 int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
 static int preprocessonly, itsr, itsr_n, sw_or_bt;
-static int seedy;      /* be verbose about chosen seed */
 static int inlineonly; /* show inlined code */
 static int dataflow = 1;
 
@@ -277,7 +276,7 @@ void alldone(int estatus) {
   (void)unlink(TMP_FILE2);
   auto& seed = utils::seed::Seed::getInstance();
 
-  if (!buzzed && seedy && !analyze && !export_ast && !s_trail &&
+  if (!buzzed && seed.NeedToPrintSeed() && !analyze && !export_ast && !s_trail &&
       !preprocessonly && depth > 0) {
     printf("seed used: %d\n", seed.GetSeed());
   }
@@ -329,7 +328,7 @@ void alldone(int estatus) {
       strcat(pan_runtime, "-c ");
     if (columns == 2)
       strcat(pan_runtime, "-M ");
-    if (seedy == 1)
+    if (seed.NeedToPrintSeed())
       strcat(pan_runtime, "-h ");
     if (like_java == 1)
       strcat(pan_runtime, "-J ");
@@ -991,7 +990,7 @@ int main(int argc, char *argv[]) {
       verbose += 1;
       break;
     case 'h':
-      seedy = 1;
+      seed.SetNeedToPrintSeed(true);
       break;
     case 'i':
       interactive = 1;

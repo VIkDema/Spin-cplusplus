@@ -11,6 +11,8 @@ public:
   int GetSeed();
   void SetSeed(int seed);
   void GenerateSeed();
+  bool NeedToPrintSeed();
+  void SetNeedToPrintSeed(bool need_to_print_seed);
 
   static Seed &getInstance() {
     static Seed instance;
@@ -18,6 +20,7 @@ public:
   }
 
 private:
+  bool need_to_print_seed_;
   int seed_;
 };
 
