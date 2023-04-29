@@ -9,6 +9,7 @@
 #include "pangen1.hpp"
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "pangen3.hpp"
 #include "pangen6.hpp"
 #include "y.tab.h"
@@ -512,7 +513,7 @@ void prehint(Symbol *s) {
 void checktype(Symbol *sp, char *s) {
   char buf[128];
   int i;
-
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
   if (!s || (sp->type != BYTE && sp->type != SHORT && sp->type != INT))
     return;
 
@@ -533,7 +534,7 @@ void checktype(Symbol *sp, char *s) {
           }
 
   } else if (!(sp->hidden & 4)) {
-    if (!(verbose & 32))
+    if (!verbose_flags.NeedToPrintVerbose())
       return;
     sputtype(buf, sp->type);
     i = (int)strlen(buf);
@@ -546,7 +547,7 @@ void checktype(Symbol *sp, char *s) {
       printf("global");
     printf(" '%s %s' could be declared 'bit %s'\n", buf, sp->name, sp->name);
   } else if (sp->type != BYTE && !(sp->hidden & 8)) {
-    if (!(verbose & 32))
+    if (!verbose_flags.NeedToPrintVerbose())
       return;
     sputtype(buf, sp->type);
     i = (int)strlen(buf);
@@ -568,6 +569,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
   Ordered *walk;
   Symbol *sp;
   char buf[128], buf2[128], buf3[128];
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   if (dowhat == INIV) { /* initialize in order of declaration */
     for (walk = all_names; walk; walk = walk->next) {
@@ -592,7 +594,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
               strcmp(s, sp->context->name) == 0) {
             switch (dowhat) {
             case LOGV:
-              if (sp->type == CHAN && verbose == 0)
+              if (sp->type == CHAN && !verbose_flags.Active())
                 break;
               sprintf(buf, "%s%s:", pre, s);
               {
@@ -819,6 +821,7 @@ static int doglobal(char *pre, int dowhat) {
   Ordered *walk;
   Symbol *sp;
   int j, cnt = 0;
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   for (j = 0; j < 8; j++)
     for (walk = all_names; walk; walk = walk->next) {
@@ -827,7 +830,7 @@ static int doglobal(char *pre, int dowhat) {
         if (Types[j] != MTYPE || !ismtype(sp->name))
           switch (dowhat) {
           case LOGV:
-            if (sp->type == CHAN && verbose == 0)
+            if (sp->type == CHAN && !verbose_flags.Active())
               break;
             if (sp->hidden & 1)
               break;
@@ -1252,6 +1255,8 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
 }
 
 void typ2c(Symbol *sp) {
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
+
   int wsbits = sizeof(long) * 8; /* wordsize in bits */
   switch (sp->type) {
   case UNSIGNED:
@@ -1274,7 +1279,7 @@ void typ2c(Symbol *sp) {
       nBits++;
       break;
     } /* else fall through */
-    if (!(sp->hidden & 1) && (verbose & 32))
+    if (!(sp->hidden & 1) && verbose_flags.NeedToPrintVerbose())
       printf("spin: warning: bit-array %s[%d] mapped to byte-array\n", sp->name,
              sp->nel);
     nBits += 8 * sp->nel; /* mapped onto array of uchars */

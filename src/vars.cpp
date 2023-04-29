@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
 extern char GBuf[];
@@ -252,7 +253,7 @@ void dumpglobals(void) {
   static Lextok *dummy = ZN;
   Symbol *sp;
   int j;
-
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (!dummy)
     dummy = nn(ZN, NAME, nn(ZN, CONST, ZN, ZN), ZN);
 
@@ -264,7 +265,8 @@ void dumpglobals(void) {
       continue;
 
     if (sp->type == STRUCT) {
-      if ((verbose & 4) && !(verbose & 64) &&
+      if (verbose_flags.NeedToPrintAllProcessActions() &&
+          !verbose_flags.NeedToPrintVeryVerbose() &&
           (sp->setat < depth && jumpsteps != depth)) {
         continue;
       }
@@ -278,7 +280,8 @@ void dumpglobals(void) {
         doq(sp, j, 0);
         continue;
       }
-      if ((verbose & 4) && !(verbose & 64) &&
+      if (verbose_flags.NeedToPrintAllProcessActions() &&
+          !verbose_flags.NeedToPrintVeryVerbose() &&
           (sp->setat < depth && jumpsteps != depth)) {
         continue;
       }
@@ -335,6 +338,7 @@ void dumplocal(RunList *r, int final) {
   static Lextok *dummy = ZN;
   Symbol *z, *s;
   int i;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!r)
     return;
@@ -357,7 +361,8 @@ void dumplocal(RunList *r, int final) {
         continue;
       }
 
-      if ((verbose & 4) && !(verbose & 64) && !final &&
+      if (verbose_flags.NeedToPrintAllProcessActions() &&
+          !verbose_flags.NeedToPrintVeryVerbose() && !final &&
           (z->setat < depth && jumpsteps != depth)) {
         continue;
       }

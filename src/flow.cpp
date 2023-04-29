@@ -8,10 +8,11 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
 extern Symbol *Fname;
-extern int nr_errs, lineno, verbose, in_for, old_scope_rules, s_trail;
+extern int nr_errs, lineno, in_for, old_scope_rules, s_trail;
 extern short has_unless, has_badelse, has_xu;
 extern char CurScope[MAXSCOPESZ];
 
@@ -93,6 +94,7 @@ int is_skip(Lextok *n) {
 void check_sequence(Sequence *s) {
   Element *e, *le = ZE;
   Lextok *n;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   int cnt = 0;
 
   for (e = s->frst; e; le = e, e = e->nxt) {
@@ -100,8 +102,9 @@ void check_sequence(Sequence *s) {
     if (is_skip(n) && !has_lab(e, 0)) {
       cnt++;
       if (cnt > 1 && n->ntyp != PRINT && n->ntyp != PRINTM) {
-        if (verbose & 32)
+        if (verbose_flags.NeedToPrintVerbose()) {
           printf("spin: %s:%d, redundant skip\n", n->fn->name, n->ln);
+        }
         if (e != s->frst && e != s->last && e != s->extent) {
           e->status |= DONE; /* not unreachable */
           le->nxt = e->nxt;  /* remove it */
@@ -398,8 +401,9 @@ static Element *if_seq(Lextok *n) {
     prev_z->this_sequence->frst->n->val = 1;
     has_badelse++;
     if (has_xu) {
-      log::fatal("invalid use of 'else' combined with i/o and xr/xs assertions,",
-            (char *)0);
+      log::fatal(
+          "invalid use of 'else' combined with i/o and xr/xs assertions,",
+          (char *)0);
     } else {
       log::non_fatal("dubious use of 'else' combined with i/o,");
     }
@@ -674,13 +678,6 @@ void fix_dest(Symbol *c, Symbol *a) /* c:label name, a:proctype name */
 {
   Label *l;
   extern Symbol *context;
-
-#if 0
-	printf("ref to label '%s' in proctype '%s', search:\n",
-		c->name, a->name);
-	for (l = labtab; l; l = l->nxt)
-		printf("	%s in	%s\n", l->s->name, l->c->name);
-#endif
 
   for (l = labtab; l; l = l->nxt) {
     if (strcmp(c->name, l->s->name) == 0 &&
@@ -1028,6 +1025,7 @@ static void walk_atomic(Element *a, Element *b, int added) {
   Symbol *ofn;
   int oln;
   SeqList *h;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   ofn = Fname;
   oln = lineno;
@@ -1035,12 +1033,13 @@ static void walk_atomic(Element *a, Element *b, int added) {
     f->status |= (ATOM | added);
     switch (f->n->ntyp) {
     case ATOMIC:
-      if (verbose & 32)
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("spin: %s:%d, warning, atomic inside %s (ignored)\n",
                f->n->fn->name, f->n->ln, (added) ? "d_step" : "atomic");
+      }
       goto mknonat;
     case D_STEP:
-      if (!(verbose & 32)) {
+      if (!verbose_flags.NeedToPrintVerbose()) {
         if (added)
           goto mknonat;
         break;

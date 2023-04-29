@@ -1,6 +1,6 @@
 
 #include "fatal.hpp"
-
+#include "../utils/verbose/verbose.hpp"
 #include "../spin.hpp"
 #include "y.tab.h"
 #include <filesystem>
@@ -12,7 +12,6 @@ extern Symbol *Fname;
 extern Symbol *oFname;
 extern int nr_errs;
 extern int lineno;
-extern int verbose;
 extern int yychar;
 extern char yytext[];
 
@@ -23,7 +22,6 @@ static constexpr std::string_view kFunction = "function-name: ";
 
 void non_fatal(const std::string_view &s1,
                const std::optional<std::string> &s2) {
-
   std::string fname =
       Fname ? Fname->name : (oFname ? oFname->name : "nofilename");
   std::string separator =
@@ -34,18 +32,18 @@ void non_fatal(const std::string_view &s1,
 
   std::cout << fmt::format("spin: {0}:{1}, Error: {2}{3} {4}", fname, lineno,
                            s1, s2.value_or(""), separator, near);
-
   std::cout << std::endl;
   nr_errs++;
 }
 
 void fatal(const std::string_view &s1, const std::optional<std::string> &s2) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   non_fatal(s1, s2);
   for (const auto &file :
        {"pan.b", "pan.c", "pan.h", "pan.m", "pan.t", "pan.p", "pan.pre"}) {
     std::filesystem::remove(file);
   }
-  if (!(verbose & 32)) {
+  if (!verbose_flags.NeedToPrintVerbose()) {
     std::filesystem::remove("_spin_nvr.tmp");
   }
   alldone(1);

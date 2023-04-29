@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <limits.h>
 #include <sys/stat.h>
@@ -16,7 +17,7 @@
 extern RunList *run_lst, *X_lst;
 extern Element *Al_El;
 extern Symbol *Fname, *oFname;
-extern int verbose, lineno, xspin, jumpsteps, depth, merger, cutoff;
+extern int lineno, xspin, jumpsteps, depth, merger, cutoff;
 extern int nproc, nstop, Tval, ntrail, columns;
 extern short Have_claim, Skip_claim, has_code;
 extern void ana_src(int, int);
@@ -116,6 +117,8 @@ void match_trail(void) {
   Element *dothis;
   char snap[512], *q;
 
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
   if (has_code) {
     printf("spin: important:\n");
     printf("  =======================================warning====\n");
@@ -187,14 +190,14 @@ okay:
 
   while (fscanf(fd, "%d:%d:%d\n", &depth, &prno, &nst) == 3) {
     if (depth == -2) {
-      if (verbose) {
+      if (verbose_flags.Active()) {
         printf("starting claim %d\n", prno);
       }
       start_claim(prno);
       continue;
     }
     if (depth == -4) {
-      if (verbose & 32) {
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("using statement merging\n");
       }
       merger = 1;
@@ -202,7 +205,7 @@ okay:
       continue;
     }
     if (depth == -1) {
-      if (1 || verbose) {
+      if (1 || verbose_flags.Active()) {
         if (columns == 2)
           dotag(stdout, " CYCLE>\n");
         else
@@ -240,7 +243,7 @@ okay:
       if (prno == i - 1) {
         run_lst = run_lst->nxt;
         nstop++;
-        if (verbose & 4) {
+        if (verbose_flags.NeedToPrintAllProcessActions()) {
           if (columns == 2) {
             dotag(stdout, "<end>\n");
             continue;
@@ -260,7 +263,7 @@ okay:
       lost_trail();
     }
 
-    if (0 && !xspin && (verbose & 32)) {
+    if (0 && !xspin && verbose_flags.NeedToPrintVerbose()) {
       printf("step %d i=%d pno %d stmnt %d\n", depth, i, prno, nst);
     }
 
@@ -270,7 +273,7 @@ okay:
     }
 
     if (!X_lst) {
-      if (verbose & 32) {
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("%3d: no process %d (stmnt %d)\n", depth, prno - Have_claim,
                nst);
         printf(" max %d (%d - %d + %d) claim %d ", nproc - nstop + Skip_claim,
@@ -291,7 +294,7 @@ okay:
 
       if (nst < min_seq || nst > max_seq) {
         printf("%3d: error: invalid statement", depth);
-        if (verbose & 32) {
+        if (verbose_flags.NeedToPrintVerbose()) {
           printf(": pid %d:%d (%s:%d:%d) stmnt %d (valid range %d .. %d)", prno,
                  X_lst->pid, X_lst->n->name, X_lst->tn, X_lst->b, nst, min_seq,
                  max_seq);
@@ -311,7 +314,8 @@ okay:
       do {
         g = eval_sub(og);
         if (g && depth >= jumpsteps &&
-            ((verbose & 32) || ((verbose & 4) && not_claim()))) {
+            (verbose_flags.NeedToPrintVerbose() ||
+             (verbose_flags.NeedToPrintAllProcessActions() && not_claim()))) {
           if (columns != 2) {
             p_talk(og, 1);
 
@@ -322,9 +326,9 @@ okay:
             comment(stdout, og->n, 0);
             printf("]\n");
           }
-          if (verbose & 1)
+          if (verbose_flags.NeedToPrintGlobalVariables())
             dumpglobals();
-          if (verbose & 2)
+          if (verbose_flags.NeedToPrintLocalVariables())
             dumplocal(X_lst, 0);
           if (xspin)
             printf("\n");
@@ -348,7 +352,9 @@ okay:
       }
 
       if (depth >= jumpsteps &&
-          ((verbose & 32) || ((verbose & 4) && not_claim()))) /* -v or -p */
+          (verbose_flags.NeedToPrintVerbose() ||
+           (verbose_flags.NeedToPrintAllProcessActions() &&
+            not_claim()))) /* -v or -p */
       {
         if (columns != 2) {
           p_talk(dothis, 1);
@@ -359,14 +365,15 @@ okay:
           printf("\t[");
           comment(stdout, dothis->n, 0);
           printf("]");
-          if (a && (verbose & 32))
+          if (a && verbose_flags.NeedToPrintVerbose()) {
             printf("\t<merge %d now @%d>", dothis->merge,
                    (X_lst && X_lst->pc) ? X_lst->pc->seqno : -1);
+          }
           printf("\n");
         }
-        if (verbose & 1)
+        if (verbose_flags.NeedToPrintGlobalVariables())
           dumpglobals();
-        if (verbose & 2)
+        if (verbose_flags.NeedToPrintLocalVariables())
           dumplocal(X_lst, 0);
         if (xspin)
           printf("\n");

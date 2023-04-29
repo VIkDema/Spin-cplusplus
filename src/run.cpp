@@ -7,8 +7,9 @@
  */
 
 #include "fatal/fatal.hpp"
-#include "utils/seed/seed.hpp"
 #include "spin.hpp"
+#include "utils/seed/seed.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
 
@@ -28,9 +29,8 @@ static int get_priority(Lextok *n);
 static void set_priority(Lextok *n, Lextok *m);
 extern void sr_buf(int, int, const char *);
 
-
 long Rand(void) { /* CACM 31(10), Oct 1988 */
-  auto& seed = utils::seed::Seed::getInstance();
+  auto &seed = utils::seed::Seed::getInstance();
   auto Seed = seed.GetSeed();
 
   Seed = 16807 * (Seed % 127773) - 2836 * (Seed / 127773);
@@ -56,6 +56,7 @@ Element *eval_sub(Element *e) {
   Element *f, *g;
   SeqList *z;
   int i, j, k, only_pos;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!e || !e->n)
     return ZE;
@@ -102,7 +103,8 @@ Element *eval_sub(Element *e) {
       if (interactive && !MadeChoice && !E_Check && !Escape_Check &&
           !(e->status & (D_ATOM)) && depth >= jumpsteps &&
           z->this_sequence->frst &&
-          (xspin || (verbose & 32) || Enabled0(z->this_sequence->frst))) {
+          (xspin || verbose_flags.NeedToPrintVerbose() ||
+           Enabled0(z->this_sequence->frst))) {
         if (z->this_sequence->frst->n->ntyp == ELSE) {
           has_else = (Rvous) ? ZE : z->this_sequence->frst->nxt;
           nr_else = j;
@@ -227,7 +229,8 @@ Element *eval_sub(Element *e) {
       return eval_sub(e->nxt);
     } else {
       SeqList *x;
-      if (!(e->status & (D_ATOM)) && e->esc && (verbose & 32)) {
+      if (!(e->status & (D_ATOM)) && e->esc &&
+          verbose_flags.NeedToPrintVerbose()) {
         printf("Stmnt [");
         comment(stdout, e->n, 0);
         printf("] has escape(s): ");
@@ -252,7 +255,7 @@ Element *eval_sub(Element *e) {
         Escape_Check++;
         if (like_java) {
           if ((g = rev_escape(e->esc)) != ZE) {
-            if (verbose & 4) {
+            if (verbose_flags.NeedToPrintAllProcessActions()) {
               printf("\tEscape taken (-J) ");
               if (g->n && g->n->fn)
                 printf("%s:%d", g->n->fn->name, g->n->ln);
@@ -264,7 +267,7 @@ Element *eval_sub(Element *e) {
         } else {
           for (x = e->esc; x; x = x->nxt) {
             if ((g = eval_sub(x->this_sequence->frst)) != ZE) {
-              if (verbose & 4) {
+              if (verbose_flags.NeedToPrintAllProcessActions()) {
                 printf("\tEscape taken ");
                 if (g->n && g->n->fn)
                   printf("%s:%d", g->n->fn->name, g->n->ln);
@@ -661,7 +664,7 @@ int interprint(FILE *fd, Lextok *n) {
 
 static int Enabled1(Lextok *n) {
   int i;
-  int v = verbose;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (n)
     switch (n->ntyp) {
@@ -670,11 +673,11 @@ static int Enabled1(Lextok *n) {
         return 1; /* conservative */
                   /* else fall through */
     default:      /* side-effect free */
-      verbose = 0;
+      verbose_flags.Clean();
       E_Check++;
       i = eval(n);
       E_Check--;
-      verbose = v;
+      verbose_flags.Activate();
       return i;
 
     case SET_P:
@@ -691,12 +694,12 @@ static int Enabled1(Lextok *n) {
         if (Rvous)
           return 0;
         TstOnly = 1;
-        verbose = 0;
+        verbose_flags.Clean();
         E_Check++;
         i = eval(n);
         E_Check--;
         TstOnly = 0;
-        verbose = v;
+        verbose_flags.Activate();
         return i;
       }
       return (!qfull(n));
@@ -704,12 +707,12 @@ static int Enabled1(Lextok *n) {
       if (q_is_sync(n))
         return 0; /* it's never a user-choice */
       n->ntyp = 'R';
-      verbose = 0;
+      verbose_flags.Clean();
       E_Check++;
       i = eval(n);
       E_Check--;
       n->ntyp = 'r';
-      verbose = v;
+      verbose_flags.Activate();
       return i;
     }
   return 0;
@@ -841,6 +844,7 @@ void set_priority(Lextok *n, Lextok *p) {
   int i = nproc - nstop - Have_claim;
   int pid = eval(n);
   RunList *Y;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (old_priority_rules) {
     return;
@@ -856,7 +860,7 @@ void set_priority(Lextok *n, Lextok *p) {
       }
     }
   }
-  if (verbose & 32) {
+  if (verbose_flags.NeedToPrintVerbose()) {
     printf("\tPid\tName\tPriority\n");
     for (Y = run_lst; Y; Y = Y->nxt) {
       printf("\t%d\t%s\t%d\n", Y->pid, Y->n->name, Y->priority);

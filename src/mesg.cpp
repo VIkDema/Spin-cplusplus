@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <stdlib.h>
@@ -18,7 +19,7 @@
 
 extern RunList *X_lst;
 extern Symbol *Fname;
-extern int verbose, TstOnly, s_trail, analyze, columns;
+extern int TstOnly, s_trail, analyze, columns;
 extern int lineno, depth, xspin, m_loss, jumpsteps;
 extern int nproc, nstop;
 extern short Have_claim;
@@ -252,8 +253,10 @@ found:
 }
 
 void typ_ck(int ft, int at, char *s) {
-  if ((verbose & 32) && ft != at && (ft == CHAN || at == CHAN) &&
-      (at != PREDEF || strcmp(s, "recv") != 0)) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
+  if (verbose_flags.NeedToPrintVerbose() && ft != at &&
+      (ft == CHAN || at == CHAN) && (at != PREDEF || strcmp(s, "recv") != 0)) {
     char buf[256], tag1[64], tag2[64];
     (void)sputtype(tag1, ft);
     (void)sputtype(tag2, at);
@@ -296,6 +299,8 @@ static void mtype_ck(char *p, Lextok *arg) {
 }
 
 static int a_snd(Queue *q, Lextok *n) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
   Lextok *m;
   int i = q->qlen * q->nflds; /* q offset */
   int j = 0;                  /* q field# */
@@ -319,13 +324,13 @@ static int a_snd(Queue *q, Lextok *n) {
     if (q->fld_width[i + j] == MTYPE) {
       mtype_ck(q->mtp[i + j], m->lft); /* 6.4.8 */
     }
-    if ((verbose & 16) && depth >= jumpsteps) {
+    if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
       sr_talk(n, New, "Send ", "->", j, q); /* XXX j was i+j in 6.4.8 */
     }
     typ_ck(q->fld_width[i + j], Sym_typ(m->lft), "send");
   }
 
-  if ((verbose & 16) && depth >= jumpsteps) {
+  if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
     for (i = j; i < q->nflds; i++) {
       sr_talk(n, 0, "Send ", "->", i, q);
     }
@@ -341,6 +346,7 @@ static int a_snd(Queue *q, Lextok *n) {
 }
 
 static int a_rcv(Queue *q, Lextok *n, int full) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   Lextok *m;
   int i = 0, oi, j, k;
   extern int Rvous;
@@ -399,7 +405,7 @@ try_slot:
   if (TstOnly)
     return 1;
 
-  if (verbose & 8) {
+  if (verbose_flags.NeedToPrintReceives()) {
     if (j < q->nflds) {
       printf("%3d: warning: missing params in next recv\n", depth);
     } else if (m) {
@@ -417,7 +423,7 @@ try_slot:
   for (m = n->rgt, j = 0; m && j < q->nflds; m = m->rgt, j++) {
     if (columns && !full) /* was columns == 1 */
       continue;
-    if ((verbose & 8) && !Rvous && depth >= jumpsteps) {
+    if (verbose_flags.NeedToPrintReceives() && !Rvous && depth >= jumpsteps) {
       char *Recv = "Recv ";
       char *notRecv = "Recv ";
       sr_talk(n, q->contents[i * q->nflds + j],
@@ -437,7 +443,8 @@ try_slot:
       }
   }
 
-  if ((!columns || full) && (verbose & 8) && !Rvous && depth >= jumpsteps)
+  if ((!columns || full) && verbose_flags.NeedToPrintReceives() && !Rvous &&
+      depth >= jumpsteps)
     for (i = j; i < q->nflds; i++) {
       char *Recv = "Recv ";
       char *notRecv = "Recv ";
@@ -452,6 +459,7 @@ try_slot:
 }
 
 static int s_snd(Queue *q, Lextok *n) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   Lextok *m;
   RunList *rX, *sX = X_lst; /* rX=recvr, sX=sendr */
   int i, j = 0;             /* q field# */
@@ -475,7 +483,7 @@ static int s_snd(Queue *q, Lextok *n) {
     return 1;
   }
   q->stepnr[0] = depth;
-  if ((verbose & 16) && depth >= jumpsteps) {
+  if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
     m = n->rgt;
     rX = X_lst;
     X_lst = sX;
@@ -509,14 +517,18 @@ static int s_snd(Queue *q, Lextok *n) {
         } else {
           i = 0;
         }
-        if (verbose & 8)
+        if (verbose_flags.NeedToPrintReceives()) {
           sr_talk(n_rem, i, "Recv ", "<-", j, q_rem);
+        }
       }
-      if (verbose & 8)
-        for (i = j; i < q->nflds; i++)
+      if (verbose_flags.NeedToPrintReceives()) {
+        for (i = j; i < q->nflds; i++) {
           sr_talk(n_rem, 0, "Recv ", "<-", j, q_rem);
-      if (columns == 2)
+        }
+      }
+      if (columns == 2) {
         putarrow(depth, depth);
+      }
     }
     n_rem = (Lextok *)0;
     q_rem = (Queue *)0;
@@ -626,6 +638,7 @@ int qishidden(int q) {
 
 static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   char s[128];
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (qishidden(eval(n->lft)))
     return;
@@ -638,7 +651,7 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
     return;
   }
   if (xspin) {
-    if ((verbose & 4) && tr[0] != '[')
+    if (verbose_flags.NeedToPrintAllProcessActions() && tr[0] != '[')
       sprintf(s, "(state -)\t[values: %d", eval(n->lft));
     else
       sprintf(s, "(state -)\t[%d", eval(n->lft));
@@ -673,8 +686,9 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   if (j == q->nflds - 1) {
     if (xspin) {
       printf("]\n");
-      if (!(verbose & 4))
+      if (!verbose_flags.NeedToPrintAllProcessActions()) {
         printf("\n");
+      }
       return;
     }
     printf("\t%s queue %d (", a, eval(n->lft));
@@ -717,6 +731,7 @@ void sr_mesg(FILE *fd, int v, int j, const char *s) {
 }
 
 void doq(Symbol *s, int n, RunList *r) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   Queue *q;
   int j, k;
 
@@ -724,7 +739,8 @@ void doq(Symbol *s, int n, RunList *r) {
     return;
   for (q = qtab; q; q = q->nxt)
     if (q->qid == s->val[n]) {
-      if (xspin > 0 && (verbose & 4) && q->setat < depth) {
+      if (xspin > 0 && verbose_flags.NeedToPrintAllProcessActions() &&
+          q->setat < depth) {
         continue;
       }
       if (q->nslots == 0) {

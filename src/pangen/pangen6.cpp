@@ -8,13 +8,14 @@
 
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
 extern Ordered *all_names;
 extern FSM_use *use_free;
 extern FSM_state **fsm_tbl;
 extern FSM_state *fsmx;
-extern int verbose, o_max;
+extern int o_max;
 
 static FSM_trans *cur_t;
 static FSM_trans *expl_par;
@@ -611,8 +612,9 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, char *cause, char *pn) {
 
   t->round = AST_Round;
   t->relevant = 1;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if ((verbose & 32) && t->step) {
+  if (verbose_flags.NeedToPrintVerbose() && t->step) {
     printf("\tDR %s [[ ", pn);
     comment(stdout, t->step->n, 0);
     printf("]]\n\t\tfully relevant %s", cause);
@@ -624,7 +626,7 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, char *cause, char *pn) {
   }
   for (u = t->Val[0]; u; u = u->nxt)
     if (u != uin && (u->special & (USE | DEREF_USE))) {
-      if (verbose & 32) {
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("\t\t\tuses(%d): ", u->special);
         AST_var(u->n, u->n->sym, 1);
         printf("\n");
@@ -676,6 +678,7 @@ static void AST_relevant(Lextok *n) {
   FSM_state *f;
   FSM_trans *t;
   int ischan;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* look for all DEF's of n
    *	mark those stmnts relevant
@@ -686,7 +689,7 @@ static void AST_relevant(Lextok *n) {
     return;
   ischan = (Sym_typ(n) == CHAN);
 
-  if (verbose & 32) {
+  if (verbose_flags.NeedToPrintVerbose()) {
     printf("<<ast_relevant (ntyp=%d) ", n->ntyp);
     AST_var(n, n->sym, 1);
     printf(">>\n");
@@ -717,6 +720,7 @@ static void AST_relevant(Lextok *n) {
 static int AST_relpar(char *s) {
   FSM_trans *t, *T;
   FSM_use *u;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (T = expl_par; T; T = (T == expl_par) ? expl_var : (FSM_trans *)0)
     for (t = T; t; t = t->nxt) {
@@ -724,7 +728,7 @@ static int AST_relpar(char *s) {
         for (u = t->Val[0]; u; u = u->nxt) {
           if (u->n->sym->type && u->n->sym->context &&
               strcmp(u->n->sym->context->name, s) == 0) {
-            if (verbose & 32) {
+            if (verbose_flags.NeedToPrintVerbose()) {
               printf("proctype %s relevant, due to symbol ", s);
               AST_var(u->n, u->n->sym, 1);
               printf("\n");
@@ -846,13 +850,14 @@ static int AST_always(Lextok *n) {
 static void AST_edge_dump(AST *a, FSM_state *f) {
   FSM_trans *t;
   FSM_use *u;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (t = f->t; t; t = t->nxt) /* edges */
   {
     if (t->step && AST_always(t->step->n))
       t->relevant |= 1; /* always relevant */
 
-    if (verbose & 32) {
+    if (verbose_flags.NeedToPrintVerbose()) {
       switch (t->relevant) {
       case 0:
         printf("     ");
@@ -927,13 +932,14 @@ static void AST_dfs(AST *a, int s, int vis) {
 
 static void AST_dump(AST *a) {
   FSM_state *f;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (f = a->fsm; f; f = f->nxt) {
     f->seen = 0;
     fsm_tbl[f->from] = f;
   }
 
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     printf("AST_START %s from %d\n", a->p->n->name, a->i_st);
 
   AST_dfs(a, a->i_st, 1);
@@ -1191,8 +1197,9 @@ static int AST_dump_rel(void) {
   Ordered *walk;
   char buf[64];
   int banner = 0;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (verbose & 32) {
+  if (verbose_flags.NeedToPrintVerbose()) {
     printf("Relevant variables:\n");
     for (rv = rel_vars; rv; rv = rv->nxt) {
       printf("\t");
@@ -1344,11 +1351,12 @@ static void check_slice(Lextok *n, int code) {
 
 static void AST_data_dep(void) {
   Slicer *sc;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* mark all def-relevant transitions */
   for (sc = slicer; sc; sc = sc->nxt) {
     sc->used = 1;
-    if (verbose & 32) {
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: slice criterion ");
       AST_var(sc->n, sc->n->sym, 1);
       printf(" type=%d\n", Sym_typ(sc->n));
@@ -1498,6 +1506,7 @@ static void AST_shouldconsider(AST *a, int s) {
 static int FSM_critical(AST *a, int s) {
   FSM_state *f;
   FSM_trans *t;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* is a 1-relevant stmnt reachable from this state? */
 
@@ -1510,22 +1519,13 @@ static int FSM_critical(AST *a, int s) {
     if ((t->relevant & 1) || FSM_critical(a, t->to)) {
       f->cr = 1;
 
-      if (verbose & 32) {
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("\t\t\t\tcritical(%d) ", t->relevant);
         comment(stdout, t->step->n, 0);
         printf("\n");
       }
       break;
     }
-#if 0
-	else {
-		if (verbose&32)
-		{ printf("\t\t\t\tnot-crit ");
-		  comment(stdout, t->step->n, 0);
-	 	  printf("\n");
-		}
-	}
-#endif
 done:
   return f->cr;
 }
@@ -1534,11 +1534,12 @@ static void AST_ctrl(AST *a) {
   FSM_state *f;
   FSM_trans *t;
   int hit;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* add all blockable transitions
    * from which relevant transitions can be reached
    */
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     printf("CTL -- %s\n", a->p->n->name);
 
   /* 1 : mark all blockable edges */
@@ -1553,7 +1554,7 @@ static void AST_ctrl(AST *a) {
           case ELSE:
             t->round = AST_Round;
             t->relevant |= 2; /* mark for next phases */
-            if (verbose & 32) {
+            if (verbose_flags.NeedToPrintVerbose()) {
               printf("\tpremark ");
               comment(stdout, t->step->n, 0);
               printf("\n");
@@ -1575,7 +1576,7 @@ static void AST_ctrl(AST *a) {
       for (t = f->t; t; t = t->nxt)
         if (t->relevant & 2) {
           t->relevant &= ~2; /* clear mark */
-          if (verbose & 32) {
+          if (verbose_flags.NeedToPrintVerbose()) {
             printf("\t\tnomark ");
             if (t->step && t->step->n)
               comment(stdout, t->step->n, 0);
@@ -1611,7 +1612,7 @@ static void AST_ctrl(AST *a) {
       for (t = f->t; t; t = t->nxt) {
         t->round = AST_Round;
         t->relevant |= 2; /* lift */
-        if (verbose & 32) {
+        if (verbose_flags.NeedToPrintVerbose()) {
           printf("\t\t\tliftmark ");
           if (t->step && t->step->n)
             comment(stdout, t->step->n, 0);
@@ -1661,7 +1662,8 @@ AST_criteria(void) { /*
                       * remote labels are handled separately -- by making
                       * sure they are not pruned away during optimization
                       */
-  AST_Changes = 1;   /* to get started */
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+  AST_Changes = 1; /* to get started */
   for (AST_Round = 1; slicer && AST_Changes; AST_Round++) {
     AST_Changes = 0;
     AST_data_dep();
@@ -1669,7 +1671,7 @@ AST_criteria(void) { /*
     AST_dominant();    /* mark data-irrelevant subgraphs */
     AST_control_dep(); /* can add data deps, which add control deps */
 
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose())
       printf("\n\nROUND %d -- changes %d\n", AST_Round, AST_Changes);
   }
 }
@@ -1677,6 +1679,7 @@ AST_criteria(void) { /*
 static void AST_alias_analysis(void) /* aliasing of promela channels */
 {
   AST *a;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (a = ast; a; a = a->nxt)
     AST_sends(a); /* collect chan-names that are send across chans */
@@ -1689,13 +1692,14 @@ static void AST_alias_analysis(void) /* aliasing of promela channels */
 
   AST_trans(); /* transitive closure of alias table */
 
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     AST_aliases(); /* show channel aliasing info */
 }
 
 void AST_slice(void) {
   AST *a;
   int spurious = 0;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!slicer) {
     printf("spin: warning: no slice criteria found (no assertions and no "
@@ -1715,7 +1719,7 @@ void AST_slice(void) {
   AST_criteria(); /* process the slice criteria from
                    * asserts and from the never claim
                    */
-  if (!spurious || (verbose & 32)) {
+  if (!spurious || verbose_flags.NeedToPrintVerbose()) {
     spurious = 1;
     for (a = ast; a; a = a->nxt) {
       AST_dump(a);         /* marked up result */
@@ -1728,7 +1732,7 @@ void AST_slice(void) {
   }
   AST_suggestions();
 
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     show_expl();
 }
 
@@ -1901,6 +1905,7 @@ static void AST_hidden(void) /* reveal all hidden assignments */
 
 static int bad_scratch(FSM_state *f, int upto) {
   FSM_trans *t;
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
 #if 0
 	1. all internal branch-points have else-s
 	2. all non-branchpoints have non-blocking out-edge
@@ -1916,11 +1921,11 @@ static int bad_scratch(FSM_state *f, int upto) {
 
   f->scratch |= 4;
 
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     printf("X[%d:%d:%d] ", f->from, upto, f->scratch);
 
   if (f->scratch & 1) {
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose())
       printf("\tbad scratch: %d\n", f->from);
   bad:
     f->scratch &= ~4;
@@ -1964,13 +1969,14 @@ static void AST_pair(AST *a, FSM_state *h, int y) {
 
 static void AST_checkpairs(AST *a) {
   Pair *p;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (p = a->pairs; p; p = p->nxt) {
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose())
       printf("	inspect pair %d %d\n", p->b, p->h->from);
     if (!bad_scratch(p->h, p->b)) /* subgraph is clean */
     {
-      if (verbose & 32)
+      if (verbose_flags.NeedToPrintVerbose())
         printf("subgraph: %d .. %d\n", p->b, p->h->from);
       mark_subgraph(p->h, p->b);
     }
@@ -1981,6 +1987,8 @@ static void subgraph(AST *a, FSM_state *f, int out) {
   FSM_state *h;
   int i, j;
   ulong *g;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
 #if 0
 	reverse dominance suggests that this is a possible
 	entry and exit node for a proper subgraph
@@ -1991,7 +1999,7 @@ static void subgraph(AST *a, FSM_state *f, int out) {
   j = f->from % BPW; /* assert(j <= 32); else lshift undefined? */
   g = h->mod;
 
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     printf("possible pair %d %d -- %d\n", f->from, h->from,
            (g[i] & (1 << j)) ? 1 : 0);
 
@@ -2105,13 +2113,15 @@ static void curtail(AST *a) {
   FSM_state *f, *g;
   FSM_trans *t;
   int i, haselse, isrel, blocking;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
 #if 0
 	mark nodes that do not satisfy these requirements:
 	1. all internal branch-points have else-s
 	2. all non-branchpoints have non-blocking out-edge
 	3. all internal edges are non-data-relevant
 #endif
-  if (verbose & 32)
+  if (verbose_flags.NeedToPrintVerbose())
     printf("Curtail %s:\n", a->p->n->name);
 
   for (f = a->fsm; f; f = f->nxt) {
@@ -2140,18 +2150,13 @@ static void curtail(AST *a) {
         }
       }
     }
-#if 0
-		if (verbose&32)
-			printf("prescratch %d -- %d %d %d %d -- %d\n",
-				f->from, i, isrel, blocking, haselse, is_guard(f));
-#endif
     if (isrel                   /* 3. */
         || (i == 1 && blocking) /* 2. */
         || (i > 1 && !haselse)) /* 1. */
     {
       if (!is_guard(f)) {
         f->scratch |= 1;
-        if (verbose & 32)
+        if (verbose_flags.NeedToPrintVerbose())
           printf("scratch %d -- %d %d %d %d\n", f->from, i, isrel, blocking,
                  haselse);
       }
@@ -2254,6 +2259,7 @@ static void AST_dominant(void) {
   AST *a;
   int oi;
   static FSM_state no_state;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 #if 0
 	find dominators
 	Aho, Sethi, & Ullman, Compilers - principles, techniques, and tools
@@ -2284,7 +2290,7 @@ static void AST_dominant(void) {
 
       a->nwords = (a->nstates + BPW - 1) / BPW; /* round up */
 
-      if (verbose & 32) {
+      if (verbose_flags.NeedToPrintVerbose()) {
         printf("%s (%d): ", a->p->n->name, a->i_st);
         printf("states=%d (max %d), words = %d, bpw %d, overflow %d\n",
                a->nstates, o_max, a->nwords, (int)BPW, (int)(a->nstates % BPW));

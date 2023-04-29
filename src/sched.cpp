@@ -8,10 +8,11 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
 
-extern int verbose, s_trail, analyze, no_wrapup;
+extern int s_trail, analyze, no_wrapup;
 extern char *claimproc, *eventmap, GBuf[];
 extern Ordered *all_names;
 extern Symbol *Fname, *context;
@@ -41,6 +42,7 @@ extern char *which_mtype(const char *);
 
 void runnable(ProcList *p, int weight, int noparams) {
   RunList *r = (RunList *)emalloc(sizeof(RunList));
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   r->n = p->n;
   r->tn = p->tn;
@@ -49,7 +51,8 @@ void runnable(ProcList *p, int weight, int noparams) {
   r->priority = weight;
   p->priority = (unsigned char)weight; /* not quite the best place of course */
 
-  if (!noparams && ((verbose & 4) || (verbose & 32))) {
+  if (!noparams && (verbose_flags.NeedToPrintAllProcessActions() ||
+                    verbose_flags.NeedToPrintVerbose())) {
     printf("Starting %s with pid %d", p->n ? p->n->name : "--", r->pid);
     if (has_priority)
       printf(" priority %d", r->priority);
@@ -129,7 +132,7 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
   if (!p) {
     char *pnm_sym_name_default = "?";
     log::fatal("cannot find proctype '%s'",
-          (pnm && pnm->sym) ? pnm->sym->name : pnm_sym_name_default);
+               (pnm && pnm->sym) ? pnm->sym->name : pnm_sym_name_default);
   }
 
   for (fp = p->p, at = args; fp; fp = fp->rgt)
@@ -193,6 +196,8 @@ static void formdump(void) {
 }
 
 void announce(char *w) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
   if (columns) {
     extern char GBuf[];
     extern int firstrow;
@@ -206,7 +211,8 @@ void announce(char *w) {
     return;
   }
 
-  if (dumptab || analyze || product || s_trail || !(verbose & 4))
+  if (dumptab || analyze || product || s_trail ||
+      !verbose_flags.NeedToPrintAllProcessActions())
     return;
 
   if (w)
@@ -278,6 +284,7 @@ void check_param_count(int i, Lextok *m) {
 void start_claim(int n) {
   ProcList *p;
   RunList *r, *q = (RunList *)0;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (p = ready; p; p = p->nxt)
     if (p->tn == n && p->b == N_CLAIM) {
@@ -285,9 +292,11 @@ void start_claim(int n) {
       goto found;
     }
   printf("spin: couldn't find claim %d (ignored)\n", n);
-  if (verbose & 32)
-    for (p = ready; p; p = p->nxt)
+  if (verbose_flags.NeedToPrintVerbose()) {
+    for (p = ready; p; p = p->nxt) {
       printf("\t%d = %s\n", p->tn, p->n->name);
+    }
+  }
 
   Skip_claim = 1;
   goto done;
@@ -340,6 +349,7 @@ int f_pid(char *n) {
 }
 
 void wrapup(int fini) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   limited_vis = 0;
   if (columns) {
     if (columns == 2)
@@ -350,16 +360,12 @@ void wrapup(int fini) {
   if (no_wrapup)
     goto short_cut;
   if (nproc != nstop) {
-    int ov = verbose;
     printf("#processes: %d\n", nproc - nstop - Have_claim + Skip_claim);
-    verbose &= ~4;
+    verbose_flags.Clean();
     dumpglobals();
-    verbose = ov;
-    verbose &= ~1; /* no more globals */
-    verbose |= 32; /* add process states */
     for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt)
       talk(X_lst);
-    verbose = ov; /* restore */
+    verbose_flags.Activate();
   }
   printf("%d process%s created\n", nproc - Have_claim + Skip_claim,
          (xspin || nproc != 1) ? "es" : "");
@@ -430,6 +436,7 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
 }
 
 static RunList *pickproc(RunList *Y) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   SeqList *z;
   Element *has_else;
   short Choices[256];
@@ -501,7 +508,7 @@ static RunList *pickproc(RunList *Y) {
           no_choice++;
         else
           only_choice = k;
-        if (!xspin && unex && !(verbose & 32)) {
+        if (!xspin && unex && !verbose_flags.NeedToPrintVerbose()) {
           k++;
           continue;
         }
@@ -535,7 +542,7 @@ static RunList *pickproc(RunList *Y) {
             no_choice++;
           else
             only_choice = k;
-          if (!xspin && unex && !(verbose & 32)) {
+          if (!xspin && unex && !verbose_flags.NeedToPrintVerbose()) {
             k++;
             continue;
           }
@@ -638,6 +645,8 @@ void sched(void) {
   RunList *Y = NULL; /* previous process in run queue */
   RunList *oX;
   int go, notbeyond = 0;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
 #ifdef PC
   int bufmax = 100;
 #endif
@@ -709,17 +718,19 @@ void sched(void) {
     oX = X_lst; /* a rendezvous could change it */
     go = 1;
     if (X_lst->pc && !(X_lst->pc->status & D_ATOM) && !x_can_run()) {
-      if (!xspin && ((verbose & 32) || (verbose & 4))) {
+      if (!xspin && ((verbose_flags.NeedToPrintVerbose()) ||
+                     (verbose_flags.NeedToPrintAllProcessActions()))) {
         p_talk(X_lst->pc, 1);
         printf("\t<<Not Enabled>>\n");
       }
       go = 0;
     }
     if (go && (e = eval_sub(X_lst->pc))) {
-      if (depth >= jumpsteps && ((verbose & 32) || (verbose & 4))) {
+      if (depth >= jumpsteps &&
+          ((verbose_flags.NeedToPrintVerbose()) ||
+           (verbose_flags.NeedToPrintAllProcessActions()))) {
         if (X_lst == oX)
-          if (!(e->status & D_ATOM) ||
-              (verbose & 32)) /* no talking in d_steps */
+          if (!(e->status & D_ATOM) || verbose_flags.NeedToPrintVerbose()) /* no talking in d_steps */
           {
             if (!LastStep)
               LastStep = X_lst->pc;
@@ -729,9 +740,9 @@ void sched(void) {
             comment(stdout, LastStep->n, 0);
             printf("]\n");
           }
-        if (verbose & 1)
+        if (verbose_flags.NeedToPrintGlobalVariables())
           dumpglobals();
-        if (verbose & 2)
+        if (verbose_flags.NeedToPrintLocalVariables())
           dumplocal(X_lst, 0);
 
         if (!(e->status & D_ATOM))
@@ -769,7 +780,7 @@ void sched(void) {
           run_lst = X_lst->nxt;
         nstop++;
         Priority_Sum -= X_lst->priority;
-        if (verbose & 4) {
+        if (verbose_flags.NeedToPrintAllProcessActions()) {
           whoruns(1);
           dotag(stdout, "terminates\n");
         }
@@ -811,6 +822,7 @@ int complete_rendez(void) {
   RunList *orun = X_lst, *tmp;
   Element *s_was = LastStep;
   Element *e;
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   int j, ointer = interactive;
 
   if (s_trail)
@@ -836,7 +848,8 @@ int complete_rendez(void) {
         Rvous = 0;
         goto out;
       }
-      if ((verbose & 32) || (verbose & 4)) {
+      if ((verbose_flags.NeedToPrintVerbose()) ||
+          (verbose_flags.NeedToPrintAllProcessActions())) {
         tmp = orun;
         orun = X_lst;
         X_lst = tmp;
@@ -1071,12 +1084,13 @@ void whoruns(int lnr) {
 }
 
 static void talk(RunList *r) {
-  if ((verbose & 32) || (verbose & 4)) {
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  if (verbose_flags.NeedToPrintVerbose() || verbose_flags.NeedToPrintAllProcessActions()) {
     p_talk(r->pc, 1);
     printf("\n");
-    if (verbose & 1)
+    if (verbose_flags.NeedToPrintGlobalVariables())
       dumpglobals();
-    if (verbose & 2)
+    if (verbose_flags.NeedToPrintLocalVariables())
       dumplocal(r, 1);
   }
 }

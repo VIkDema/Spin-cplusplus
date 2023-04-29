@@ -8,6 +8,7 @@
 
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
 struct BuildStack {
@@ -218,25 +219,8 @@ static int build_step(FSM_trans *v) {
     return -1;       /* break cycle */
 
   f = fsm_tbl[st];
-#if 0
-	lt = v->step->n;
-	if (verbose&32)
-	{	if (++howdeep == 1)
-			printf("spin: %s:%d, merge:\n", lt->fn->name, lt->ln);
-		printf("\t[%d] <seqno %d>\t", howdeep, el->seqno);
-		comment(stdout, lt, 0);
-		printf(";\n");
-	}
-#endif
   r = build_step(f->t);
   v->step->merge = (r == -1) ? st : r;
-#if 0
-	if (verbose&32)
-	{	printf("	merge value: %d (st=%d,r=%d, line %d)\n",
-			v->step->merge, st, r, el->n->ln);
-		howdeep--;
-	}
-#endif
   popbuild();
 
   return v->step->merge;
@@ -273,16 +257,6 @@ static void FSM_MERGER(
 #define SINGLES
 #ifdef SINGLES
         t->step->merge_single = t->to;
-#if 0
-			if ((verbose&32))
-			{	printf("spin: %s:%d, merge_single:\n\t<seqno %d>\t",
-					t->step->n->fn->name,
-					t->step->n->ln,
-					t->step->seqno);
-				comment(stdout, t->step->n, 0);
-				printf(";\n");
-			}
-#endif
 #endif
         /* t is an isolated eligible step:
          *
@@ -335,16 +309,6 @@ static void FSM_MERGER(
         else if (g->t->step->merge_single)
           t->step->merge_start = g->t->step->merge_single;
 #endif
-#if 0
-			if ((verbose&32)
-			&& t->step->merge_start)
-			{	printf("spin: %s:%d, merge_START:\n\t<seqno %d>\t",
-						lt->fn->name, lt->ln,
-						t->step->seqno);
-				comment(stdout, lt, 0);
-				printf(";\n");
-			}
-#endif
       }
     }
 }
@@ -378,15 +342,6 @@ static void FSM_ANA(void) {
                 t->Val[n] = v;
               else
                 w->nxt = v;
-#if q
-              if (verbose & 32) {
-                printf("%s : %3d:  %d -> %d \t", t->step->n->fn->name,
-                       t->step->n->ln, f->from, t->to);
-                comment(stdout, t->step->n, 0);
-                printf("\t%c%d: %s\n", n == 0 ? 'R' : 'L', u->special,
-                       u->var->name);
-              }
-#endif
               if (good_dead(t->step, u)) {
                 u->nxt = t->step->dead; /* insert into dead */
                 t->step->dead = u;
@@ -719,8 +674,9 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 
     FSM_DEL();
   }
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   for (e = Al_El; e; e = e->Nxt) {
-    if (!(e->status & DONE) && (verbose & 32)) {
+    if (!(e->status & DONE) && verbose_flags.NeedToPrintVerbose()) {
       printf("unreachable code: ");
       printf("%s:%3d  ", e->n->fn->name, e->n->ln);
       comment(stdout, e->n, 0);

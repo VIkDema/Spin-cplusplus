@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <ctype.h>
@@ -48,7 +49,7 @@ extern Symbol *Fname, *oFname;
 extern Symbol *context, *owner;
 extern YYSTYPE yylval;
 extern short has_last, has_code, has_priority;
-extern int verbose, IArgs, hastrack, separate, in_for;
+extern int IArgs, hastrack, separate, in_for;
 extern int implied_semis, ltl_mode, in_seq, par_cnt;
 
 short has_stack = 0;
@@ -303,12 +304,6 @@ static int getinline(void) {
     lineno = Inline_stub[Inlining]->cln;
     Fname = Inline_stub[Inlining]->cfn;
     Inlining--;
-
-#if 0
-		if (verbose&32)
-		printf("spin: %s:%d, done inlining %s\n",
-			Fname, lineno, Inline_stub[Inlining+1]->nm->name);
-#endif
     return Getchar();
   }
   return c;
@@ -1047,11 +1042,6 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   Fname = tmp->dfn;  /* filename of same */
   Inliner[Inlining] = (char *)tmp->cn;
   Inline_stub[Inlining] = tmp;
-#if 0
-	if (verbose&32)
-	printf("spin: %s:%d, inlining '%s' (from %s:%d)\n",
-		tmp->cfn->name, tmp->cln, t->name, tmp->dfn->name, tmp->dln);
-#endif
   for (j = 0; j < Inlining; j++) {
     if (Inline_stub[j] == Inline_stub[Inlining]) {
       log::fatal("cyclic inline attempt on: %s", t->name);
@@ -1129,7 +1119,7 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
   Lextok *t;
   static char Buf1[SOMETHINGBIG], Buf2[RATHERSMALL];
   static int c_code = 1;
-
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   for (t = nms; t; t = t->rgt)
     if (t->lft) {
       if (t->lft->ntyp != NAME) {
@@ -1179,7 +1169,7 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
   }
   dln = lineno;
   if (s->type == CODE_FRAG) {
-    if (verbose & 32) {
+    if (verbose_flags.NeedToPrintVerbose()) {
       sprintf(Buf1, "\t/* line %d %s */\n\t\t", lineno, Fname->name);
     } else {
       strcpy(Buf1, "");
@@ -1843,13 +1833,6 @@ static int check_name(char *s) {
       if (!strcmp(s, t->lft->sym->name) /* varname matches formal */
           && strcmp(s, Inline_stub[Inlining]->anms[i]) != 0) /* actual pars */
       {
-#if 0
-			if (verbose&32)
-			printf("\tline %d, replace %s in call of '%s' with %s\n",
-				lineno, s,
-				Inline_stub[Inlining]->nm->name,
-				Inline_stub[Inlining]->anms[i]);
-#endif
         for (tt = Inline_stub[Inlining]->params; tt; tt = tt->rgt)
           if (!strcmp(Inline_stub[Inlining]->anms[i],
                       tt->lft->sym->name)) { /* would be cyclic if not caught */
@@ -1857,7 +1840,7 @@ static int check_name(char *s) {
                    oFname->name ? oFname->name : "--", lineno,
                    tt->lft->sym->name);
             log::fatal("formal par of %s contains replacement value",
-                  Inline_stub[Inlining]->nm->name);
+                       Inline_stub[Inlining]->nm->name);
             yylval->ntyp = tt->lft->ntyp;
             yylval->sym = lookup(tt->lft->sym->name);
             return NAME;
@@ -1871,7 +1854,7 @@ static int check_name(char *s) {
             if ((ptr > optr && *(ptr - 1) == '.') ||
                 *(ptr + strlen(s)) == '.') {
               log::fatal("formal par of %s used in structure name",
-                    Inline_stub[Inlining]->nm->name);
+                         Inline_stub[Inlining]->nm->name);
             }
             ptr++;
           }

@@ -19,6 +19,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "version/version.hpp"
 #include <assert.h>
 #include <signal.h>
@@ -54,7 +55,7 @@ int Etimeouts; /* nr timeouts in program */
 int Ntimeouts; /* nr timeouts in never claim */
 int analyze, columns, dumptab, has_remote, has_remvar;
 int interactive, jumpsteps, m_loss, nr_errs, cutoff;
-int s_trail, ntrail, verbose, xspin, notabs, rvopt;
+int s_trail, ntrail, xspin, notabs, rvopt;
 int no_print, no_wrapup, Caccess, limited_vis, like_java;
 int separate;           /* separate compilation */
 int export_ast;         /* pangen5.c */
@@ -70,17 +71,6 @@ int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 static int preprocessonly, itsr, itsr_n, sw_or_bt;
 static int inlineonly; /* show inlined code */
 static int dataflow = 1;
-
-#if 0
-meaning of flags on verbose:
-	1	-g global variable values
-	2	-l local variable values
-	4	-p all process actions
-	8	-r receives
-	16	-s sends
-	32	-v verbose
-	64	-w very verbose
-#endif
 
 static char **add_ltl = (char **)0;
 static char **ltl_file = (char **)0;
@@ -242,18 +232,19 @@ void string_trim(char *t) {
 
 int e_system(int v, const char *s) {
   static int count = 1;
-
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   /* v == 0 : checks to find non-linked version of gcc */
   /* v == 1 : all other commands */
   /* v == 2 : preprocessing the promela input */
 
   if (v == 1) {
-    if (verbose & (32 | 64)) /* -v or -w */
+    if (verbose_flags.NeedToPrintVerbose() ||
+        verbose_flags.NeedToPrintVeryVerbose()) /* -v or -w */
     {
       printf("cmd%02d: %s\n", count++, s);
       fflush(stdout);
     }
-    if (verbose & 64) /* only -w */
+    if (verbose_flags.NeedToPrintVeryVerbose()) /* only -w */
     {
       return 0; /* suppress the call to system(s) */
     }
@@ -274,10 +265,11 @@ void alldone(int estatus) {
 
   (void)unlink(TMP_FILE1);
   (void)unlink(TMP_FILE2);
-  auto& seed = utils::seed::Seed::getInstance();
+  auto &seed = utils::seed::Seed::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (!buzzed && seed.NeedToPrintSeed() && !analyze && !export_ast && !s_trail &&
-      !preprocessonly && depth > 0) {
+  if (!buzzed && seed.NeedToPrintSeed() && !analyze && !export_ast &&
+      !s_trail && !preprocessonly && depth > 0) {
     printf("seed used: %d\n", seed.GetSeed());
   }
 
@@ -336,19 +328,19 @@ void alldone(int estatus) {
       strcat(pan_runtime, "-O ");
     if (notabs)
       strcat(pan_runtime, "-T ");
-    if (verbose & 1)
+    if (verbose_flags.NeedToPrintGlobalVariables())
       strcat(pan_runtime, "-g ");
-    if (verbose & 2)
+    if (verbose_flags.NeedToPrintLocalVariables())
       strcat(pan_runtime, "-l ");
-    if (verbose & 4)
+    if (verbose_flags.NeedToPrintAllProcessActions())
       strcat(pan_runtime, "-p ");
-    if (verbose & 8)
+    if (verbose_flags.NeedToPrintReceives())
       strcat(pan_runtime, "-r ");
-    if (verbose & 16)
+    if (verbose_flags.NeedToPrintSends())
       strcat(pan_runtime, "-s ");
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose())
       strcat(pan_runtime, "-v ");
-    if (verbose & 64)
+    if (verbose_flags.NeedToPrintVeryVerbose())
       strcat(pan_runtime, "-w ");
     if (m_loss)
       strcat(pan_runtime, "-m ");
@@ -762,48 +754,57 @@ void usage(void) {
 }
 
 int optimizations(int nr) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
   switch (nr) {
   case '1':
     dataflow = 1 - dataflow; /* dataflow */
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: dataflow optimizations turned %s\n",
              dataflow ? "on" : "off");
+    }
     break;
   case '2':
     /* dead variable elimination */
     deadvar = 1 - deadvar;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: dead variable elimination turned %s\n",
              deadvar ? "on" : "off");
+    }
     break;
   case '3':
     /* statement merging */
     merger = 1 - merger;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: statement merging turned %s\n", merger ? "on" : "off");
+    }
     break;
 
   case '4':
     /* rv optimization */
     rvopt = 1 - rvopt;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: rendezvous optimization turned %s\n", rvopt ? "on" : "off");
+    }
     break;
   case '5':
     /* case caching */
     ccache = 1 - ccache;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: case caching turned %s\n", ccache ? "on" : "off");
+    }
     break;
   case '6':
     old_priority_rules = 1;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: using old priority rules (pre version 6.2)\n");
+    }
     return 0; /* no break */
   case '7':
     implied_semis = 0;
-    if (verbose & 32)
+    if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: no implied semi-colons (pre version 6.3)\n");
+    }
     return 0; /* no break */
   default:
     printf("spin: bad or missing parameter on -o\n");
@@ -930,8 +931,9 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 #endif
 
 int main(int argc, char *argv[]) {
-  auto& seed = utils::seed::Seed::getInstance();
+  auto &seed = utils::seed::Seed::getInstance();
   seed.GenerateSeed();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   int usedopts = 0;
 
@@ -987,7 +989,7 @@ int main(int argc, char *argv[]) {
       argv++;
       break;
     case 'g':
-      verbose += 1;
+      verbose_flags.SetNeedToPrintGlobalVariables();
       break;
     case 'h':
       seed.SetNeedToPrintSeed(true);
@@ -1014,7 +1016,7 @@ int main(int argc, char *argv[]) {
       Strict++;
       break; /* modified -e */
     case 'l':
-      verbose += 2;
+      verbose_flags.SetNeedToPrintLocalVariables();
       break;
     case 'M':
       columns = 2;
@@ -1047,7 +1049,7 @@ int main(int argc, char *argv[]) {
         pp.view();
         alldone(0);
       }
-      verbose += 4;
+      verbose_flags.SetNeedToPrintAllProcessActions();
       break;
     case 'q':
       if (isdigit((int)argv[1][2]))
@@ -1074,7 +1076,7 @@ int main(int argc, char *argv[]) {
             break;
 #if 0
 				  case 'w': /* conflicts with bitstate runtime arg */
-					verbose += 64; 
+       verbose_flags.SetNeedToPrintVeryVerbose();
 					break;
 #endif
           case 'W':
@@ -1109,7 +1111,7 @@ int main(int argc, char *argv[]) {
         add_runtime("-r");
         goto samecase;
       } else {
-        verbose += 8;
+        verbose_flags.SetNeedToPrintReceives();
       }
       break;
     case 'S':
@@ -1124,7 +1126,7 @@ int main(int argc, char *argv[]) {
       if (strcmp(&argv[1][1], "search") == 0) {
         goto samecase;
       }
-      verbose += 16;
+      verbose_flags.SetNeedToPrintSends();
       break;
     case 'T':
       notabs = 1;
@@ -1142,14 +1144,14 @@ int main(int argc, char *argv[]) {
       cutoff = atoi(&argv[1][2]);
       break;
     case 'v':
-      verbose += 32;
+      verbose_flags.SetNeedToPrintVerbose();
       break;
     case 'V':
       printf("%s\n", SpinVersion);
       alldone(0);
       break;
     case 'w':
-      verbose += 64;
+      verbose_flags.SetNeedToPrintVeryVerbose();
       break;
     case 'W':
       norecompile = 1;
@@ -1274,17 +1276,19 @@ int main(int argc, char *argv[]) {
     alldone(1);
   }
   if (columns == 2) {
-    if (xspin || (verbose & (1 | 4 | 8 | 16 | 32))) {
+    if (xspin || verbose_flags.Active()) {
       printf("spin: -c precludes all flags except -t\n");
       alldone(1);
     }
     putprelude();
   }
-  if (columns && !(verbose & 8) && !(verbose & 16)) {
-    verbose += (8 + 16);
+  if (columns && !verbose_flags.NeedToPrintReceives() && !verbose_flags.NeedToPrintSends()) {
+    verbose_flags.SetNeedToPrintSends();
+    verbose_flags.SetNeedToPrintReceives();
   }
   if (columns == 2 && limited_vis) {
-    verbose += (1 + 4);
+    verbose_flags.SetNeedToPrintGlobalVariables();
+    verbose_flags.SetNeedToPrintAllProcessActions();
   }
 
   Symbol *s;

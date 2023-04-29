@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
 extern Symbol *Fname, *owner;
@@ -177,7 +178,7 @@ void checkrun(Symbol *parnm, int posno) {
   int i, m;
   int res = 0;
   char buf[16], buf2[16];
-
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
   for (n = runstmnts; n; n = n->rgt) {
     now = n->lft;
     if (now->sym != parnm->context)
@@ -204,7 +205,7 @@ void checkrun(Symbol *parnm, int posno) {
       }
   }
   if (!(res & 4) || !(res & 8)) {
-    if (!(verbose & 32))
+    if (!verbose_flags.NeedToPrintVerbose())
       return;
     strcpy(buf2, (!(res & 4)) ? "bit" : "byte");
     sputtype(buf, parnm->type);
@@ -630,10 +631,12 @@ static struct X_lkp {
 };
 
 static void chan_check(Symbol *sp) {
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
+
   Access *a;
   int i, b = 0, d;
 
-  if (verbose & 1)
+  if (verbose_flags.NeedToPrintGlobalVariables())
     goto report; /* -C -g */
 
   for (a = sp->access; a; a = a->lnk)
@@ -676,6 +679,7 @@ void chanaccess(void) {
   char buf[128];
   extern int Caccess, separate;
   extern short has_code;
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
     if (!walk->entry->owner)
@@ -696,7 +700,7 @@ void chanaccess(void) {
         if (!separate && !walk->entry->context && !has_code && deadvar)
           walk->entry->hidden |= 1; /* auto-hide */
 
-        if (!(verbose & 32) || has_code)
+        if (!verbose_flags.NeedToPrintVerbose() || has_code)
           continue;
 
         printf("spin: %s:0, warning, ", Fname->name);

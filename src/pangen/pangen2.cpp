@@ -8,13 +8,14 @@
 
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
-#include <iostream>
 #include "../spin.hpp"
 #include "../version/version.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "pangen4.hpp"
 #include "pangen5.hpp"
 #include "pangen7.hpp"
 #include "y.tab.h"
+#include <iostream>
 
 #define DELTA 500 /* sets an upperbound on nr of chan names */
 
@@ -381,8 +382,7 @@ void gensrc(void) {
   if (has_remvar)
     fprintf(fd_th, "#define REM_VARS	1\n");
   if (has_remote)
-    fprintf(fd_th, "#define REM_REFS	%d\n",
-            has_remote); /* not yet used */
+    fprintf(fd_th, "#define REM_REFS	%d\n", has_remote); /* not yet used */
   if (has_hidden) {
     fprintf(fd_th, "#define HAS_HIDDEN	%d\n", has_hidden);
     fprintf(fd_th, "#if defined(BFS_PAR) || defined(BFS)\n");
@@ -568,8 +568,8 @@ doless:
 
     if (separate == 1) {
       fprintf(fd_tm, "	if (II == 0)\n");
-      fprintf(fd_tm,
-              "	{ _m = step_claim(trpt->o_pm, trpt->tau, tt, ot, t);\n");
+      fprintf(fd_tm, "	{ _m = step_claim(trpt->o_pm, trpt->tau, tt, ot, "
+                     "t);\n");
       fprintf(fd_tm, "	  if (_m) goto P999; else continue;\n");
       fprintf(fd_tm, "	} else\n");
     }
@@ -2027,7 +2027,7 @@ static void put_seq(Sequence *s, int Tt0, int Tt1) {
   SeqList *h;
   Element *e, *g;
   int a, deadlink;
-
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (0)
     printf("put_seq %d\n", s->frst->seqno);
 
@@ -2073,7 +2073,7 @@ static void put_seq(Sequence *s, int Tt0, int Tt1) {
             && !g->esc) {
           fprintf(fd_tt, "#if 0\n\t/* dead link: */\n");
           deadlink = 1;
-          if (verbose & 32)
+          if (verbose_flags.NeedToPrintVerbose())
             printf("spin: %s:%d, warning, condition is always false\n",
                    g->n->fn ? g->n->fn->name : "", g->n->ln);
         } else
@@ -2465,6 +2465,7 @@ void dump_tree(const char *s, Lextok *p) {
 void putstmnt(FILE *fd, Lextok *now, int m) {
   Lextok *v;
   int i, j;
+  auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!now) {
     fprintf(fd, "0");
@@ -3057,7 +3058,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
             for (w = v->rgt; w; w = w->rgt)
               if (v->lft->sym == w->lft->sym) {
                 log::fatal("cannot use var ('%s') in multiple msg fields",
-                      v->lft->sym->name);
+                           v->lft->sym->name);
               }
         }
       }
@@ -3324,8 +3325,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     } else {
       putstmnt(fd, now->rgt, m);
     }
-
-    if (now->sym->type != CHAN || verbose > 0) {
+    if (now->sym->type != CHAN || verbose_flags.Active()) {
       fprintf(fd, ";\n#ifdef VAR_RANGES");
       fprintf(fd, "\n\t\tlogval(\"");
       withprocname = terse = nocast = 1;
