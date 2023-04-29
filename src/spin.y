@@ -9,6 +9,7 @@
 %{
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
 #include <sys/types.h>
 #include <iostream>
 #ifndef PC
@@ -45,12 +46,12 @@ extern	void	any_runs(Lextok *);
 extern	void	ltl_list(char *, char *);
 extern	void	validref(Lextok *, Lextok *);
 extern  void	sanity_check(Lextok *);
-extern	char	yytext[];
+extern	std::string yytext;
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
 int	ltl_mode = 0;	/* set when parsing an ltl formula */
-int	Expand_Ok = 0, realread = 1, IArgs = 0, NamesNotAdded = 0;
+int	Expand_Ok = 0, realread = 1, need_arguments = 0, NamesNotAdded = 0;
 int	in_for = 0, in_seq = 0, par_cnt = 0;
 int	dont_simplify = 0;
 char	*claimproc = (char *) 0;
@@ -100,7 +101,7 @@ static	int  Embedded = 0, inEventMap = 0, has_ini = 0;
 
 /** PROMELA Grammar Rules **/
 
-program	: units		{ yytext[0] = '\0'; }
+program	: units		{ yytext.clear(); }
 	;
 
 units	: unit
@@ -274,7 +275,7 @@ utype	: TYPEDEF NAME '{' 	{  if (context)
 
 nm	: NAME			{ $$ = $1; }
 	| INAME			{ $$ = $1;
-				  if (IArgs)
+				  if (need_arguments)
 				  log::fatal("invalid use of '%s'", $1->sym->name);
 				}
 	;
@@ -540,7 +541,7 @@ varref	: cmpnd			{ $$ = mk_explicit($1, Expand_Ok, NAME); }
 	;
 
 pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
-				  if ($1->sym->isarray && !in_for && !IArgs)
+				  if ($1->sym->isarray && !in_for && !need_arguments)
 				  {	log::non_fatal("missing array index for '%s'",
 						$1->sym->name);
 				  }
@@ -736,17 +737,17 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				  $$->ln = $1->ln;
 				  $$->fn = $1->fn;
         			}
-	| INAME			{ IArgs++; }
+	| INAME			{ need_arguments++; }
 	  l_par args r_par	{ initialization_ok = 0;
 				  pickup_inline($1->sym, $4, ZN);
-				  IArgs--;
+				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $7; }
 
-	| varref ASGN INAME	{ IArgs++; /* inline call */ }
+	| varref ASGN INAME	{ need_arguments++; /* inline call */ }
 	  l_par args r_par	{ initialization_ok = 0;
 				  pickup_inline($3->sym, $6, $1);
-				  IArgs--;
+				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $9; }
 	| RETURN full_expr	{ $$ = return_statement($2); }	

@@ -349,7 +349,7 @@ int Sym_typ(Lextok *);
 int tl_main(int, char *[]);
 int Width_set(int *, int, Lextok *);
 int yyparse(void);
-int yylex(void);
+
 void AST_track(Lextok *, int);
 void add_seq(Lextok *);
 void alldone(int);

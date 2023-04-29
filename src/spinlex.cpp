@@ -15,6 +15,7 @@
 #include <errno.h>
 #include <optional>
 #include <stdlib.h>
+#include <string>
 
 #define MAXINL 16  /* max recursion depth inline fcts */
 #define MAXPAR 32  /* max params to an inline call */
@@ -49,14 +50,14 @@ extern Symbol *Fname, *oFname;
 extern Symbol *context, *owner;
 extern YYSTYPE yylval;
 extern short has_last, has_code, has_priority;
-extern int IArgs, hastrack, separate, in_for;
+extern int need_arguments, hastrack, separate, in_for;
 extern int implied_semis, ltl_mode, in_seq, par_cnt;
 
 short has_stack = 0;
 int lineno = 1;
 int scope_seq[256], scope_level = 0;
 char CurScope[MAXSCOPESZ];
-char yytext[2048];
+std::string yytext;
 FILE *yyin, *yyout;
 
 static C_Added *c_added, *c_tracked;
@@ -152,20 +153,19 @@ static int isalpha_(int c) { return isalpha(c); /* could be macro */ }
 static int isdigit_(int c) { return isdigit(c); /* could be macro */ }
 
 static void getword(int first, int (*tst)(int)) {
-  int i = 0, c;
-
-  yytext[i++] = (char)first;
+  int c;
+  yytext.push_back((char)first);
   while (tst(c = Getchar())) {
     if (c == EOF) {
       break;
     }
-    yytext[i++] = (char)c;
+    yytext.push_back((char)c);
     if (c == '\\') {
       c = Getchar();
-      yytext[i++] = (char)c; /* no tst */
+      yytext.push_back((char)c);
     }
   }
-  yytext[i] = '\0';
+  yytext.push_back('\0');
 
   Ungetch(c);
 }
@@ -1055,8 +1055,9 @@ static void do_directive(int first) {
 
   getword(c, isalpha_);
 
-  if (strcmp(yytext, "#ident") == 0)
+  if (yytext == "#ident") {
     goto done;
+  }
 
   if ((c = Getchar()) != ' ')
     log::fatal("malformed preprocessor directive - # .");
@@ -1065,7 +1066,7 @@ static void do_directive(int first) {
     log::fatal("malformed preprocessor directive - # .lineno");
 
   getword(c, isdigit_);
-  lineno = atoi(yytext); /* pickup the line number */
+  lineno = std::stoi(yytext); /* pickup the line number */
 
   if ((c = Getchar()) == '\n')
     return; /* no filename */
@@ -1083,7 +1084,7 @@ static void do_directive(int first) {
     log::fatal("malformed preprocessor directive - fname.");
 
   /* strcat(yytext, "\""); */
-  Fname = lookup(yytext);
+  Fname = lookup(yytext.data());
 done:
   while (Getchar() != '\n')
     ;
@@ -1295,11 +1296,6 @@ int follows_token(int c) {
   }
   return 0;
 }
-#define DEFER_LTL
-#ifdef DEFER_LTL
-/* defer ltl formula to the end of the spec
- * no matter where they appear in the original
- */
 
 static int deferred = 0;
 static FILE *defer_fd;
@@ -1349,7 +1345,6 @@ int put_deferred(void) {
   fflush(defer_fd);
   return 1;
 }
-#endif
 
 #define EXPAND_SELECT
 #ifdef EXPAND_SELECT
@@ -1417,7 +1412,6 @@ again:
   yytext[1] = '\0';
   switch (c) {
   case EOF:
-#ifdef DEFER_LTL
     if (!deferred) {
       deferred = 1;
       if (get_deferred()) {
@@ -1426,7 +1420,6 @@ again:
     } else {
       zap_deferred();
     }
-#endif
     return c;
   case '\n': /* newline */
     lineno++;
@@ -1478,14 +1471,14 @@ again:
     getword(c, notquote);
     if (Getchar() != '\"')
       log::fatal("string not terminated", yytext);
-    strcat(yytext, "\"");
-  SymToken(lookup(yytext), STRING)
+    yytext += "\"";
+    SymToken(lookup(yytext.data()), STRING)
 
       case '$':
     getword('\"', notdollar);
     if (Getchar() != '$') log::fatal("ltl definition not terminated", yytext);
-    strcat(yytext, "\"");
-  SymToken(lookup(yytext), STRING)
+    yytext += "\"";
+  SymToken(lookup(yytext.data()), STRING)
 
       case '\'': /* new 3.0.9 */
     c = Getchar();
@@ -1511,7 +1504,7 @@ again:
     long int nr;
     getword(c, isdigit_);
     errno = 0;
-    nr = strtol(yytext, NULL, 10);
+    nr = std::strtol(yytext.c_str(), nullptr, 10);
     if (errno != 0) {
       fprintf(stderr, "spin: value out of range: '%s' read as '%d'\n", yytext,
               (int)nr);
@@ -1522,7 +1515,7 @@ again:
   if (isalpha_(c) || c == '_') {
     getword(c, isalnum_);
     if (!in_comment) {
-      c = check_name(yytext);
+      c = check_name(yytext.data());
 
       /* replace timeout with (timeout) */
       if (c == TIMEOUT && Inlining < 0 && last_token != '(') {
@@ -1575,13 +1568,11 @@ again:
     not_expanded:
 #endif
 
-#ifdef DEFER_LTL
       if (c == LTL && !deferred) {
         if (put_deferred()) {
           goto again;
         }
       }
-#endif
       if (c) {
         last_token = c;
         return c;
@@ -1920,8 +1911,7 @@ int yylex(void) {
     }
   }
   last = c;
-
-  if (IArgs) {
+  if (need_arguments) {
     static int IArg_nst = 0;
 
     if (strcmp(yytext, ",") == 0) {

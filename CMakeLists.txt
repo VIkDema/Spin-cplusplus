@@ -43,6 +43,8 @@ set(SPIN_SOURCES
     src/utils/seed/seed.cpp
     src/utils/verbose/verbose.hpp
     src/utils/verbose/verbose.cpp
+    src/lexer/lexer.hpp
+    src/lexer/lexer.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

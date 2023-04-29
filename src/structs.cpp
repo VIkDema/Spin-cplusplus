@@ -590,7 +590,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
 {
   Lextok *bld = ZN, *x;
   int i, cnt;
-  extern int IArgs;
+  extern int need_arguments;
 
   if (n->sym->type != STRUCT || in_for || is_explicit(n))
     return n;
@@ -609,7 +609,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
   }
 
   if (!Ok || !n->sym->Slst) {
-    if (IArgs)
+    if (need_arguments)
       return n;
     printf("spin: saw '");
     comment(stdout, n, 0);
