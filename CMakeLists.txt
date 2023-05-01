@@ -45,6 +45,17 @@ set(SPIN_SOURCES
     src/utils/verbose/verbose.cpp
     src/lexer/lexer.hpp
     src/lexer/lexer.cpp
+    src/lexer/names.cpp
+    src/lexer/names.hpp
+    src/lexer/file_stream.cpp
+    src/lexer/file_stream.hpp
+    src/lexer/yylex.cpp
+    src/lexer/yylex.hpp
+    src/lexer/helpers.hpp
+    src/lexer/deferred.hpp
+    src/lexer/deferred.cpp
+    src/lexer/scope.hpp
+    src/lexer/scope.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

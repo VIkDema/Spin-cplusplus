@@ -178,7 +178,7 @@ void checkrun(Symbol *parnm, int posno) {
   int i, m;
   int res = 0;
   char buf[16], buf2[16];
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   for (n = runstmnts; n; n = n->rgt) {
     now = n->lft;
     if (now->sym != parnm->context)
@@ -280,7 +280,8 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
         log::non_fatal("unsigned without width-field");
       }
     } else if (n->sym->nbits > 0) {
-      log::non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
+      log::non_fatal("(%s) only an unsigned can have width-field",
+                     n->sym->name);
     }
 
     if (vis) {
@@ -444,7 +445,7 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
       n->lft->sym->ini->val = cnt;
     } else if (n->lft->sym->ini->val != cnt) {
       log::non_fatal("name %s appears twice in mtype declaration",
-                n->lft->sym->name);
+                     n->lft->sym->name);
     }
   }
 
@@ -480,6 +481,25 @@ int ismtype(char *str) /* name to number */
     cnt = 1;
     for (n = lst->mt; n; n = n->rgt) {
       if (strcmp(str, n->lft->sym->name) == 0) {
+        return cnt;
+      }
+      cnt++;
+    }
+  }
+
+  return 0;
+}
+
+int ismtype(const std::string &str) /* name to number */
+{
+  Mtypes_t *lst;
+  Lextok *n;
+  int cnt;
+
+  for (lst = Mtypes; lst; lst = lst->nxt) {
+    cnt = 1;
+    for (n = lst->mt; n; n = n->rgt) {
+      if (str == std::string(n->lft->sym->name)) {
         return cnt;
       }
       cnt++;
@@ -631,7 +651,7 @@ static struct X_lkp {
 };
 
 static void chan_check(Symbol *sp) {
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   Access *a;
   int i, b = 0, d;
@@ -679,7 +699,7 @@ void chanaccess(void) {
   char buf[128];
   extern int Caccess, separate;
   extern short has_code;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
     if (!walk->entry->owner)

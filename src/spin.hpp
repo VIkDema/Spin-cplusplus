@@ -265,8 +265,10 @@ typedef Lextok *Lexptr;
 #endif
 
 /** NEW**/
-int lex(std::optional<bool> pp_mode=std::nullopt);
-
+int ismtype(const std::string &);
+bool IsProctype(const std::string &value);
+bool IsEqname(const std::string &value);
+bool IsUtype(const std::string &value);
 /***** prototype definitions *****/
 Element *eval_sub(Element *);
 Element *get_lab(Lextok *, int);
@@ -327,6 +329,7 @@ int is_inline(void);
 int ismtype(char *);
 int isproctype(char *);
 int isutype(char *);
+
 int Lval_struct(Lextok *, Symbol *, int, int);
 int main(int, char **);
 int pc_value(Lextok *);

@@ -10,6 +10,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
 #include <sys/types.h>
 #include <iostream>
 #ifndef PC

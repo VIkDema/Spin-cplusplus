@@ -72,6 +72,17 @@ int isutype(char *t) {
   return 0;
 }
 
+bool IsUtype(const std::string &value) {
+  UType *tmp;
+
+  for (tmp = Unames; tmp; tmp = tmp->nxt) {
+    if (value == std::string(tmp->nm->name)) {
+      return true;
+    }
+  }
+  return false;
+}
+
 Lextok *getuname(Symbol *t) {
   UType *tmp;
 
@@ -98,7 +109,8 @@ void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
     }
 
     if (n->sym->nbits > 0)
-      log::non_fatal("(%s) only an unsigned can have width-field", n->sym->name);
+      log::non_fatal("(%s) only an unsigned can have width-field",
+                     n->sym->name);
 
     if (Expand_Ok)
       n->sym->hidden |= (4 | 8 | 16); /* formal par */
@@ -663,4 +675,15 @@ int isproctype(char *t) {
       return 1;
   }
   return 0;
+}
+
+bool IsProctype(const std::string &value) {
+  UType *tmp;
+
+  for (tmp = Pnames; tmp; tmp = tmp->nxt) {
+    if (value == std::string(tmp->nm->name)) {
+      return true;
+    }
+  }
+  return false;
 }

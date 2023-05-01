@@ -1,5 +1,6 @@
 #include "pretty_print_viewer.hpp"
 
+#include "../../lexer/lexer.hpp"
 #include "../../spin.hpp"
 #include "y.tab.h"
 #include <cstdio>
@@ -21,7 +22,8 @@ void PrettyPrintViewer::doindent() {
 void PrettyPrintViewer::decrease_indentation() { indent--; }
 void PrettyPrintViewer::increase_indentation() { indent++; }
 
-bool PrettyPrintViewer::should_start_new_line(int current_token, int last_token) {
+bool PrettyPrintViewer::should_start_new_line(int current_token,
+                                              int last_token) {
   return (current_token == C_DECL || current_token == C_STATE ||
           current_token == C_TRACK || current_token == SEP ||
           current_token == DO || current_token == IF ||
@@ -54,8 +56,9 @@ void PrettyPrintViewer::start_new_line(std::string &buf) {
   in_c_decl = 0;
 }
 
-void PrettyPrintViewer::append_space_if_needed(int current_token, int last_token,
-                                         std::string &buffer) {
+void PrettyPrintViewer::append_space_if_needed(int current_token,
+                                               int last_token,
+                                               std::string &buffer) {
   if (current_token != ':' && current_token != SEMI && current_token != ',' &&
       current_token != '(' && current_token != '#' && last_token != '#' &&
       current_token != ARROW && last_token != ARROW && current_token != '.' &&
@@ -76,9 +79,13 @@ void PrettyPrintViewer::append_space_if_needed(int current_token, int last_token
 
 void PrettyPrintViewer::view() {
   std::string buffer = "";
-  int current_token, last_token = 0;
+  int current_token = 0, last_token = 0;
+  lexer::Lexer lexer(true);
+  while ((current_token = lexer.lex()) != EOF) {
+    std::string temp;
+    map_token_to_string(current_token, temp);
+    //std::cout << "DEBUG: token - " << current_token << " string - " << temp << std::endl;
 
-  while ((current_token = lex(true)) != EOF) {
     if ((last_token == IF || last_token == DO) && current_token != SEP) {
       decrease_indentation();
     }
