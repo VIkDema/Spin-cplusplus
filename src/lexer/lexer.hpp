@@ -45,9 +45,11 @@ public:
     }
     ltl_mode_ = ltl_mode;
   }
-  bool HasLtl(){
-    return has_ltl_;
-  }
+  bool HasLtl() { return has_ltl_; }
+  int GetInSeq() { return in_seq_; }
+  void SetInSeq(int in_seq) { in_seq_ = in_seq; }
+  int GetImpliedSemis() { return implied_semis_; }
+  void SetImpliedSemis(int implied_semis) { implied_semis_ = implied_semis; }
 
 private:
   int pre_proc();
@@ -79,5 +81,7 @@ private:
   unsigned char in_comment_;
   bool ltl_mode_; /* set when parsing an ltl formula */
   bool has_ltl_;
+  int implied_semis_;
+  int in_seq_;
 };
 } // namespace lexer

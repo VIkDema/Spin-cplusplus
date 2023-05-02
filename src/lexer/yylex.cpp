@@ -10,7 +10,7 @@ extern std::string yytext;
 extern int need_arguments;
 extern YYSTYPE yylval;
 extern Symbol *context, *owner;
-static lexer::Lexer lexer_;
+lexer::Lexer lexer_;
 
 namespace {
 constexpr std::array<int, 3> kConditionElse = {SEMI, ARROW, FI};

@@ -312,7 +312,7 @@ void alldone(int estatus) {
     /* -oN options 1..5 are ignored in simulations */
     if (old_priority_rules)
       strcat(pan_runtime, "-o6 ");
-    if (!implied_semis)
+    if (!lexer_.GetImpliedSemis())
       strcat(pan_runtime, "-o7 ");
     if (no_print)
       strcat(pan_runtime, "-b ");
@@ -803,7 +803,7 @@ int optimizations(int nr) {
     }
     return 0; /* no break */
   case '7':
-    implied_semis = 0;
+    lexer_.SetImpliedSemis(0);
     if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: no implied semi-colons (pre version 6.3)\n");
     }

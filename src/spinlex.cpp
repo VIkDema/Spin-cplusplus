@@ -51,7 +51,7 @@ extern Symbol *Fname, *oFname;
 extern Symbol *context, *owner;
 extern YYSTYPE yylval;
 extern int need_arguments, hastrack, separate;
-extern int implied_semis, in_seq;
+extern int implied_semis;
 extern lexer::Lexer lexer_;
 short has_stack = 0;
 int lineno = 1;
@@ -929,6 +929,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
 }
 
 void precondition(char *q) {
+  #if 0
   int c, nest = 1;
 
   for (;;) {
@@ -950,9 +951,13 @@ void precondition(char *q) {
     }
   }
   log::fatal("cannot happen"); /* unreachable */
+  #endif
 }
 
 Symbol *prep_inline(Symbol *s, Lextok *nms) {
+  return nullptr;
+  #if 0
+
   int c, nest = 1, dln, firstchar, cnr;
   char *p;
   Lextok *t;
@@ -1092,4 +1097,5 @@ more:
     break;
   }
   goto more;
+  #endif
 }

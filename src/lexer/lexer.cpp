@@ -37,12 +37,12 @@ Lexer::Lexer()
     : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
       last_token_(0), pp_mode_(false), temp_has_(0), parameter_count_(0),
       has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
-      ltl_mode_(false), has_ltl_(false) {}
+      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
 Lexer::Lexer(bool pp_mode)
     : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
       last_token_(0), pp_mode_(pp_mode), temp_has_(0), parameter_count_(0),
       has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
-      ltl_mode_(false), has_ltl_(false) {}
+      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
 
 void Lexer::SetLastToken(int last_token) { last_token_ = last_token; }
 int Lexer::GetLastToken() { return last_token_; }
@@ -301,7 +301,7 @@ bool Lexer::ScatTo(int stop, int (*Predicate)(int), std::string &buf,
 }
 
 int Lexer::lex() {
-  int new_char;
+  int new_char = 0;
 again:
   new_char = stream_.GetChar();
 
@@ -322,7 +322,8 @@ again:
   case '\n': // new_line
   {
     stream_.IncLineNumber();
-    if (parameter_count_ == 0 && helpers::IsFollowsToken(last_token_)) {
+    if (implied_semis_ && in_seq_ && parameter_count_ == 0 &&
+        helpers::IsFollowsToken(last_token_)) {
       if (last_token_ == '}') {
         do {
           new_char = stream_.GetChar();
@@ -452,7 +453,7 @@ again:
         goto again;
       }
     not_expanded:
-      if (new_char == LTL && !deferred_.GetDeferred()) {
+      if (new_char == LTL && !deferred_.IsDiferred()) {
         if (deferred_.PutDeffered()) {
           goto again;
         }

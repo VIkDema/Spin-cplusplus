@@ -993,7 +993,6 @@ static void putproc(ProcList *p) {
     fprintf(fd_th, "extern uchar reached%d[];\n", Pid_nr);
     fprintf(fd_th, "\n#define _nstates%d	%d\t/* %s */\n", Pid_nr,
             p->s->maxel, p->n->name);
-#endif
     fprintf(fd_th, "extern short src_ln%d[];\n", Pid_nr);
     fprintf(fd_th, "extern uchar *loopstate%d;\n", Pid_nr);
     fprintf(fd_th, "extern S_F_MAP src_file%d[];\n", Pid_nr);

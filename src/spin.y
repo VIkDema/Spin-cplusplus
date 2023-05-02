@@ -45,7 +45,6 @@ extern	std::string yytext;
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
 int	Expand_Ok = 0, realread = 1, need_arguments = 0, NamesNotAdded = 0;
-int	in_seq = 0;
 int	dont_simplify = 0;
 char	*claimproc = (char *) 0;
 char	*eventmap = (char *) 0;
@@ -258,11 +257,11 @@ utype	: TYPEDEF NAME '{' 	{  if (context)
 					$2->sym->name);
 				   }
 				   owner = $2->sym;
-				   in_seq = $1->ln;
+				   lexer_.SetInSeq($1->ln);
 				}
 	  decl_lst '}'		{ setuname($5);
 				  owner = ZS;
-				  in_seq = 0;
+				  lexer_.SetInSeq(0);
 				}
 	;
 
@@ -348,9 +347,9 @@ cexpr	: C_EXPR		{ Symbol *s;
 				}
 	;
 
-body	: '{'			{ open_seq(1); in_seq = $1->ln; }
+body	: '{'			{ open_seq(1); lexer_.SetInSeq($1->ln); }
           sequence OS		{ add_seq(Stop); }
-          '}'			{ $$->sq = close_seq(0); in_seq = 0;
+          '}'			{ $$->sq = close_seq(0); lexer_.SetInSeq(0);
 				  if (scope_level != 0)
 				  {	log::non_fatal("missing '}' ?");
 					scope_level = 0;
