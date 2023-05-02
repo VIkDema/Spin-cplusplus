@@ -8,6 +8,7 @@
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
+#include "lexer/lexer.hpp"
 #include "y.tab.h"
 
 struct UType {
@@ -17,7 +18,8 @@ struct UType {
 };
 
 extern Symbol *Fname;
-extern int lineno, depth, Expand_Ok, has_hidden, in_for;
+extern int lineno, depth, Expand_Ok, has_hidden;
+extern lexer::Lexer lexer_;
 
 Symbol *owner;
 
@@ -604,7 +606,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
   int i, cnt;
   extern int need_arguments;
 
-  if (n->sym->type != STRUCT || in_for || is_explicit(n))
+  if (n->sym->type != STRUCT || lexer_.GetInFor() || is_explicit(n))
     return n;
 
   if (n->rgt && n->rgt->ntyp == '.' && n->rgt->lft && n->rgt->lft->sym &&

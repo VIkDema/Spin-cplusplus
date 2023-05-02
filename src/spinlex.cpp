@@ -7,6 +7,7 @@
  */
 
 #include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -49,10 +50,9 @@ extern ProcList *ready;
 extern Symbol *Fname, *oFname;
 extern Symbol *context, *owner;
 extern YYSTYPE yylval;
-extern short has_last, has_code, has_priority;
-extern int need_arguments, hastrack, separate, in_for;
-extern int implied_semis, ltl_mode, in_seq, par_cnt;
-
+extern int need_arguments, hastrack, separate;
+extern int implied_semis, in_seq;
+extern lexer::Lexer lexer_;
 short has_stack = 0;
 int lineno = 1;
 int scope_seq[256], scope_level = 0;
@@ -64,7 +64,6 @@ static C_Added *c_added, *c_tracked;
 static IType *Inline_stub[MAXINL];
 static char *ReDiRect;
 static char *Inliner[MAXINL], IArg_cont[MAXPAR][MAXLEN];
-static unsigned char in_comment = 0;
 static int IArgno = 0, Inlining = -1;
 static int last_token = 0;
 
@@ -122,7 +121,7 @@ void gencodetable(FILE *fd) {
   fprintf(fd, "	char *c; char *t;\n");
   fprintf(fd, "} code_lookup[] = {\n");
 
-  if (has_code)
+  if (lexer_.GetHasCode())
     for (tmp = seqnames; tmp; tmp = tmp->nxt)
       if (tmp->nm->type == CODE_FRAG || tmp->nm->type == CODE_DECL) {
         fprintf(fd, "\t{ \"%s\", ", tmp->nm->name);

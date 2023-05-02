@@ -1,11 +1,3 @@
-/***** spin: spin.y *****/
-
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 %{
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
@@ -26,6 +18,8 @@
 #define PART1	"place initialized chan decl of "
 #define PART2	" at start of proctype "
 
+extern lexer::Lexer lexer_;
+
 static	Lextok *ltl_to_string(Lextok *);
 
 extern  Symbol	*context, *owner;
@@ -38,8 +32,8 @@ extern	void	safe_break(void);
 extern	void	restore_break(void);
 extern  int	u_sync, u_async, dumptab, scope_level;
 extern	int	initialization_ok;
-extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np, has_priority;
-extern	short	has_code, has_state, has_ltl, has_io;
+extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np;
+extern	short	has_state, has_io;
 extern	void	check_mtypes(Lextok *, Lextok *);
 extern	void	count_runs(Lextok *);
 extern	void	no_internals(Lextok *);
@@ -51,9 +45,8 @@ extern	std::string yytext;
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
-int	ltl_mode = 0;	/* set when parsing an ltl formula */
 int	Expand_Ok = 0, realread = 1, need_arguments = 0, NamesNotAdded = 0;
-int	in_for = 0, in_seq = 0, par_cnt = 0;
+int	in_seq = 0;
 int	dont_simplify = 0;
 char	*claimproc = (char *) 0;
 char	*eventmap = (char *) 0;
@@ -122,10 +115,10 @@ unit	: proc		/* proctype { }       */
 	| error
 	;
 
-l_par	: '('		{ par_cnt++; }
+l_par	: '('		{ lexer_.inc_parameter_count();}
 	;
 
-r_par	: ')'		{ par_cnt--; }
+r_par	: ')'		{ lexer_.des_parameter_count(); }
 	;
 
 
@@ -201,9 +194,9 @@ init	: INIT		{ context = $1->sym; }
         		}
 	;
 
-ltl	: LTL optname2	{ ltl_mode = 1; ltl_name = $2->sym->name; }
+ltl	: LTL optname2	{ lexer_.SetLtlMode(true);  ltl_name = $2->sym->name; }
 	  ltl_body	{ if ($4) ltl_list($2->sym->name, $4->sym->name);
-			  ltl_mode = 0; has_ltl = 1;
+			  lexer_.SetLtlMode(false);
 			}
 	;
 
@@ -296,19 +289,23 @@ c_fcts	: ccode			{ /* leaves pseudo-inlines with sym of
 
 cstate	: C_STATE STRING STRING	{
 				  c_state($2->sym, $3->sym, ZS);
-				  has_code = has_state = 1;
+				  lexer_.SetHasCode(1);
+				  has_state = 1;
 				}
 	| C_TRACK STRING STRING {
 				  c_track($2->sym, $3->sym, ZS);
-				  has_code = has_state = 1;
+				  lexer_.SetHasCode(1);
+				  has_state = 1;
 				}
 	| C_STATE STRING STRING	STRING {
 				  c_state($2->sym, $3->sym, $4->sym);
-				  has_code = has_state = 1;
+				  lexer_.SetHasCode(1);
+				  has_state = 1;
 				}
 	| C_TRACK STRING STRING STRING {
 				  c_track($2->sym, $3->sym, $4->sym);
-				  has_code = has_state = 1;
+				   lexer_.SetHasCode(1);
+				   has_state = 1;
 				}
 	;
 
@@ -320,7 +317,7 @@ ccode	: C_CODE		{ Symbol *s;
 				  $$->sym = s;
 				  $$->ln = $1->ln;
 				  $$->fn = $1->fn;
-				  has_code = 1;
+				  lexer_.SetHasCode(1);
 				}
 	| C_DECL		{ Symbol *s;
 				  NamesNotAdded++;
@@ -331,7 +328,7 @@ ccode	: C_CODE		{ Symbol *s;
 				  $$->sym = s;
 				  $$->ln = $1->ln;
 				  $$->fn = $1->fn;
-				  has_code = 1;
+				  lexer_.SetHasCode(1);
 				}
 	;
 cexpr	: C_EXPR		{ Symbol *s;
@@ -348,7 +345,7 @@ cexpr	: C_EXPR		{ Symbol *s;
 				  $$->ln = $1->ln;
 				  $$->fn = $1->fn;
 				  no_side_effects(s->name);
-				  has_code = 1;
+				  lexer_.SetHasCode(1);
 				}
 	;
 
@@ -542,7 +539,7 @@ varref	: cmpnd			{ $$ = mk_explicit($1, Expand_Ok, NAME); }
 	;
 
 pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
-				  if ($1->sym->isarray && !in_for && !need_arguments)
+				  if ($1->sym->isarray && !lexer_.GetInFor() && !need_arguments)
 				  {	log::non_fatal("missing array index for '%s'",
 						$1->sym->name);
 				  }
@@ -578,7 +575,7 @@ stmnt	: Special		{ $$ = $1; initialization_ok = 0; }
 				}
 	;
 
-for_pre : FOR l_par		{ in_for = 1; }
+for_pre : FOR l_par		{ lexer_.SetInFor(1);}
 	  varref		{ trapwonly($4 /*, "for" */);
 				  pushbreak(); /* moved up */
 				  $$ = $4;
@@ -600,11 +597,11 @@ Special : varref RCV		{ Expand_Ok++; }
 				  any_runs($4);
 				}
 	| for_pre ':' expr DOTDOT expr r_par	{
-				  for_setup($1, $3, $5); in_for = 0;
+				  for_setup($1, $3, $5); lexer_.SetInFor(0);
 				}
 	  for_post		{ $$ = for_body($1, 1);
 				}
-	| for_pre IN varref r_par	{ $$ = for_index($1, $3); in_for = 0;
+	| for_pre IN varref r_par	{ $$ = for_index($1, $3);  lexer_.SetInFor(0);
 				}
 	  for_post		{ $$ = for_body($5, 1);
 				}
@@ -680,7 +677,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				  if ($1->sym->type == CHAN)
 				   log::fatal("arithmetic on chan id's");
 				}
-	| SET_P l_par two_args r_par	{ $$ = nn(ZN, SET_P, $3, ZN); has_priority++; }
+	| SET_P l_par two_args r_par	{ $$ = nn(ZN, SET_P, $3, ZN); lexer_.IncHasPriority(); }
 	| PRINT	l_par STRING	{ realread = 0; }
 	  prargs r_par		{ $$ = nn($3, PRINT, $5, ZN); realread = 1; }
 	| PRINTM l_par varref r_par	{ $$ = nn(ZN, PRINTM, $3, ZN); }
@@ -842,7 +839,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 				}
 	| LEN l_par varref r_par	{ $$ = nn($3, LEN, $3, ZN); }
 	| ENABLED l_par expr r_par	{ $$ = nn(ZN, ENABLED, $3, ZN); has_enabled++; }
-	| GET_P l_par expr r_par	{ $$ = nn(ZN, GET_P, $3, ZN); has_priority++; }
+	| GET_P l_par expr r_par	{ $$ = nn(ZN, GET_P, $3, ZN); lexer_.IncHasPriority(); }
 	| varref RCV		{ Expand_Ok++; }
 	  '[' rargs ']'		{ Expand_Ok--; has_io++;
 				  $$ = nn($1, 'R', $1, $5);
@@ -876,7 +873,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 	;
 
 Opt_priority:	/* none */	{ $$ = ZN; }
-	| PRIORITY CONST	{ $$ = $2; has_priority++; }
+	| PRIORITY CONST	{ $$ = $2; lexer_.IncHasPriority(); }
 	;
 
 full_expr:	expr		{ $$ = $1; }

@@ -6,6 +6,7 @@
  * Tool documentation is available at http://spinroot.com
  */
 
+#include "../lexer/lexer.hpp"
 #include "../spin.hpp"
 #include "y.tab.h"
 #include <assert.h>
@@ -25,8 +26,7 @@ static Symbol lastdef;
 static int lastfrom;
 static SRC *frst = (SRC *)0;
 static SRC *skip = (SRC *)0;
-
-extern int ltl_mode;
+extern lexer::Lexer lexer_;
 
 extern void sr_mesg(FILE *, int, int, const char *);
 extern Lextok **find_mtype_list(const char *);
@@ -362,7 +362,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     Cat1("!=");
     break;
   case EQ:
-    if (ltl_mode && now->lft->ntyp == 'p' &&
+    if (lexer_.IsLtlMode() && now->lft->ntyp == 'p' &&
         now->rgt->ntyp == 'q') /* remote ref */
     {
       Lextok *p = now->lft->lft;
@@ -584,7 +584,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case 'p':
-    if (ltl_mode) {
+    if (lexer_.IsLtlMode()) {
       fprintf(fd, "%s", now->lft->sym->name); /* proctype */
       if (now->lft->lft) {
         fprintf(fd, "[");

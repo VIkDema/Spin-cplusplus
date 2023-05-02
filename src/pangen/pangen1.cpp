@@ -28,7 +28,7 @@ extern Queue *qtab;
 extern Symbol *Fname;
 extern int lineno, verbose, Pid_nr, separate, old_scope_rules, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
-extern short has_sorted, has_random, has_provided, has_priority;
+extern short has_sorted, has_random, has_provided;
 extern Queue *ltab[];
 
 int Npars = 0, u_sync = 0, u_async = 0, hastrack = 1;

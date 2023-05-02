@@ -9,10 +9,13 @@
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "lexer/lexer.hpp"
+
 #include "y.tab.h"
 
+extern lexer::Lexer lexer_;
 extern Symbol *Fname;
-extern int nr_errs, lineno, in_for, old_scope_rules, s_trail;
+extern int nr_errs, lineno,  old_scope_rules, s_trail;
 extern short has_unless, has_badelse, has_xu;
 extern char CurScope[MAXSCOPESZ];
 
@@ -944,10 +947,10 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
     add_seq(nn(ZN, 'c', nn(z3, LT, z3, z2), ZN)); /* condition */
 
     /* retrieve  message from the right slot -- for now: rotate contents */
-    in_for = 0;
+    lexer_.SetInFor(0);
     add_seq(nn(a5, 'r', a5, expand(a3, 1))); /* receive */
     add_seq(nn(a5, 's', a5, expand(a3, 1))); /* put back in to rotate */
-    in_for = 1;
+    lexer_.SetInFor(1);
     return z3;
   } else {
     Lextok *leaf = a5;

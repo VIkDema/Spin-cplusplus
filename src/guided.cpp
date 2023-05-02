@@ -7,6 +7,7 @@
  */
 
 #include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -19,7 +20,8 @@ extern Element *Al_El;
 extern Symbol *Fname, *oFname;
 extern int lineno, xspin, jumpsteps, depth, merger, cutoff;
 extern int nproc, nstop, Tval, ntrail, columns;
-extern short Have_claim, Skip_claim, has_code;
+extern short Have_claim, Skip_claim;
+extern lexer::Lexer lexer_;
 extern void ana_src(int, int);
 extern char **trailfilename;
 
@@ -119,7 +121,7 @@ void match_trail(void) {
 
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (has_code) {
+  if (lexer_.GetHasCode()) {
     printf("spin: important:\n");
     printf("  =======================================warning====\n");
     printf("  this model contains embedded c code statements\n");

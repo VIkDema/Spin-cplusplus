@@ -10,6 +10,7 @@ extern std::string yytext;
 extern int need_arguments;
 extern YYSTYPE yylval;
 extern Symbol *context, *owner;
+static lexer::Lexer lexer_;
 
 namespace {
 constexpr std::array<int, 3> kConditionElse = {SEMI, ARROW, FI};
@@ -65,16 +66,15 @@ std::string TokenToString(int temp_token) {
 int yylex() {
   static int last_token = 0;
   static int hold_token = 0;
-  static lexer::Lexer lexer;
 
   int temp_token;
 
   if (hold_token) {
     temp_token = hold_token;
     hold_token = 0;
-    lexer.SetLastToken(temp_token);
+    lexer_.SetLastToken(temp_token);
   } else {
-    temp_token = lexer.lex();
+    temp_token = lexer_.lex();
     if ((last_token == ELSE &&
          std::find(kConditionElse.begin(), kConditionElse.end(), temp_token) ==
              kConditionElse.end()) ||
@@ -83,7 +83,7 @@ int yylex() {
                    temp_token) == kConditionGuillement.end())) {
       hold_token = temp_token;
       last_token = 0;
-      lexer.SetLastToken(SEMI);
+      lexer_.SetLastToken(SEMI);
       return SEMI;
     }
 
@@ -91,7 +91,7 @@ int yylex() {
       if (context) {
         owner = ZS;
       }
-      hold_token = lexer.lex();
+      hold_token = lexer_.lex();
       if (hold_token == '}' || hold_token == ARROW || hold_token == SEMI) {
         temp_token = hold_token;
         hold_token = 0;
@@ -105,40 +105,40 @@ int yylex() {
 
     if (yytext == ",") {
 
-      lexer.add_inline_argument();
-      lexer.inc_index_argument();
+      lexer_.add_inline_argument();
+      lexer_.inc_index_argument();
 
     } else if (yytext == "(") {
 
-      lexer.inc_index_argument();
+      lexer_.inc_index_argument();
 
-      if (lexer.get_inline_nesting() == 0) {
-        lexer.add_inline_argument();
+      if (lexer_.get_inline_nesting() == 0) {
+        lexer_.add_inline_argument();
       } else {
-        lexer.update_inline_argument(yytext);
+        lexer_.update_inline_argument(yytext);
       }
     } else if (yytext == ")") {
 
-      if (lexer.get_inline_nesting() > 0) {
-        lexer.update_inline_argument(yytext);
+      if (lexer_.get_inline_nesting() > 0) {
+        lexer_.update_inline_argument(yytext);
       }
 
-      lexer.des_inline_nesting();
+      lexer_.des_inline_nesting();
 
     } else if (temp_token == CONST && yytext[0] == '\'') {
 
       yytext = fmt::format("\'{}\'", (char)yylval->val);
-      lexer.update_inline_argument(yytext);
+      lexer_.update_inline_argument(yytext);
 
     } else if (temp_token == CONST) {
 
       yytext = fmt::format("{}", yylval->val);
-      lexer.update_inline_argument(yytext);
+      lexer_.update_inline_argument(yytext);
 
     } else {
 
       yytext = TokenToString(temp_token);
-      lexer.update_inline_argument(yytext);
+      lexer_.update_inline_argument(yytext);
     }
   }
   return temp_token;

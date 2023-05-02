@@ -8,9 +8,10 @@
 
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
+#include "../lexer/lexer.hpp"
 #include "../spin.hpp"
-#include "../version/version.hpp"
 #include "../utils/verbose/verbose.hpp"
+#include "../version/version.hpp"
 #include "pangen4.hpp"
 #include "pangen5.hpp"
 #include "pangen7.hpp"
@@ -42,7 +43,7 @@ extern int m_loss, has_remote, has_remvar, merger, rvopt, separate;
 extern int Ntimeouts, Etimeouts, deadvar, old_scope_rules, old_priority_rules;
 extern int u_sync, u_async, nrRdy, Unique;
 extern int GenCode, IsGuard, Level, TestOnly;
-extern int globmin, globmax, ltl_mode, dont_simplify;
+extern int globmin, globmax, dont_simplify;
 
 extern short has_stack;
 extern char *NextLab[64]; /* must match value in dstep.c:18 */
@@ -55,8 +56,6 @@ int OkBreak = -1, has_hidden = 0; /* has_hidden set in sym.c and structs.c */
 short nocast = 0;                 /* to turn off casts in lvalues */
 short terse = 0;                  /* terse printing of varnames */
 short no_arrays = 0;
-short has_last = 0;     /* spec refers to _last */
-short has_priority = 0; /* spec refers to _priority */
 short has_badelse = 0;  /* spec contains else combined with chan refs */
 short has_enabled = 0;  /* spec contains enabled() */
 short has_pcvalue = 0;  /* spec contains pc_value() */
@@ -66,14 +65,13 @@ short has_random = 0;   /* spec contains `??' (random-recv) operator */
 short has_xu = 0;       /* spec contains xr or xs assertions */
 short has_unless = 0;   /* spec contains unless statements */
 short has_provided = 0; /* spec contains PROVIDED clauses on procs */
-short has_code = 0;     /* spec contains c_code, c_expr, c_state */
-short has_ltl = 0;      /* has inline ltl formulae */
-int mstp = 0;           /* max nr of state/process */
-int claimnr = -1;       /* claim process, if any */
-int eventmapnr = -1;    /* event trace, if any */
-int Pid_nr;             /* proc currently processed */
-int multi_oval;         /* set in merges, used also in pangen4.c */
-int in_settr;           /* avoid quotes inside quotes */
+extern lexer::Lexer lexer_;
+int mstp = 0;        /* max nr of state/process */
+int claimnr = -1;    /* claim process, if any */
+int eventmapnr = -1; /* event trace, if any */
+int Pid_nr;          /* proc currently processed */
+int multi_oval;      /* set in merges, used also in pangen4.c */
+int in_settr;        /* avoid quotes inside quotes */
 
 #define MAXMERGE 256 /* max nr of bups per merge sequence */
 
@@ -349,10 +347,10 @@ void gensrc(void) {
     fprintf(fd_th, "#ifndef NFAIR\n");
     fprintf(fd_th, "#define NFAIR	2	/* must be >= 2 */\n");
     fprintf(fd_th, "#endif\n");
-    if (has_last)
-      fprintf(fd_th, "#define HAS_LAST	%d\n", has_last);
-    if (has_priority && !old_priority_rules)
-      fprintf(fd_th, "#define HAS_PRIORITY	%d\n", has_priority);
+    if (lexer_.GetHasLast())
+      fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
+    if (lexer_.GetHasPriority() && !old_priority_rules)
+      fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
     goto doless;
   }
 
@@ -390,17 +388,17 @@ void gensrc(void) {
                    "declared hidden\n");
     fprintf(fd_th, "#endif\n");
   }
-  if (has_last)
-    fprintf(fd_th, "#define HAS_LAST	%d\n", has_last);
-  if (has_priority && !old_priority_rules)
-    fprintf(fd_th, "#define HAS_PRIORITY	%d\n", has_priority);
+  if (lexer_.GetHasLast())
+    fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
+  if (lexer_.GetHasPriority() && !old_priority_rules)
+    fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
   if (has_sorted)
     fprintf(fd_th, "#define HAS_SORTED	%d\n", has_sorted);
   if (m_loss)
     fprintf(fd_th, "#define M_LOSS\n");
   if (has_random)
     fprintf(fd_th, "#define HAS_RANDOM	%d\n", has_random);
-  if (has_ltl)
+  if (lexer_.HasLtl())
     fprintf(fd_th, "#define HAS_LTL	1\n");
   fprintf(fd_th,
           "#define HAS_CODE	1\n"); /* could also be set to has_code */
@@ -413,7 +411,7 @@ void gensrc(void) {
   fprintf(fd_th, "#endif\n");
   if (has_stack)
     fprintf(fd_th, "#define HAS_STACK	%d\n", has_stack);
-  if (has_enabled || (has_priority && !old_priority_rules))
+  if (has_enabled || (lexer_.GetHasPriority() && !old_priority_rules))
     fprintf(fd_th, "#define HAS_ENABLED	1\n");
   if (has_unless)
     fprintf(fd_th, "#define HAS_UNLESS	%d\n", has_unless);
@@ -423,8 +421,8 @@ void gensrc(void) {
     fprintf(fd_th, "#define HAS_PCVALUE	%d\n", has_pcvalue);
   if (has_badelse)
     fprintf(fd_th, "#define HAS_BADELSE	%d\n", has_badelse);
-  if (has_enabled || (has_priority && !old_priority_rules) || has_pcvalue ||
-      has_badelse || has_last) {
+  if (has_enabled || (lexer_.GetHasPriority() && !old_priority_rules) ||
+      has_pcvalue || has_badelse || lexer_.GetHasLast()) {
     fprintf(fd_th, "#ifndef NOREDUCE\n");
     fprintf(fd_th, "	#define NOREDUCE	1\n");
     fprintf(fd_th, "#endif\n");
@@ -1576,7 +1574,7 @@ static void doforward(FILE *tm_fd, Element *e) {
     fprintf(tm_fd, ";\n\t\tif (trpt->o_pm&1)\n\t\t");
     fprintf(tm_fd, "\tuerror(\"non-determinism in D_proctype\")");
   }
-  if (deadvar && !has_code)
+  if (deadvar && !lexer_.GetHasCode())
     for (u = e->dead; u; u = u->nxt) {
       fprintf(tm_fd, ";\n\t\t");
       fprintf(tm_fd, "if (TstOnly) return 1; /* TT */\n");
@@ -2465,7 +2463,7 @@ void dump_tree(const char *s, Lextok *p) {
 void putstmnt(FILE *fd, Lextok *now, int m) {
   Lextok *v;
   int i, j;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!now) {
     fprintf(fd, "0");
@@ -2739,7 +2737,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       Bailout(fd, ";");
     }
 
-    if (has_enabled || has_priority)
+    if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "\n\t\tif (TstOnly) return 1; /* T1 */");
 
     if (u_sync && !u_async && rvopt)
@@ -2942,7 +2940,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
           Bailout(fd, "");
         }
       }
-      if (has_enabled || has_priority)
+      if (has_enabled || lexer_.GetHasPriority())
         fprintf(fd, ";\n\t\tif (TstOnly) return 1 /* T2 */");
     } else /* random receive: val 1 or 3 */
     {
@@ -2979,7 +2977,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       fprintf(fd, "))) ");
       Bailout(fd, "");
 
-      if (has_enabled || has_priority) {
+      if (has_enabled || lexer_.GetHasPriority()) {
         fprintf(fd, ";\n\t\tif (TstOnly) return 1 /* T2 */");
       }
       if (!GenCode) {
@@ -3292,7 +3290,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       break;
     }
 
-    if (has_enabled || has_priority)
+    if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "if (TstOnly) return 1; /* T3 */\n\t\t");
     _isok++;
 
@@ -3341,7 +3339,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     break;
 
   case PRINT:
-    if (has_enabled || has_priority)
+    if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "if (TstOnly) return 1; /* T4 */\n\t\t");
 #ifdef PRINTF
     fprintf(fd, "printf(%s", now->sym->name);
@@ -3360,7 +3358,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       s = now->lft->sym->mtype_name->name;
     }
 
-    if (has_enabled || has_priority) {
+    if (has_enabled || lexer_.GetHasPriority()) {
       fprintf(fd, "if (TstOnly) return 1; /* T5 */\n\t\t");
     }
     fprintf(fd, "/* YY */ printm(");
@@ -3408,7 +3406,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
   case C_CODE:
     if (now->sym)
       fprintf(fd, "/* %s */\n\t\t", now->sym->name);
-    if (has_enabled || has_priority)
+    if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "if (TstOnly) return 1; /* T6 */\n\t\t");
 
     if (now->sym)
@@ -3425,7 +3423,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     break;
 
   case ASSERT:
-    if (has_enabled || has_priority)
+    if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "if (TstOnly) return 1; /* T7 */\n\t\t");
 
     cat3("spin_assert(", now->lft, ", ");
@@ -3448,7 +3446,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       break;
     }
 
-    if (has_enabled || has_priority) {
+    if (has_enabled || lexer_.GetHasPriority()) {
       fprintf(fd, "if (TstOnly)\n\t\t\t");
       fprintf(fd, "return (II+1 == now._nr_pr);\n\t\t");
     }
@@ -3616,7 +3614,7 @@ void putremote(FILE *fd, Lextok *n, int m) /* remote reference */
       putstmnt(fd, n->lft->lft, m); /* pid */
       fprintf(fd, "]");
     }
-    if (ltl_mode) {
+    if (lexer_.IsLtlMode()) {
       fprintf(fd, ":%s", n->sym->name);
     } else {
       fprintf(fd, ".%s", n->sym->name);

@@ -1,10 +1,10 @@
 #pragma once
 #include "deferred.hpp"
 #include "file_stream.hpp"
+#include "scope.hpp"
 #include <optional>
 #include <string>
 #include <vector>
-#include "scope.hpp"
 
 namespace lexer {
 class Lexer {
@@ -25,6 +25,30 @@ public:
   void des_inline_nesting();
   std::size_t get_inline_nesting();
 
+  void inc_parameter_count() { parameter_count_++; }
+  void des_parameter_count() { parameter_count_--; }
+
+  void SetHasCode(int has_code) { has_code_ = has_code; }
+  void SetHasPriority(int has_priority) { has_priority_ = has_priority; }
+  void SetInFor(int in_for) { in_for_ = in_for; }
+  void IncHasPriority() { has_priority_++; }
+
+  short GetHasCode() { return has_code_; }
+  short GetHasPriority() { return has_priority_; }
+  short GetHasLast() { return has_last_; }
+  int GetInFor() { return in_for_; }
+
+  bool IsLtlMode() { return ltl_mode_; }
+  void SetLtlMode(bool ltl_mode) {
+    if (ltl_mode) {
+      has_ltl_ = true;
+    }
+    ltl_mode_ = ltl_mode;
+  }
+  bool HasLtl(){
+    return has_ltl_;
+  }
+
 private:
   int pre_proc();
   void do_directive(int first_char);
@@ -42,9 +66,18 @@ private:
   std::size_t curr_inline_argument_;
   std::size_t argument_nesting_;
   int last_token_;
-  [[maybe_unused]] bool pp_mode_;
+  bool pp_mode_;
 
   std::string temp_hold_;
   int temp_has_;
+
+  int parameter_count_;
+  int has_last_;
+  short has_code_;     /* spec contains c_code, c_expr, c_state */
+  short has_priority_; /* spec refers to _priority */
+  int in_for_;
+  unsigned char in_comment_;
+  bool ltl_mode_; /* set when parsing an ltl formula */
+  bool has_ltl_;
 };
 } // namespace lexer

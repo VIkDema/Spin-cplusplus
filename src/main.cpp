@@ -9,6 +9,7 @@
 #include "utils/format/preprocessed_file_viewer.hpp"
 #include "utils/format/pretty_print_viewer.hpp"
 #include "utils/seed/seed.hpp"
+#include "lexer/lexer.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
@@ -41,7 +42,8 @@ extern char *claimproc;
 extern void repro_src(void);
 extern void qhide(int);
 extern char CurScope[MAXSCOPESZ];
-extern short has_provided, has_code, has_ltl, has_accept;
+extern lexer::Lexer lexer_;
+extern short has_provided, has_accept;
 extern int realread, buzzed;
 extern void ana_src(int, int);
 extern void putprelude(void);
@@ -281,7 +283,7 @@ void alldone(int estatus) {
     }
   }
 
-  if (buzzed && replay && !has_code && !estatus) {
+  if (buzzed && replay && !lexer_.GetHasCode() && !estatus) {
     extern QH *qh_lst;
     QH *j;
     int i;
@@ -353,7 +355,7 @@ void alldone(int estatus) {
     exit(estatus);              /* replay without c_code */
   }
 
-  if (buzzed && (!replay || has_code) && !estatus) {
+  if (buzzed && (!replay || lexer_.GetHasCode()) && !estatus) {
     char *tmp, *tmp2 = NULL, *P_X;
     char *C_X = const_cast<char *>((buzzed == 2) ? "-O" : "");
 
@@ -482,7 +484,7 @@ void alldone(int estatus) {
       }
     }
 
-    if (has_ltl) {
+    if (lexer_.HasLtl()) {
       (void)unlink("_spin_nvr.tmp");
     }
 
@@ -1338,7 +1340,7 @@ int main(int argc, char *argv[]) {
     if (has_provided && merger) {
       merger = 0; /* cannot use statement merging in this case */
     }
-    if (!s_trail && (dataflow || merger) && (!replay || has_code)) {
+    if (!s_trail && (dataflow || merger) && (!replay || lexer_.GetHasCode())) {
       ana_src(dataflow, merger);
     }
     sched();

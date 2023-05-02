@@ -11,15 +11,11 @@
 
 extern std::string yytext;
 extern Symbol *Fname, *oFname;
-extern int in_for;
-extern int ltl_mode;
-static unsigned char in_comment = 0;
 extern YYSTYPE yylval;
-extern short has_last, has_code, has_priority;
 
 #define ValToken(x, y)                                                         \
   {                                                                            \
-    if (in_comment)                                                            \
+    if (in_comment_)                                                           \
       goto again;                                                              \
     yylval = nn(ZN, 0, ZN, ZN);                                                \
     yylval->val = x;                                                           \
@@ -28,7 +24,7 @@ extern short has_last, has_code, has_priority;
   }
 #define SymToken(x, y)                                                         \
   {                                                                            \
-    if (in_comment)                                                            \
+    if (in_comment_)                                                           \
       goto again;                                                              \
     yylval = nn(ZN, 0, ZN, ZN);                                                \
     yylval->sym = x;                                                           \
@@ -39,10 +35,14 @@ extern short has_last, has_code, has_priority;
 namespace lexer {
 Lexer::Lexer()
     : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
-      last_token_(0), pp_mode_(false), temp_has_(0) {}
+      last_token_(0), pp_mode_(false), temp_has_(0), parameter_count_(0),
+      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
+      ltl_mode_(false), has_ltl_(false) {}
 Lexer::Lexer(bool pp_mode)
     : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
-      last_token_(0), pp_mode_(pp_mode), temp_has_(0) {}
+      last_token_(0), pp_mode_(pp_mode), temp_has_(0), parameter_count_(0),
+      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
+      ltl_mode_(false), has_ltl_(false) {}
 
 void Lexer::SetLastToken(int last_token) { last_token_ = last_token; }
 int Lexer::GetLastToken() { return last_token_; }
@@ -63,7 +63,7 @@ int Lexer::CheckName(const std::string &value) {
 
   yylval = nn(ZN, 0, ZN, ZN);
 
-  if (ltl_mode) {
+  if (ltl_mode_) {
     auto opt_token = ::helpers::ParseLtlToken(value);
     if (opt_token.has_value()) {
       return opt_token.value();
@@ -78,7 +78,7 @@ int Lexer::CheckName(const std::string &value) {
       yylval->sym = lookup(symbol_copy.data());
     }
 
-    if (!(opt_name->token == IN && !in_for)) {
+    if (!(opt_name->token == IN && !in_for_)) {
       return opt_name->token;
     }
   }
@@ -92,11 +92,11 @@ int Lexer::CheckName(const std::string &value) {
   }
 
   if (value == "_last") {
-    has_last++;
+    has_last_++;
   }
 
   if (value == "_priority") {
-    has_priority++;
+    IncHasPriority();
   }
 
   if (stream_.HasInlining()) {
@@ -322,7 +322,7 @@ again:
   case '\n': // new_line
   {
     stream_.IncLineNumber();
-    if (helpers::IsFollowsToken(last_token_)) {
+    if (parameter_count_ == 0 && helpers::IsFollowsToken(last_token_)) {
       if (last_token_ == '}') {
         do {
           new_char = stream_.GetChar();
@@ -346,7 +346,7 @@ again:
   }
   case '#': /* preprocessor directive */
   {
-    if (in_comment)
+    if (in_comment_)
       goto again;
     if (pp_mode_) {
       last_token_ = PREPROC;
@@ -385,7 +385,7 @@ again:
         new_char = '\f';
       }
     }
-    if (stream_.GetChar() != '\'' && !in_comment)
+    if (stream_.GetChar() != '\'' && !in_comment_)
       log::fatal("character quote missing: %s", yytext);
     { ValToken(new_char, CONST) }
   }
@@ -410,7 +410,7 @@ again:
 
   if (helpers::isalpha_(new_char) || new_char == '_') {
     yytext = stream_.GetWord(new_char, helpers::isalnum_);
-    if (!in_comment) {
+    if (!in_comment_) {
       new_char = CheckName(yytext);
       if (new_char == TIMEOUT && stream_.GetInlining() < 0 &&
           last_token_ != '(') {
@@ -465,7 +465,7 @@ again:
     goto again;
   }
 
-  if (ltl_mode) {
+  if (ltl_mode_) {
     switch (new_char) {
     case '-':
       new_char = Follow('>', IMPLIES, '-');
@@ -504,14 +504,14 @@ again:
   case '/':
     new_char = Follow('*', 0, '/');
     if (!new_char) {
-      in_comment = 1;
+      in_comment_ = 1;
       goto again;
     }
     break;
   case '*':
     new_char = Follow('/', 0, '*');
     if (!new_char) {
-      in_comment = 0;
+      in_comment_ = 0;
       goto again;
     }
     break;

@@ -7,6 +7,7 @@
  */
 
 #include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -698,7 +699,7 @@ void chanaccess(void) {
   Ordered *walk;
   char buf[128];
   extern int Caccess, separate;
-  extern short has_code;
+  extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
@@ -717,10 +718,10 @@ void chanaccess(void) {
         if ((walk->entry->hidden & 128)) /* was: 32 */
           continue;
 
-        if (!separate && !walk->entry->context && !has_code && deadvar)
+        if (!separate && !walk->entry->context && !lexer_.GetHasCode() && deadvar)
           walk->entry->hidden |= 1; /* auto-hide */
 
-        if (!verbose_flags.NeedToPrintVerbose() || has_code)
+        if (!verbose_flags.NeedToPrintVerbose() || lexer_.GetHasCode())
           continue;
 
         printf("spin: %s:0, warning, ", Fname->name);

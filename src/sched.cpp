@@ -9,6 +9,8 @@
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "lexer/lexer.hpp"
+
 #include "y.tab.h"
 #include <stdlib.h>
 
@@ -18,9 +20,10 @@ extern Ordered *all_names;
 extern Symbol *Fname, *context;
 extern int lineno, nr_errs, dumptab, xspin, jumpsteps, columns;
 extern int u_sync, Elcnt, interactive, TstOnly, cutoff;
-extern short has_enabled, has_priority, has_code, replay;
+extern short has_enabled, replay;
 extern int limited_vis, product, nclaims, old_priority_rules;
 extern int old_scope_rules, scope_seq[256], scope_level, has_stdin;
+extern lexer::Lexer lexer_;
 
 extern int pc_highest(Lextok *n);
 extern void putpostlude(void);
@@ -54,7 +57,7 @@ void runnable(ProcList *p, int weight, int noparams) {
   if (!noparams && (verbose_flags.NeedToPrintAllProcessActions() ||
                     verbose_flags.NeedToPrintVerbose())) {
     printf("Starting %s with pid %d", p->n ? p->n->name : "--", r->pid);
-    if (has_priority)
+    if (lexer_.GetHasPriority())
       printf(" priority %d", r->priority);
     printf("\n");
   }
@@ -422,7 +425,7 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
       printf("pid %d cannot run: not provided\n", X_lst->pid);
     return 0;
   }
-  if (has_priority && !old_priority_rules) {
+  if (lexer_.GetHasPriority() && !old_priority_rules) {
     Lextok *n = nn(ZN, CONST, ZN, ZN);
     n->val = X_lst->pid;
     if (0)
@@ -447,7 +450,7 @@ static RunList *pickproc(RunList *Y) {
     return NULL;
   }
   if (!interactive || depth < jumpsteps) {
-    if (has_priority && !old_priority_rules) /* new 6.3.2 */
+    if (lexer_.GetHasPriority() && !old_priority_rules) /* new 6.3.2 */
     {
       j = Rand() % (nproc - nstop);
       for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
@@ -656,7 +659,7 @@ void sched(void) {
     dumplabels();
     return;
   }
-  if (has_code && !analyze) {
+  if (lexer_.GetHasCode() && !analyze) {
     printf("spin: warning: c_code fragments remain uninterpreted\n");
     printf("      in random simulations with spin; use ./pan -r instead\n");
   }
@@ -670,12 +673,12 @@ void sched(void) {
     sync_product();
     alldone(0);
   }
-  if (analyze && (!replay || has_code)) {
+  if (analyze && (!replay || lexer_.GetHasCode())) {
     gensrc();
     multi_claims();
     return;
   }
-  if (replay && !has_code) {
+  if (replay && !lexer_.GetHasCode()) {
     return;
   }
   if (s_trail) {
