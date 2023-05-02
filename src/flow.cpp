@@ -287,9 +287,6 @@ static int has_chanref(Lextok *n) {
   switch (n->ntyp) {
   case 's':
   case 'r':
-#if 0
-	case 'R':	case LEN:
-#endif
   case FULL:
   case NFULL:
   case EMPTY:
@@ -801,64 +798,6 @@ void make_atomic(Sequence *s, int added) {
     break;
   }
 }
-
-#if 0
-static int depth = 0;
-void dump_sym(Symbol *, char *);
-
-void
-dump_lex(Lextok *t, char *s)
-{	int i;
-
-	depth++;
-	printf(s);
-	for (i = 0; i < depth; i++)
-		printf("\t");
-	std::cout << log::explainToString(t->ntyp);
-	if (t->ntyp == NAME) printf(" %s ", t->sym->name);
-	if (t->ntyp == CONST) printf(" %d ", t->val);
-	if (t->ntyp == STRUCT)
-	{	dump_sym(t->sym, "\n:Z:");
-	}
-	if (t->lft)
-	{	dump_lex(t->lft, "\nL");
-	}
-	if (t->rgt)
-	{	dump_lex(t->rgt, "\nR");
-	}	
-	depth--;
-}
-void
-dump_sym(Symbol *z, char *s)
-{	int i;
-	char txt[64];
-	depth++;
-	printf(s);
-	for (i = 0; i < depth; i++)
-		printf("\t");
-
-	if (z->type == CHAN)
-	{	if (z->ini && z->ini->rgt && z->ini->rgt->sym)
-		{	/* dump_sym(z->ini->rgt->sym, "\n:I:"); -- could also be longer list */
-			if (z->ini->rgt->rgt
-			|| !z->ini->rgt->sym)
-			log::fatal("chan %s in for should have only one field (a typedef)", z->name);
-			printf(" -- %s %p -- ", z->ini->rgt->sym->name, z->ini->rgt->sym);
-		}
-	} else if (z->type == STRUCT)
-	{	if (z->Snm)
-			printf(" == %s %p == ", z->Snm->name, z->Snm);
-		else
-		{	if (z->Slst)
-				dump_lex(z->Slst, "\n:X:");
-			if (z->ini)
-				dump_lex(z->ini, "\n:I:");
-		}
-	}
-	depth--;
-
-}
-#endif
 
 int match_struct(Symbol *s, Symbol *t) {
   if (!t || !t->ini || !t->ini->rgt || !t->ini->rgt->sym || t->ini->rgt->rgt) {

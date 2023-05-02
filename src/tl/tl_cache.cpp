@@ -32,20 +32,6 @@ void ini_cache(void) {
   CacheHits = 0;
 }
 
-#if 0
-void
-cache_dump(void)
-{	Cache *d; int nr=0;
-
-	printf("\nCACHE DUMP:\n");
-	for (d = stored; d; d = d->nxt, nr++)
-	{	if (d->same) continue;
-		printf("B%3d: ", nr); dump(d->before); printf("\n");
-		printf("A%3d: ", nr); dump(d->after); printf("\n");
-	}
-	printf("============\n");
-}
-#endif
 
 Node *in_cache(Node *n) {
   Cache *d;

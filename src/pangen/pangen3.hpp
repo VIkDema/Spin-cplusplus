@@ -1120,12 +1120,6 @@ static const char *Proto[] = {
     "/* int atoi(char *); */",
     "/* int abort(void); */",
     "int close(int);", /* should probably remove this */
-#if 0
-	"#ifndef SC",
-	"	int creat(char *, unsigned short);",
-	"	int write(int, void *, unsigned);",
-	"#endif",
-#endif
     "int delproc(int, int);",
     "int endstate(void);",
     "int find_claim(char *);",

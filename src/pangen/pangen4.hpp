@@ -15,15 +15,6 @@
 
 static const char *Dfa[] = {
     "#ifdef MA",
-#if 0
-	"/*",
-	"#include <stdio.h>",
-	"#define uchar	unsigned char",
-	"*/",
-	"#define ulong	unsigned long",
-	"#define ushort	unsigned short",
-	"",
-#endif
     "#define TWIDTH		256",
     "#define HASH(y,n)	(n)*(((long)y))",
     "#define INRANGE(e,h)	((h>=e->From && h<=e->To)||(e->s==1 && "

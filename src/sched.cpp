@@ -1054,13 +1054,7 @@ int setlocal(Lextok *p, int m) {
     if (r->type == STRUCT)
       (void)Lval_struct(p, r, 1, m); /* 1 = check init */
     else {
-#if 0
-			if (r->nbits > 0)
-				m = (m & ((1<<r->nbits)-1));
-			r->val[n] = m;
-#else
       r->val[n] = cast_val(r->type, m, r->nbits);
-#endif
       r->setat = depth;
     }
   }
@@ -1176,9 +1170,6 @@ int remotevar(Lextok *n) {
     prno = f_pid(n->lft->sym->name);
   else {
     prno = eval(n->lft->lft); /* pid - can cause recursive call */
-#if 0
-		if (n->lft->lft->ntyp == CONST)	/* user-guessed pid */
-#endif
     {
       prno += Have_claim;
       added = Have_claim;
@@ -1188,13 +1179,6 @@ int remotevar(Lextok *n) {
   if (prno < 0) {
     return 0; /* non-existing process */
   }
-#if 0
-	i = nproc - nstop;
-	for (Y = run_lst; Y; Y = Y->nxt)
-	{	--i;
-		printf("	%s: i=%d, prno=%d, ->pid=%d\n", Y->n->name, i, prno, Y->pid);
-	}
-#endif
   i = nproc - nstop + Skip_claim; /* 6.0: added Skip_claim */
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {

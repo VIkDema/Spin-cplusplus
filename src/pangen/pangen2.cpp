@@ -991,9 +991,6 @@ static void putproc(ProcList *p) {
 
   if (pid_is_claim(Pid_nr) && separate == 1) {
     fprintf(fd_th, "extern uchar reached%d[];\n", Pid_nr);
-#if 0
-		fprintf(fd_th, "extern short _nstates%d;\n", Pid_nr);
-#else
     fprintf(fd_th, "\n#define _nstates%d	%d\t/* %s */\n", Pid_nr,
             p->s->maxel, p->n->name);
 #endif
@@ -1527,10 +1524,6 @@ static int nrhops(Element *e) {
     stopat = e->merge_start;
   else
     stopat = e->merge;
-#if 0
-	printf("merge: %d merge_start %d - seqno %d\n",
-		e->merge, e->merge_start, e->seqno);
-#endif
   do {
     cnt += nr_bup(f);
 
@@ -1668,16 +1661,6 @@ static void lastfirst(int stopat, Element *fin, int casenr) {
   if (!f || f->seqno == stopat || (!f->merge && !f->merge_single))
     return;
   lastfirst(stopat, f, casenr);
-#if 0
-	fprintf(fd_tb, "\n\t/* merge %d -- %d:%d %d:%d:%d (casenr %d)	",
-		YZcnt,
-		f->merge_start, f->merge,
-		f->seqno, f?f->seqno:-1, stopat,
-		casenr);
-	comment(fd_tb, f->n, 0);
-	fprintf(fd_tb, " */\n");
-	fflush(fd_tb);
-#endif
   dobackward(f, casenr);
 }
 
@@ -2579,12 +2562,6 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       fprintf(fd, ", 0");
     fprintf(fd, ")");
     check_mtypes(now, now->lft);
-#if 0
-		/* process now->sym->name has run priority now->val */
-		if (now->val > 0 && now->val < 256 && !old_priority_rules)
-		{	fprintf(fd, " && (((P0 *)pptr(now._nr_pr - 1))->_priority = %d)", now->val);
-		}
-#endif
     if (now->val < 0 || now->val > 255) /* 0 itself is allowed */
     {
       log::fatal("bad process in run %s, valid range: 1..255", now->sym->name);
@@ -3578,12 +3555,6 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
                 * = x where a[1] == 1 but it is hard when the array is inside a
                 * structure, so the names don't match
                 */
-#if 0
-				if (n->lft->ntyp == NAME)
-				{	printf("%4d: Basename %s	index %s\n",
-						n->lft->ln, s->name, n->lft->sym->name);
-				}
-#endif
         cat3("[ Index(", n->lft, ", ");
         fprintf(fd, "%d) ]", s->nel);
       }

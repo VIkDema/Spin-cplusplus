@@ -108,9 +108,6 @@ static int good_dead(Element *e, FSM_use *u) {
   return 1;
 }
 
-#if 0
-static int howdeep = 0;
-#endif
 
 static int eligible(FSM_trans *v) {
   Element *el = ZE;
@@ -194,9 +191,6 @@ static void popbuild(void) {
 static int build_step(FSM_trans *v) {
   FSM_state *f;
   Element *el;
-#if 0
-	Lextok	*lt = ZN;
-#endif
   int st;
   int r;
 
@@ -644,30 +638,17 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 {
   ProcList *p;
   Element *e;
-#if 0
-	int counter = 1;
-#endif
   for (p = ready; p; p = p->nxt) {
     ana_seq(p->s);
     fsm_table();
 
     e = p->s->frst;
-#if 0
-		if (dataflow || merger)
-		{	printf("spin: %d, optimizing '%s'",
-				counter++, p->n->name);
-			fflush(stdout);
-		}
-#endif
     if (dataflow) {
       FSM_ANA();
     }
     if (merger) {
       FSM_MERGER(/* p->n->name */);
       huntele(e, e->status, -1)->merge_in = 1; /* start-state */
-#if 0
-			printf("\n");
-#endif
     }
     if (export_ast)
       AST_store(p, huntele(e, e->status, -1)->seqno);

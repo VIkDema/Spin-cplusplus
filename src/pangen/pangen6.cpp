@@ -421,15 +421,7 @@ static void AST_para(ProcList *p) {
         na->cnm = c;
         na->nxt = chalias;
         chalcur = chalias = na;
-#if 0
-			printf("%s -- (par) -- ", p->n->name);
-			AST_var(c, c->sym, 1);
-			printf(" => <<");
-#endif
         AST_findrun(p->n->name, cnt);
-#if 0
-			printf(">>\n");
-#endif
       }
     }
 }
@@ -439,11 +431,6 @@ static void AST_haschan(Lextok *c) {
     return;
   if (Sym_typ(c) == CHAN) {
     AST_add_alias(c, 2); /* ASGN */
-#if 0
-		printf("<<");
-		AST_var(c, c->sym, 1);
-		printf(">>\n");
-#endif
   } else {
     AST_haschan(c->rgt);
     AST_haschan(c->lft);
@@ -472,15 +459,6 @@ static int AST_ord(Lextok *n, Lextok *s) {
   return 0;
 }
 
-#if 0
-static void
-AST_ownership(Symbol *s)
-{
-	if (!s) return;
-	printf("%s:", s->name);
-	AST_ownership(s->owner);
-}
-#endif
 
 static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
   Symbol *as, *bs;
@@ -958,12 +936,6 @@ static void AST_sends(AST *a) {
         for (u = t->Val[0]; u; u = u->nxt) {
           if (Sym_typ(u->n) == CHAN &&
               ((u->special & USE) && !(u->special & DEREF_USE))) {
-#if 0
-				printf("%s -- (%d->%d) -- ",
-					a->p->n->name, f->from, t->to);
-				AST_var(u->n, u->n->sym, 1);
-				printf(" -> chanlist\n");
-#endif
             cl = (ChanList *)emalloc(sizeof(ChanList));
             cl->s = t->step->n;
             cl->n = u->n;
@@ -1026,11 +998,6 @@ static void AST_def_use(AST *a) {
 
 static void name_AST_track(Lextok *n, int code) {
   extern int nr_errs;
-#if 0
-	printf("AST_name: ");
-	AST_var(n, n->sym, 1);
-	printf(" -- %d\n", code);
-#endif
   if (in_recv && (code & DEF) && (code & USE)) {
     printf("spin: %s:%d, error: DEF and USE of same var in rcv stmnt: ",
            n->fn->name, n->ln);

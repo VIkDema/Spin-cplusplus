@@ -40,7 +40,6 @@ extern	void	no_internals(Lextok *);
 extern	void	any_runs(Lextok *);
 extern	void	ltl_list(char *, char *);
 extern	void	validref(Lextok *, Lextok *);
-extern  void	sanity_check(Lextok *);
 extern	std::string yytext;
 
 int	Mpars = 0;	/* max nr of message parameters  */
@@ -869,7 +868,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 	  			{ $$ = rem_var($1->sym, $3, $6->sym, $6->lft); }
 	| PNAME '@' NAME	{ $$ = rem_lab($1->sym, ZN, $3->sym); }
 	| PNAME ':' pfld	{ $$ = rem_var($1->sym, ZN, $3->sym, $3->lft); }
-	| ltl_expr		{ $$ = $1; /* sanity_check($1); */ }
+	| ltl_expr		{ $$ = $1; }
 	;
 
 Opt_priority:	/* none */	{ $$ = ZN; }
@@ -1133,30 +1132,6 @@ is_boolean(int t)
 {
 	return (t == AND || t == OR || t == IMPLIES || t == EQUIV);
 }
-
-#if 0
-/* flags correct formula like: ltl { true U (true U true) } */
-void
-sanity_check(Lextok *t)	/* check proper embedding of ltl_expr */
-{
-	if (!t) return;
-	sanity_check(t->lft);
-	sanity_check(t->rgt);
-
-	if (t->lft && t->rgt)
-	{	if (!is_boolean(t->ntyp)
-		&&  (is_temporal(t->lft->ntyp)
-		||   is_temporal(t->rgt->ntyp)))
-		{	std::cout << "spin: attempt to apply '"
-		<< log::explainToString(t->ntyp)
-		<<"' to '" 
-		<< log::explainToString(t->lft->ntyp)
-		<<"' and '"
-		<<log::explainToString(t->rgt->ntyp)
-		<<"\'"<< std::endl
-	}	}
-}
-#endif
 
 void
 yyerror(char *fmt, ...)

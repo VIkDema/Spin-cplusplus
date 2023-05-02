@@ -200,10 +200,6 @@ Node *Canonical(Node *n) {
 
   can = ZN;
   addcan(tok, n);
-#if 0
-	Debug("\nA0: "); Dump(can); 
-	Debug("\nA1: "); Dump(n); Debug("\n");
-#endif
   releasenode(1, n);
 
   /* mark redundant nodes */
@@ -295,9 +291,6 @@ Node *Canonical(Node *n) {
     m = m->rgt;
   }
 out:
-#if 0
-	Debug("A2: "); Dump(can); Debug("\n");
-#endif
   if (!can) {
     if (!dflt)
       log::fatal("cannot happen, Canonical");

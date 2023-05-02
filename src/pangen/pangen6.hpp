@@ -708,21 +708,10 @@ static const char *Code2c[] = {
     "	fprintf(fd, \"        -DQMAX=N    --> upperbound on nr of channels "
     "(default: N=%%d)\\n\", QMAX);",
     "	fprintf(fd, \"\\n\");",
-#if 0
-	"#if !defined(WIN32) && !defined(WIN64)",
-	"	fprintf(fd, \"     To change the size of spin's individual shared memory segments for cygwin/linux:\\n\");",
-	"	fprintf(fd, \"        -DSET_SEG_SIZE=N --> default %%g (Mbytes)\\n\", SEG_SIZE/(1048576.));",
-	"	fprintf(fd, \"\\n\");",
-	"#endif",
-#endif
     "	fprintf(fd, \"     To set the total amount of memory reserved for the "
     "global workqueue:\\n\");",
     "	fprintf(fd, \"        -DSET_WQ_SIZE=N --> default: N=128 (defined in "
     "MBytes)\\n\\n\");",
-#if 0
-	"	fprintf(fd, \"     To omit the global workqueue completely (bad idea):\\n\");",
-	"	fprintf(fd, \"        -DNGQ\\n\\n\");",
-#endif
     "	fprintf(fd, \"     To force the use of a single global heap, instead "
     "of separate heaps:\\n\");",
     "	fprintf(fd, \"        -DGLOB_HEAP\\n\");",

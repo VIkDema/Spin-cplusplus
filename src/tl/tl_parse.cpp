@@ -114,11 +114,6 @@ static Node *tl_factor(void) {
   }
   if (!ptr)
     tl_yyerror("expected predicate");
-#if 0
-	printf("factor:	");
-	tl_explain(ptr->ntyp);
-	printf("\n");
-#endif
   return ptr;
 }
 

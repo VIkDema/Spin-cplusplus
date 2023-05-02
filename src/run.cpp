@@ -111,10 +111,6 @@ Element *eval_sub(Element *e) {
           continue;
         }
         printf("\tchoice %d: ", j);
-#if 0
-				if (z->this_sequence->frst->n)
-					printf("line %d, ", z->this_sequence->frst->n->ln);
-#endif
         if (!Enabled0(z->this_sequence->frst))
           printf("unexecutable, ");
         else {
@@ -244,13 +240,7 @@ Element *eval_sub(Element *e) {
         }
         printf("\n");
       }
-#if 0
-			if (!(e->status & D_ATOM))	/* escapes don't reach inside d_steps */
-			/* 4.2.4: only the guard of a d_step can have an escape */
-#endif
-#if 1
       if (!s_trail) /* trail determines selections, new 5.2.5 */
-#endif
       {
         Escape_Check++;
         if (like_java) {
@@ -752,11 +742,6 @@ int Enabled0(Element *e) {
     if (Enabled0(z->this_sequence->frst))
       return 1;
   }
-#if 0
-	printf("enabled1 ");
-	comment(stdout, e->n, 0);
-	printf(" ==> %s\n", Enabled1(e->n)?"yes":"nope");
-#endif
   return Enabled1(e->n);
 }
 

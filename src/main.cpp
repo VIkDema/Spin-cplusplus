@@ -1076,11 +1076,6 @@ int main(int argc, char *argv[]) {
           case 'U': /* to undefine a macro */
             add_comptime(argv[1]);
             break;
-#if 0
-				  case 'w': /* conflicts with bitstate runtime arg */
-       verbose_flags.SetNeedToPrintVeryVerbose();
-					break;
-#endif
           case 'W':
             norecompile = 1;
             break;
