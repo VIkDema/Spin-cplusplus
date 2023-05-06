@@ -18,14 +18,14 @@ extern void put_uform(void);
 FILE *tl_out; /* if standalone: = stdout; */
 
 struct Transition {
-  Symbol *name;
+  models::Symbol *name;
   Node *cond;
   int redundant, merged, marked;
   struct Transition *nxt;
 };
 
 struct State {
-  Symbol *name;
+  models::Symbol *name;
   Transition *trans;
   Graph *colors;
   unsigned char redundant;
@@ -98,11 +98,11 @@ static State *findstate(char *nm) {
         if (nm[i] == '_')
           break;
       if (i >= 64)
-        log::fatal("name too long %s", nm);
+        loger::fatal("name too long %s", nm);
       sprintf(altnm, "accept%s", &nm[i]);
       return findstate(altnm);
     }
-    /*	log::fatal("buchi: no state %s", nm); */
+    /*	loger::fatal("buchi: no state %s", nm); */
   }
   return (State *)0;
 }
@@ -128,7 +128,7 @@ static void Dfs(State *b) {
 void retarget(char *from, char *to) {
   State *b;
   Transition *t;
-  Symbol *To = tl_lookup(to);
+  models::Symbol *To = tl_lookup(to);
 
   if (tl_verbose)
     printf("replace %s with %s\n", from, to);
@@ -204,7 +204,7 @@ static Node *combination(Node *s, Node *t) {
 
 Node *unclutter(Node *n, char *snm) {
   Node *t, *s, *v, *u;
-  Symbol *w;
+  models::Symbol *w;
 
   /* check only simple cases like !q && q */
   for (t = n; t; t = t->rgt) {

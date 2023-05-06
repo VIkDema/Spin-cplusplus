@@ -1,11 +1,5 @@
 /***** spin: mesg.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
@@ -18,7 +12,7 @@
 #endif
 
 extern RunList *X_lst;
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 extern int TstOnly, s_trail, analyze, columns;
 extern int lineno, depth, xspin, m_loss, jumpsteps;
 extern int nproc, nstop;
@@ -37,7 +31,7 @@ static int a_rcv(Queue *, Lextok *, int);
 static int a_snd(Queue *, Lextok *);
 static int sa_snd(Queue *, Lextok *);
 static int s_snd(Queue *, Lextok *);
-extern Lextok **find_mtype_list(const char *);
+extern Lextok **find_mtype_list(const std::string &);
 extern char *which_mtype(const char *);
 extern void sr_buf(int, int, const char *);
 extern void sr_mesg(FILE *, int, int, const char *);
@@ -53,30 +47,30 @@ int cnt_mpars(Lextok *n) {
   return i;
 }
 
-int qmake(Symbol *s) {
+int qmake(models::Symbol *s) {
   Lextok *m;
   Queue *q;
   int i, j;
 
-  if (!s->ini)
+  if (!s->init_value)
     return 0;
 
   if (nrqs >= MAXQ) {
-    lineno = s->ini->ln;
-    Fname = s->ini->fn;
-    log::fatal("too many queues (%s)", s->name);
+    lineno = s->init_value->ln;
+    Fname = s->init_value->fn;
+    loger::fatal("too many queues (%s)", s->name);
   }
   if (analyze && nrqs >= 255) {
-    log::fatal("too many channel types");
+    loger::fatal("too many channel types");
   }
 
-  if (s->ini->ntyp != CHAN)
-    return eval(s->ini);
+  if (s->init_value->ntyp != CHAN)
+    return eval(s->init_value);
 
   q = (Queue *)emalloc(sizeof(Queue));
   q->qid = (short)++nrqs;
-  q->nslots = s->ini->val;
-  q->nflds = cnt_mpars(s->ini->rgt);
+  q->nslots = s->init_value->val;
+  q->nflds = cnt_mpars(s->init_value->rgt);
   q->setat = depth;
 
   i = max(1, q->nslots); /* 0-slot qs get 1 slot minimum */
@@ -87,12 +81,12 @@ int qmake(Symbol *s) {
   q->mtp = (char **)emalloc(q->nflds * sizeof(char *));
   q->stepnr = (int *)emalloc(i * sizeof(int));
 
-  for (m = s->ini->rgt, i = 0; m; m = m->rgt) {
+  for (m = s->init_value->rgt, i = 0; m; m = m->rgt) {
     if (m->sym && m->ntyp == STRUCT) {
       i = Width_set(q->fld_width, i, getuname(m->sym));
     } else {
       if (m->sym) {
-        q->mtp[i] = m->sym->name;
+        q->mtp[i] = m->sym->name.data();
       }
       q->fld_width[i++] = m->ntyp;
     }
@@ -180,7 +174,7 @@ int qrecv(Lextok *n, int full) {
   int whichq = eval(n->lft) - 1;
 
   if (whichq == -1) {
-    if (n->sym && !strcmp(n->sym->name, "STDIN")) {
+    if (n->sym && n->sym->name != "STDIN") {
       Lextok *m;
 #ifndef PC
       static int did_once = 0;
@@ -209,12 +203,12 @@ int qrecv(Lextok *n, int full) {
             return 0; /* no char available */
           (void)setval(m->lft, c);
         } else {
-          log::fatal("invalid use of STDIN");
+          loger::fatal("invalid use of STDIN");
         }
       return 1;
     }
     printf("Error: receiving from an uninitialized chan %s\n",
-           n->sym ? n->sym->name : "");
+           n->sym ? n->sym->name.c_str() : "");
     /* whichq = 0; */
     return 0;
   }
@@ -252,16 +246,16 @@ found:
   return i * q->nflds; /* new q offset */
 }
 
-void typ_ck(int ft, int at, char *s) {
+void typ_ck(int ft, int at, const std::string &s) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (verbose_flags.NeedToPrintVerbose() && ft != at &&
-      (ft == CHAN || at == CHAN) && (at != PREDEF || strcmp(s, "recv") != 0)) {
+      (ft == CHAN || at == CHAN) && (at != PREDEF || s != "recv")) {
     char buf[256], tag1[64], tag2[64];
     (void)sputtype(tag1, ft);
     (void)sputtype(tag2, at);
-    sprintf(buf, "type-clash in %s, (%s<-> %s)", s, tag1, tag2);
-    log::non_fatal("%s", buf);
+    sprintf(buf, "type-clash in %s, (%s<-> %s)", s.c_str(), tag1, tag2);
+    loger::non_fatal("%s", buf);
   }
 }
 
@@ -277,13 +271,13 @@ static void mtype_ck(char *p, Lextok *arg) {
   switch (arg->ntyp) {
   case NAME:
     if (arg->sym->mtype_name) {
-      t = arg->sym->mtype_name->name;
+      t = arg->sym->mtype_name->name.data();
     } else {
       t = "_unnamed_";
     }
     break;
   case CONST:
-    t = which_mtype(arg->sym->name);
+    t = which_mtype(arg->sym->name.data());
     break;
   default:
     t = "expression";
@@ -292,9 +286,10 @@ static void mtype_ck(char *p, Lextok *arg) {
 
   if (strcmp(s, t) != 0) {
     printf("spin: %s:%d, Error: '%s' is type '%s', but ",
-           arg->fn ? arg->fn->name : "", arg->ln, arg->sym->name, t);
+           arg->fn ? arg->fn->name.c_str() : "", arg->ln,
+           arg->sym->name.c_str(), t);
     printf("should be type '%s'\n", s);
-    log::non_fatal("incorrect type of '%s'", arg->sym->name);
+    loger::non_fatal("incorrect type of '%s'", arg->sym->name.c_str());
   }
 }
 
@@ -505,14 +500,14 @@ static int s_snd(Queue *q, Lextok *n) {
     X_lst = rX; /* restore receiver's context */
     if (!s_trail) {
       if (!n_rem || !q_rem)
-        log::fatal("cannot happen, s_snd");
+        loger::fatal("cannot happen, s_snd");
       m = n_rem->rgt;
       for (j = 0; m && j < q->nflds; m = m->rgt, j++) {
         if (q->fld_width[j] == MTYPE) {
           mtype_ck(q->mtp[j], m->lft); /* 6.4.8 */
         }
 
-        if (m->lft->ntyp != NAME || strcmp(m->lft->sym->name, "_") != 0) {
+        if (m->lft->ntyp != NAME || m->lft->sym->name != "_") {
           i = eval(m->lft);
         } else {
           i = 0;
@@ -539,12 +534,12 @@ static int s_snd(Queue *q, Lextok *n) {
 static void channm(Lextok *n) {
   char lbuf[512];
 
-  if (n->sym->type == CHAN)
-    strcat(GBuf, n->sym->name);
-  else if (n->sym->type == NAME)
-    strcat(GBuf, lookup(n->sym->name)->name);
-  else if (n->sym->type == STRUCT) {
-    Symbol *r = n->sym;
+  if (n->sym->type == models::SymbolType::kChan) {
+    strcat(GBuf, n->sym->name.c_str());
+  } else if (n->sym->type == models::SymbolType::kName) {
+    strcat(GBuf, lookup(n->sym->name)->name.c_str());
+  } else if (n->sym->type == models::SymbolType::kStruct) {
+    models::Symbol *r = n->sym;
     if (r->context) {
       r = findloc(r);
       if (!r) {
@@ -553,7 +548,7 @@ static void channm(Lextok *n) {
       }
     }
     ini_struct(r);
-    printf("%s", r->name);
+    printf("%s", r->name.c_str());
     strcpy(lbuf, "");
     struct_name(n->lft, r, 1, lbuf);
     strcat(GBuf, lbuf);
@@ -667,7 +662,7 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
     char snm[128];
     whoruns(1);
     {
-      char *ptr = n->fn->name;
+      const char *ptr = n->fn->name.c_str();
       char *qtr = snm;
       while (*ptr != '\0') {
         if (*ptr != '\"') {
@@ -710,11 +705,11 @@ void sr_buf(int v, int j, const char *s) {
   }
   for (n = Mtype; n && j; n = n->rgt, cnt++) {
     if (cnt == v) {
-      if (strlen(n->lft->sym->name) >= sizeof(lbuf)) {
-        log::non_fatal("mtype name %s too long", n->lft->sym->name);
+      if (n->lft->sym->name.length() >= sizeof(lbuf)) {
+        loger::non_fatal("mtype name %s too long", n->lft->sym->name);
         break;
       }
-      sprintf(lbuf, "%s", n->lft->sym->name);
+      sprintf(lbuf, "%s", n->lft->sym->name.c_str());
       strcat(GBuf, lbuf);
       return;
     }
@@ -730,7 +725,7 @@ void sr_mesg(FILE *fd, int v, int j, const char *s) {
   fprintf(fd, GBuf, (char *)0); /* prevent compiler warning */
 }
 
-void doq(Symbol *s, int n, RunList *r) {
+void doq(models::Symbol *s, int n, RunList *r) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   Queue *q;
   int j, k;
@@ -749,13 +744,13 @@ void doq(Symbol *s, int n, RunList *r) {
 
       printf("\t\tqueue %d (", q->qid);
       if (r) {
-        printf("%s(%d):", r->n->name, r->pid - Have_claim);
+        printf("%s(%d):", r->n->name.c_str(), r->pid - Have_claim);
       }
 
-      if (s->nel > 1 || s->isarray) {
-        printf("%s[%d]): ", s->name, n);
+      if (s->value_type > 1 || s->is_array) {
+        printf("%s[%d]): ", s->name.c_str(), n);
       } else {
-        printf("%s): ", s->name);
+        printf("%s): ", s->name.c_str());
       }
 
       for (k = 0; k < q->qlen; k++) {
@@ -787,7 +782,7 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
     setaccess(p->sym, ZS, 0, 'L');
 
     if (n && n->ntyp == CONST)
-      log::fatal("invalid asgn to chan");
+      loger::fatal("invalid asgn to chan");
 
     if (n && n->sym && n->sym->type == CHAN) {
       setaccess(n->sym, ZS, 0, 'V');
@@ -797,25 +792,25 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
 
   if (!d && n && n->ismtyp) /* rhs is an mtype value (a constant) */
   {
-    char *lhs = "_unnamed_", *rhs = "_unnamed_";
+    std::string *lhs = "_unnamed_", *rhs = "_unnamed_";
 
     if (p->sym) {
-      char *unnamed = "_unnamed";
+      std::string unnamed = "_unnamed";
       lhs = p->sym->mtype_name ? p->sym->mtype_name->name : unnamed;
     }
     if (n->sym) {
-      rhs = which_mtype(n->sym->name); /* only for constants */
+      rhs = which_mtype(n->sym->name.c_str()); /* only for constants */
     }
 
     if (p->sym && !p->sym->mtype_name && n->sym) {
-      p->sym->mtype_name = (Symbol *)emalloc(sizeof(Symbol));
+      p->sym->mtype_name = (models::Symbol *)emalloc(sizeof(models::Symbol));
       p->sym->mtype_name->name = rhs;
-    } else if (strcmp(lhs, rhs) != 0) {
+    } else if (lhs != rhs) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
               p->fn->name, p->ln, p->sym ? p->sym->name : "?", lhs,
               n->sym ? n->sym->name : "?", rhs);
-      log::non_fatal("type error");
+      loger::non_fatal("type error");
     }
   }
 
@@ -827,7 +822,7 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
 
   if (n->sym && n->sym->type == CHAN) {
     if (d == 1)
-      log::fatal("invalid use of chan name");
+      loger::fatal("invalid use of chan name");
     else
       setaccess(n->sym, ZS, 0, 'V');
   }
@@ -891,7 +886,7 @@ void checkindex(char *s, char *t) {
   for (b = bsn; b; b = b->nxt) {
     /*		printf("	%s\n", b->str);	*/
     if (strcmp(b->str, s) == 0) {
-      log::non_fatal("do not index an array with itself (%s)", t);
+      loger::non_fatal("do not index an array with itself (%s)", t);
       break;
     }
   }
@@ -910,7 +905,7 @@ void scan_tree(Lextok *t, char *mn, char *mx) {
   if (t->ntyp == NAME) {
     if (strlen(t->sym->name) + strlen(mn) > 256) // conservative
     {
-      log::fatal("name too long", t->sym->name);
+      loger::fatal("name too long", t->sym->name);
     }
 
     strcat(mn, t->sym->name);
@@ -963,17 +958,17 @@ void no_nested_array_refs(
 }
 
 void no_internals(Lextok *n) {
-  char *sp;
+  std::string sp;
 
-  if (!n->sym || !n->sym->name)
+  if (!n->sym || n->sym->name.empty())
     return;
 
   sp = n->sym->name;
 
-  if ((strlen(sp) == strlen("_nr_pr") && strcmp(sp, "_nr_pr") == 0) ||
-      (strlen(sp) == strlen("_pid") && strcmp(sp, "_pid") == 0) ||
-      (strlen(sp) == strlen("_p") && strcmp(sp, "_p") == 0)) {
-    log::fatal("invalid assignment to %s", sp);
+  if ((sp.length() == strlen("_nr_pr") && sp.compare("_nr_pr") == 0) ||
+      (sp.length() == strlen("_pid") && sp.compare("_pid") == 0) ||
+      (sp.length() == strlen("_p") && sp.compare("_p") == 0)) {
+    loger::fatal("invalid assignment to %s", sp.c_str());
   }
 
   no_nested_array_refs(n);

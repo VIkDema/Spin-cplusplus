@@ -11,7 +11,7 @@ extern FILE *yyin;
 static char *ReDiRect;
 static char *Inliner[MAXINL];
 static models::IType *Inline_stub[MAXINL];
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 
 namespace file {
 FileStream::FileStream() : push_back_(0), pushed_back_(0), line_number_(0) {}

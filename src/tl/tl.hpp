@@ -17,25 +17,25 @@
 #include <stdio.h>
 #include <string.h>
 
-struct Symbol {
+struct models::Symbol {
   char *name;
-  struct Symbol *next; /* linked list, symbol table */
+  struct models::Symbol *next; /* linked list, symbol table */
 };
 
 struct Node {
   short ntyp; /* node type */
-  struct Symbol *sym;
+  struct models::Symbol *sym;
   struct Node *lft; /* tree */
   struct Node *rgt; /* tree */
   struct Node *nxt; /* if linked list */
 };
 
 struct Graph {
-  Symbol *name;
-  Symbol *incoming;
-  Symbol *outgoing;
-  Symbol *oldstring;
-  Symbol *nxtstring;
+  models::Symbol *name;
+  models::Symbol *incoming;
+  models::Symbol *outgoing;
+  models::Symbol *oldstring;
+  models::Symbol *nxtstring;
   Node *New;
   Node *Old;
   Node *Other;
@@ -83,9 +83,9 @@ Node *push_negation(Node *);
 Node *right_linked(Node *);
 Node *tl_nn(int, Node *, Node *);
 
-Symbol *tl_lookup(char *);
-Symbol *getsym(Symbol *);
-Symbol *DoDump(Node *);
+models::Symbol *tl_lookup(char *);
+models::Symbol *getsym(models::Symbol *);
+models::Symbol *DoDump(Node *);
 
 extern char *emalloc(size_t); /* in main.c */
 
@@ -119,7 +119,7 @@ void tl_yyerror(char *);
 void trans(Node *);
 
 #define ZN (Node *)0
-#define ZS (Symbol *)0
+#define ZS (models::Symbol *)0
 #define Nhash 255 /* must match size in spin.h */
 #define True tl_nn(TRUE, ZN, ZN)
 #define False tl_nn(FALSE, ZN, ZN)
@@ -154,7 +154,7 @@ typedef Node *Nodeptr;
   {                                                                            \
     if (!(x)) {                                                                \
       tl_explain(y);                                                           \
-      log::fatal(": assertion failed\n", (char *)0);                                \
+      loger::fatal(": assertion failed\n", (char *)0);                                \
     }                                                                          \
   }
 

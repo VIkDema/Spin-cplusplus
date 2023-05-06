@@ -1,10 +1,6 @@
 /***** spin: pangen1.h *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
+ 
 
 static const char *Code2a[] = {
     /* the tail of procedure run() */

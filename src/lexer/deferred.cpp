@@ -21,7 +21,7 @@ bool Deferred::GetDeferred() {
 
   defer_fd = fopen(TMP_FILE2, "r");
   if (!defer_fd) {
-    log::non_fatal("cannot retrieve deferred ltl formula");
+    loger::non_fatal("cannot retrieve deferred ltl formula");
     return false;
   }
   fclose(yyin);
@@ -36,7 +36,7 @@ bool Deferred::PutDeffered() {
   if (!defer_fd) {
     defer_fd = fopen(TMP_FILE2, "w+");
     if (!defer_fd) {
-      log::non_fatal("cannot defer ltl expansion");
+      loger::non_fatal("cannot defer ltl expansion");
       return false;
     }
   }

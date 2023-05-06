@@ -1,10 +1,6 @@
 /***** spin: pangen7.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
+ 
 
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
@@ -15,6 +11,7 @@
 #ifndef PC
 #include <unistd.h>
 #endif
+#include <iostream>
 
 extern ProcList *ready;
 extern Element *Al_El;
@@ -148,13 +145,13 @@ more:
     a = sq;
     goto more;
   }
-  log::fatal("cannot happen, to_render");
+  loger::fatal("cannot happen, to_render");
 }
 
 static void wrap_text(char *pre, Lextok *t, char *post) {
-  printf(pre);
+  std::cout <<pre;
   comment(stdout, t, 0);
-  printf(post);
+  std::cout <<post;
 }
 
 static State_Stack *push_dsts(int *n) {
@@ -251,7 +248,7 @@ static void state_body(OneState *s, Guard *guard) {
         {
           if (!not_printing)
             printf(" /* self-loop */\n");
-        } else { /* log::non_fatal("loop in state body", 0); ** maybe ok */
+        } else { /* loger::non_fatal("loop in state body", 0); ** maybe ok */
         }
         continue;
       } else {
@@ -348,9 +345,9 @@ static void mk_accepting(int n, Element *e) {
   Selfs[n] = e;
 
   l = (Label *)emalloc(sizeof(Label));
-  l->s = (Symbol *)emalloc(sizeof(Symbol));
+  l->s = (models::Symbol *)emalloc(sizeof(models::Symbol));
   l->s->name = "accept00";
-  l->c = (Symbol *)emalloc(sizeof(Symbol));
+  l->c = (models::Symbol *)emalloc(sizeof(models::Symbol));
   l->uiid = 0; /* this is not in an inline */
 
   for (p = ready, i = 0; p; p = p->nxt, i++) /* find claim name */
@@ -758,7 +755,7 @@ static SQueue *retrieve_state(int *s) {
     }
   }
 
-  log::fatal("cannot happen: retrieve_state");
+  loger::fatal("cannot happen: retrieve_state");
   return (SQueue *)0;
 }
 
@@ -837,7 +834,7 @@ static void t_record(int n, Element *e, Element *g) {
 
 static void get_sub(int n, Element *e) {
   if (e->n->ntyp == D_STEP || e->n->ntyp == ATOMIC) {
-    log::fatal("atomic or d_step in never claim product");
+    loger::fatal("atomic or d_step in never claim product");
   }
   /* NON_ATOMIC */
   e->n->sl->this_sequence->last->nxt = e->nxt;
@@ -883,7 +880,7 @@ static void get_seq(int n, Sequence *s) {
     e->status |= DONE;
 
     if (e->n->ntyp == UNLESS) {
-      log::fatal("unless stmnt in never claim product");
+      loger::fatal("unless stmnt in never claim product");
     }
 
     if (e->sub) /* IF or DO */
@@ -901,7 +898,7 @@ static void get_seq(int n, Sequence *s) {
           continue;
         }
         if (t->ntyp != 'c') {
-          log::fatal("product, 'else' combined with non-condition");
+          loger::fatal("product, 'else' combined with non-condition");
         }
 
         if (t->lft->ntyp == CONST /* true */

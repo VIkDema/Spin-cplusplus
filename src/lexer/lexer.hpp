@@ -61,7 +61,7 @@ private:
   int Follow(int token, int ifyes, int ifno);
 
   file::FileStream stream_;
-  ScopeProcessor scope_;
+  ScopeProcessor& scope_;
   ::helpers::Deferred deferred_;
 
   std::vector<std::string> inline_arguments_;

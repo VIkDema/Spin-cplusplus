@@ -1,10 +1,6 @@
 /***** spin: run.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
+ 
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
@@ -14,7 +10,7 @@
 #include <stdlib.h>
 
 extern RunList *X_lst, *run_lst;
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 extern Element *LastStep;
 extern int Rvous, lineno, Tval, interactive, MadeChoice, Priority_Sum;
 extern int TstOnly, verbose, s_trail, xspin, jumpsteps, depth;
@@ -248,7 +244,7 @@ Element *eval_sub(Element *e) {
             if (verbose_flags.NeedToPrintAllProcessActions()) {
               printf("\tEscape taken (-J) ");
               if (g->n && g->n->fn)
-                printf("%s:%d", g->n->fn->name, g->n->ln);
+                printf("%s:%d", g->n->fn->name.c_str(), g->n->ln);
               printf("\n");
             }
             Escape_Check--;
@@ -260,7 +256,7 @@ Element *eval_sub(Element *e) {
               if (verbose_flags.NeedToPrintAllProcessActions()) {
                 printf("\tEscape taken ");
                 if (g->n && g->n->fn)
-                  printf("%s:%d", g->n->fn->name, g->n->ln);
+                  printf("%s:%d", g->n->fn->name.c_str(), g->n->ln);
                 printf("\n");
               }
               Escape_Check--;
@@ -372,7 +368,7 @@ int eval(Lextok *now) {
     case '/':
       temp = eval(now->rgt);
       if (temp == 0) {
-        log::fatal("division by zero");
+        loger::fatal("division by zero");
       }
       return (eval(now->lft) / temp);
     case '*':
@@ -384,7 +380,7 @@ int eval(Lextok *now) {
     case '%':
       temp = eval(now->rgt);
       if (temp == 0) {
-        log::fatal("taking modulo of zero");
+        loger::fatal("taking modulo of zero");
       }
       return (eval(now->lft) % temp);
     case LT:
@@ -487,14 +483,14 @@ int eval(Lextok *now) {
 
     case C_CODE:
       if (!analyze) {
-        printf("%s:\t", now->sym->name);
+        printf("%s:\t", now->sym->name.c_str());
         plunk_inline(stdout, now->sym->name, 0, 1);
       }
       return 1; /* uninterpreted */
 
     case C_EXPR:
       if (!analyze) {
-        printf("%s:\t", now->sym->name);
+        printf("%s:\t", now->sym->name.c_str());
         plunk_expr(stdout, now->sym->name);
         printf("\n");
       }
@@ -503,7 +499,7 @@ int eval(Lextok *now) {
     case ASSERT:
       if (TstOnly || eval(now->lft))
         return 1;
-      log::non_fatal("assertion violated");
+      loger::non_fatal("assertion violated");
       printf("spin: text of failed assertion: assert(");
       comment(stdout, now->lft, 0);
       printf(")\n");
@@ -530,7 +526,7 @@ int eval(Lextok *now) {
       printf("spin: bad node type %d (run)\n", now->ntyp);
       if (s_trail)
         printf("spin: trail file doesn't match spec?\n");
-      log::fatal("aborting");
+      loger::fatal("aborting");
     }
   }
   return 0;
@@ -593,7 +589,7 @@ int interprint(FILE *fd, Lextok *n) {
             break;
           }
           if (!tmp) {
-            log::non_fatal("too few print args %s", s);
+            loger::non_fatal("too few print args %s", s);
             break;
           }
           j = eval(tmp->lft);
@@ -632,7 +628,7 @@ int interprint(FILE *fd, Lextok *n) {
             sprintf(lbuf, "%x", j);
             break;
           default:
-            log::non_fatal("bad print cmd: '%s'", &s[i - 1]);
+            loger::non_fatal("bad print cmd: '%s'", &s[i - 1]);
             lbuf[0] = '\0';
             break;
           }
@@ -648,7 +644,7 @@ int interprint(FILE *fd, Lextok *n) {
       dotag(fd, GBuf);
     }
   if (strlen(GBuf) >= 4096)
-    log::fatal("printf string too long");
+    loger::fatal("printf string too long");
   return 1;
 }
 
@@ -752,7 +748,7 @@ int pc_enabled(Lextok *n) {
   RunList *Y, *oX;
 
   if (pid == X_lst->pid)
-    log::fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
+    loger::fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
 
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == pid) {

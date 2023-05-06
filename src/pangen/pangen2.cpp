@@ -1,11 +1,5 @@
 /***** spin: pangen2.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
 #include "../lexer/lexer.hpp"
@@ -24,19 +18,19 @@
   {                                                                            \
     fprintf(fd, "\n");                                                         \
     if (!merger)                                                               \
-      fprintf(fd, "\t\t/* %s:%d */\n", e->n->fn->name, e->n->ln);              \
+      fprintf(fd, "\t\t/* %s:%d */\n", e->n->fn->name.c_str(), e->n->ln);              \
   }
 #define tr_map(m, e)                                                           \
   {                                                                            \
     if (!merger)                                                               \
-      fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m, e->n->fn->name,     \
+      fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m, e->n->fn->name.c_str(),     \
               e->n->ln);                                                       \
   }
 
 extern ProcList *ready;
 extern RunList *run_lst;
 extern Lextok *runstmnts;
-extern Symbol *Fname, *oFname, *context;
+extern models::Symbol *Fname, *oFname, *context;
 extern char *claimproc, *eventmap;
 extern int lineno, verbose, Npars, Mpars, nclaims;
 extern int m_loss, has_remote, has_remvar, merger, rvopt, separate;
@@ -92,7 +86,7 @@ static short evalindex = 0;    /* evaluate index of var names */
 
 extern int has_global(Lextok *);
 extern void check_mtypes(Lextok *, Lextok *);
-extern void walk2_struct(char *, Symbol *);
+extern void walk2_struct(char *, models::Symbol *);
 extern int find_min(Sequence *);
 extern int find_max(Sequence *);
 
@@ -135,7 +129,7 @@ static int fproc(char *s) {
     if (strcmp(p->n->name, s) == 0)
       return p->tn;
 
-  log::fatal("proctype %s not found", s);
+  loger::fatal("proctype %s not found", s);
   return -1;
 }
 
@@ -333,7 +327,7 @@ void gensrc(void) {
   fprintf(fd_th, "#endif\n");
 
   if (separate == 1 && !claimproc) {
-    Symbol *n = (Symbol *)emalloc(sizeof(Symbol));
+    models::Symbol *n = (models::Symbol *)emalloc(sizeof(models::Symbol));
     Sequence *s = (Sequence *)emalloc(sizeof(Sequence));
     s->minel = -1;
     claimproc = n->name = "_:never_template:_";
@@ -699,7 +693,7 @@ doless:
     genconditionals();
     gensvmap();
     if (!run_lst)
-      log::fatal("no runable process");
+      loger::fatal("no runable process");
     fprintf(fd_tc, "void\n");
     fprintf(fd_tc, "active_procs(void)\n{\n");
 
@@ -799,7 +793,7 @@ doless:
   fclose(fd_tc);
 }
 
-static int find_id(Symbol *s) {
+static int find_id(models::Symbol *s) {
   ProcList *p;
 
   if (s)
@@ -809,7 +803,7 @@ static int find_id(Symbol *s) {
   return 0;
 }
 
-static void dolen(Symbol *s, char *pre, int pid, int ai, int qln) {
+static void dolen(models::Symbol *s, char *pre, int pid, int ai, int qln) {
   if (ai > 0)
     fprintf(fd_tc, "\n\t\t\t ||    ");
   fprintf(fd_tc, "%s(", pre);
@@ -820,7 +814,7 @@ static void dolen(Symbol *s, char *pre, int pid, int ai, int qln) {
       fprintf(fd_tc, "(int) ( now.");
   }
   fprintf(fd_tc, "%s", s->name);
-  if (qln > 1 || s->isarray)
+  if (qln > 1 || s->is_array)
     fprintf(fd_tc, "[%d]", ai);
   fprintf(fd_tc, ") )");
 }
@@ -863,10 +857,10 @@ void bb_or_dd(int j, int which) {
   }
 }
 
-void Done_case(char *nm, Symbol *z) {
+void Done_case(char *nm, models::Symbol *z) {
   int j, k;
-  int nid = z->Nid;
-  int qln = z->nel;
+  int nid = z->id;
+  int qln = z->value_type;
 
   fprintf(fd_tc, "\t\tcase %d: if (", nid);
   for (j = 0; j < 4; j++) {
@@ -891,7 +885,7 @@ void Done_case(char *nm, Symbol *z) {
   fprintf(fd_tc, ") return 0; break;\n");
 }
 
-static void Docase(Symbol *s, int pid, int nid) {
+static void Docase(models::Symbol *s, int pid, int nid) {
   int i, j;
 
   fprintf(fd_tc, "\t\tcase %d: if (", nid);
@@ -900,11 +894,11 @@ static void Docase(Symbol *s, int pid, int nid) {
     bb_or_dd(j, 0);
     fprintf(fd_tc, " && (");
     if (has_unless) {
-      for (i = 0; i < s->nel; i++)
-        dolen(s, DD[j].CC, pid, i, s->nel);
+      for (i = 0; i < s->value_type; i++)
+        dolen(s, DD[j].CC, pid, i, s->value_type);
     } else {
-      for (i = 0; i < s->nel; i++)
-        dolen(s, BB[j].CC, pid, i, s->nel);
+      for (i = 0; i < s->value_type; i++)
+        dolen(s, BB[j].CC, pid, i, s->value_type);
     }
     fprintf(fd_tc, "))\n\t\t\t ");
     if (j < 3)
@@ -916,7 +910,7 @@ static void Docase(Symbol *s, int pid, int nid) {
 }
 
 static void genconditionals(void) {
-  Symbol *s;
+  models::Symbol *s;
   int last = 0, j;
   extern Ordered *all_names;
   Ordered *walk;
@@ -961,9 +955,9 @@ static void genconditionals(void) {
       continue;
     j = find_id(s->context);
     if (s->type == CHAN) {
-      if (last == s->Nid)
+      if (last == s->id)
         continue; /* chan array */
-      last = s->Nid;
+      last = s->id;
       Docase(s, j, last);
     } else if (s->type == STRUCT) { /* struct may contain a chan */
       char pregat[128];
@@ -1023,13 +1017,13 @@ static void putproc(ProcList *p) {
           p->s->last ? p->s->last->seqno : 0);
 
   if (p->b == N_CLAIM || p->b == E_TRACE || p->b == N_TRACE) {
-    fprintf(fd_tm, "\n		 /* CLAIM %s */\n", p->n->name);
-    fprintf(fd_tb, "\n		 /* CLAIM %s */\n", p->n->name);
+    fprintf(fd_tm, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
+    fprintf(fd_tb, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
   } else {
-    fprintf(fd_tm, "\n		 /* PROC %s */\n", p->n->name);
-    fprintf(fd_tb, "\n		 /* PROC %s */\n", p->n->name);
+    fprintf(fd_tm, "\n		 /* PROC %s */\n", p->n->name.c_str());
+    fprintf(fd_tb, "\n		 /* PROC %s */\n", p->n->name.c_str());
   }
-  fprintf(fd_tt, "\n	/* proctype %d: %s */\n", Pid_nr, p->n->name);
+  fprintf(fd_tt, "\n	/* proctype %d: %s */\n", Pid_nr, p->n->name.c_str());
   fprintf(fd_tt, "\n	trans[%d] = (Trans **)", Pid_nr);
   fprintf(fd_tt, " emalloc(%d*sizeof(Trans *));\n\n", p->s->maxel);
 
@@ -1132,11 +1126,11 @@ static int getNid(Lextok *n) {
   if (n->sym && n->sym->type == STRUCT && n->rgt && n->rgt->lft)
     return getNid(n->rgt->lft);
 
-  if (!n->sym || n->sym->Nid == 0) {
+  if (!n->sym || n->sym->id == 0) {
     char *no_name = "no name";
-    log::fatal("bad channel name '%s'", (n->sym) ? n->sym->name : no_name);
+    loger::fatal("bad channel name '%s'", (n->sym) ? n->sym->name : no_name);
   }
-  return n->sym->Nid;
+  return n->sym->id;
 }
 
 static int valTpe(Lextok *n) {
@@ -1626,7 +1620,7 @@ static int dobackward(Element *e, int casenr) {
     CnT[YZcnt]--;
     YZmax--;
     if (YZmax < 0)
-      log::fatal("cannot happen, dobackward");
+      loger::fatal("cannot happen, dobackward");
     fprintf(fd_tb, ";\n\t/* %d */\t", YZmax);
     putname(fd_tb, "", &YZ[YZmax], 0, " = trpt->bup.oval");
     if (multi_oval > 0) {
@@ -1666,8 +1660,8 @@ static void lastfirst(int stopat, Element *fin, int casenr) {
 static int modifier;
 
 static void lab_transfer(Element *to, Element *from) {
-  Symbol *ns, *s = has_lab(from, (1 | 2 | 4));
-  Symbol *oc;
+  models::Symbol *ns, *s = has_lab(from, (1 | 2 | 4));
+  models::Symbol *oc;
   int ltp, usedit = 0;
 
   if (!s)
@@ -1678,8 +1672,8 @@ static void lab_transfer(Element *to, Element *from) {
    */
   oc = context;                    /* remember */
   for (ltp = 1; ltp < 8; ltp *= 2) /* 1, 2, and 4 */
-    if ((s = has_lab(from, ltp)) != (Symbol *)0) {
-      ns = (Symbol *)emalloc(sizeof(Symbol));
+    if ((s = has_lab(from, ltp)) != (models::Symbol *)0) {
+      ns = (models::Symbol *)emalloc(sizeof(models::Symbol));
       ns->name = (char *)emalloc((int)strlen(s->name) + 4);
       sprintf(ns->name, "%s%d", s->name, modifier);
 
@@ -1690,7 +1684,7 @@ static void lab_transfer(Element *to, Element *from) {
   context = oc; /* restore */
   if (usedit) {
     if (modifier++ > 990)
-      log::fatal("modifier overflow error");
+      loger::fatal("modifier overflow error");
   }
 }
 
@@ -1750,13 +1744,13 @@ static int case_cache(Element *e, int a) {
           e->merge_in);
 
   if (nrbups > MAXMERGE - 1)
-    log::fatal("merge requires more than 256 bups");
+    loger::fatal("merge requires more than 256 bups");
 
   if (e->n->ntyp != 'r' && !pid_is_claim(Pid_nr) && Pid_nr != eventmapnr)
     fprintf(fd_tm, "IfNotBlocked\n\t\t");
 
   if (multi_needed != 0 || multi_undo != 0)
-    log::fatal("cannot happen, case_cache");
+    loger::fatal("cannot happen, case_cache");
 
   if (nrbups > 1) {
     multi_oval = 1;
@@ -2149,7 +2143,7 @@ static Element *find_target(Element *e) {
     return e;
 
   if (t_cyc++ > 32) {
-    log::fatal("cycle of goto jumps");
+    loger::fatal("cycle of goto jumps");
   }
   switch (e->n->ntyp) {
   case GOTO:
@@ -2269,7 +2263,7 @@ static int proc_is_safe(const Lextok *n) {
 
 int has_global(Lextok *n) {
   Lextok *v;
-  static Symbol *n_seen = (Symbol *)0;
+  static models::Symbol *n_seen = (models::Symbol *)0;
 
   if (!n)
     return 0;
@@ -2312,7 +2306,7 @@ int has_global(Lextok *n) {
     if (strcmp(n->sym->name, "_priority") == 0) {
       if (old_priority_rules) {
         if (n_seen != n->sym)
-          log::fatal("cannot refer to _priority with -o6");
+          loger::fatal("cannot refer to _priority with -o6");
         n_seen = n->sym;
       }
       return 0;
@@ -2425,7 +2419,7 @@ void dump_tree(const char *s, Lextok *p) {
     return;
 
   printf("\n%s:\t%2d:\t%3d (", s, p->ln, p->ntyp);
-  std::cout << log::explainToString(p->ntyp);
+  std::cout << loger::explainToString(p->ntyp);
   if (p->ntyp == 315)
     printf(": %s", p->sym->name);
   if (p->ntyp == 312)
@@ -2536,14 +2530,14 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
   case RUN:
     if (now->sym == NULL)
-      log::fatal("internal error pangen2.c");
+      loger::fatal("internal error pangen2.c");
     if (claimproc && strcmp(now->sym->name, claimproc) == 0)
-      log::fatal("claim %s, (not runnable)", claimproc);
+      loger::fatal("claim %s, (not runnable)", claimproc);
     if (eventmap && strcmp(now->sym->name, eventmap) == 0)
-      log::fatal("eventmap %s, (not runnable)", eventmap);
+      loger::fatal("eventmap %s, (not runnable)", eventmap);
 
     if (GenCode)
-      log::fatal("'run' in d_step sequence (use atomic)");
+      loger::fatal("'run' in d_step sequence (use atomic)");
 
     fprintf(fd, "addproc(II, %d, %d",
             (now->val > 0 && !old_priority_rules) ? now->val : 1,
@@ -2555,7 +2549,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
     if (i > Npars) { /* printf("\t%d parameters used, max %d expected\n", i,
                         Npars); */
-      log::fatal("too many parameters in run %s(...)", now->sym->name);
+      loger::fatal("too many parameters in run %s(...)", now->sym->name);
     }
     for (; i < Npars; i++)
       fprintf(fd, ", 0");
@@ -2563,7 +2557,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     check_mtypes(now, now->lft);
     if (now->val < 0 || now->val > 255) /* 0 itself is allowed */
     {
-      log::fatal("bad process in run %s, valid range: 1..255", now->sym->name);
+      loger::fatal("bad process in run %s, valid range: 1..255", now->sym->name);
     }
     break;
 
@@ -2744,7 +2738,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       putname(stdout, "channel name: ", now->lft, m, "\n");
       terse--;
       printf("	%d msg parameters sent, %d expected\n", i, Mpars);
-      log::fatal("too many pars in send", "");
+      loger::fatal("too many pars in send", "");
     }
     for (j = i; i < Mpars; i++) {
       fprintf(fd, ", 0");
@@ -3026,12 +3020,12 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
         for (v = now->rgt; v; v = v->rgt) {
           if (v->lft->ntyp != CONST && v->lft->ntyp != EVAL && v->lft->sym &&
               v->lft->sym->type != STRUCT /* not a struct */
-              && (v->lft->sym->nel == 1 &&
-                  v->lft->sym->isarray == 0) /* not array */
+              && (v->lft->sym->value_type == 1 &&
+                  v->lft->sym->is_array == 0) /* not array */
               && strcmp(v->lft->sym->name, "_") != 0)
             for (w = v->rgt; w; w = w->rgt)
               if (v->lft->sym == w->lft->sym) {
-                log::fatal("cannot use var ('%s') in multiple msg fields",
+                loger::fatal("cannot use var ('%s') in multiple msg fields",
                            v->lft->sym->name);
               }
         }
@@ -3284,7 +3278,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (now->lft->sym && now->lft->sym->type == PREDEF &&
         strcmp(now->lft->sym->name, "_") != 0 &&
         strcmp(now->lft->sym->name, "_priority") != 0) {
-      log::fatal("invalid assignment to %s", now->lft->sym->name);
+      loger::fatal("invalid assignment to %s", now->lft->sym->name);
     }
 
     nocast = 1;
@@ -3292,10 +3286,10 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     nocast = 0;
     fprintf(fd, " = ");
     _isok--;
-    if (now->lft->sym->isarray && now->rgt->ntyp == ',') /* array initializer */
+    if (now->lft->sym->is_array && now->rgt->ntyp == ',') /* array initializer */
     {
       putstmnt(fd, now->rgt->lft, m);
-      log::non_fatal("cannot use an array list initializer here");
+      loger::non_fatal("cannot use an array list initializer here");
     } else {
       putstmnt(fd, now->rgt, m);
     }
@@ -3388,7 +3382,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (now->sym)
       plunk_inline(fd, now->sym->name, 1, GenCode);
     else
-      log::fatal("internal error pangen2.c");
+      loger::fatal("internal error pangen2.c");
 
     if (!GenCode) {
       fprintf(fd, "\n"); /* state changed, capture it */
@@ -3449,23 +3443,23 @@ char *simplify_name(char *s) {
 
   return t;
 }
-
-void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
+void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
+             const std::string &suff) /* varref */
 {
-  Symbol *s = n->sym;
-  char *ptr;
+  models::Symbol *s = n->sym;
+  std::string ptr;
 
   lineno = n->ln;
   Fname = n->fn;
 
   if (!s)
-    log::fatal("no name - putname");
+    loger::fatal("no name - putname");
 
   if (s->context && context && s->type)
     s = findloc(s); /* it's a local var */
 
   if (!s) {
-    fprintf(fd, "%s%s%s", pre, n->sym->name, suff);
+    fprintf(fd, "%s%s%s", pre.c_str(), n->sym->name, suff.c_str());
     return;
   }
 
@@ -3473,29 +3467,29 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
     s = lookup(s->name); /* must be a global */
 
   if (!s->type) {
-    if (strcmp(pre, ".") != 0)
-      log::fatal("undeclared variable '%s'", s->name);
-    s->type = INT;
+    if (strcmp(pre.c_str(), ".") != 0)
+      loger::fatal("undeclared variable '%s'", s->name);
+    s->type = models::kInt;
   }
 
   if (s->type == PROCTYPE)
-    log::fatal("proctype-name '%s' used as array-name", s->name);
+    loger::fatal("proctype-name '%s' used as array-name", s->name);
 
-  fprintf(fd, pre, 0);
-  if (!terse && !s->owner && evalindex != 1) {
-    if (old_priority_rules && strcmp(s->name, "_priority") == 0) {
+  fprintf(fd, pre.c_str(), 0);
+  if (!terse && !s->owner_name && evalindex != 1) {
+    if (old_priority_rules && s->name == "_priority") {
       fprintf(fd, "1");
       goto shortcut;
     } else {
-      if (s->context || strcmp(s->name, "_p") == 0 ||
-          strcmp(s->name, "_pid") == 0 || strcmp(s->name, "_priority") == 0) {
+      if (s->context || s->name == "_p" || s->name == "_pid" ||
+          s->name == "_priority") {
         fprintf(fd, "((P%d *)_this)->", Pid_nr);
       } else {
-        int x = strcmp(s->name, "_");
-        if (!(s->hidden & 1) && x != 0)
+        bool x = s->name == "_";
+        if (!(s->hidden_flags == models::SymbolFlag::kHide) && x)
           fprintf(fd, "now.");
-        if (x == 0 && _isok == 0)
-          log::fatal("attempt to read value of '_'");
+        if (!x && _isok == 0)
+          loger::fatal("attempt to read value of '_'");
       }
     }
   }
@@ -3509,7 +3503,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
   if (!dont_simplify        /* new 6.4.3 */
       && s->type != PREDEF) /* new 6.0.2 */
   {
-    if (withprocname && s->context && strcmp(pre, ".")) {
+    if (withprocname && s->context && strcmp(pre.c_str(), ".")) {
       fprintf(fd, "%s:", s->context->name);
       ptr = simplify_name(ptr);
     } else {
@@ -3520,11 +3514,11 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
   }
 
   if (evalindex != 1)
-    fprintf(fd, "%s", ptr);
+    fprintf(fd, "%s", ptr.c_str());
 
-  if (s->nel > 1 || s->isarray == 1) {
+  if (s->value_type > 1 || s->is_array == 1) {
     if (no_arrays) {
-      log::non_fatal("ref to array element invalid in this context");
+      loger::non_fatal("ref to array element invalid in this context");
       printf("\thint: instead of, e.g., x[rs] qu[3], use\n");
       printf("\tchan nm_3 = qu[3]; x[rs] nm_3;\n");
       printf("\tand use nm_3 in sends/recvs instead of qu[3]\n");
@@ -3545,8 +3539,9 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
       putstmnt(fd, n->lft, m);
       evalindex = 1;
     } else {
-      if (terse || (n->lft && n->lft->ntyp == CONST && n->lft->val < s->nel) ||
-          (!n->lft && s->nel > 0)) {
+      if (terse ||
+          (n->lft && n->lft->ntyp == CONST && n->lft->val < s->value_type) ||
+          (!n->lft && s->value_type > 0)) {
         cat3("[", n->lft, "]");
       } else { /* attempt to catch arrays that are indexed with an array element
                 * in the same array this causes trouble in the verifier in the
@@ -3555,13 +3550,13 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
                 * structure, so the names don't match
                 */
         cat3("[ Index(", n->lft, ", ");
-        fprintf(fd, "%d) ]", s->nel);
+        fprintf(fd, "%d) ]", s->value_type);
       }
     }
   } else {
     if (n->lft /* effectively a scalar, but with an index */
         && (n->lft->ntyp != CONST || n->lft->val != 0)) {
-      log::fatal("ref to scalar '%s' using array index", (char *)ptr);
+      loger::fatal("ref to scalar '%s' using array index", (char *)ptr);
     }
   }
 
@@ -3569,7 +3564,7 @@ void putname(FILE *fd, char *pre, Lextok *n, int m, char *suff) /* varref */
     putname(fd, ".", n->rgt->lft, m, "");
   }
 shortcut:
-  fprintf(fd, suff, 0);
+  fprintf(fd, suff.c_str(), 0);
 }
 
 void putremote(FILE *fd, Lextok *n, int m) /* remote reference */
@@ -3664,14 +3659,14 @@ void count_runs(Lextok *n) {
   runcount = opcount = 0;
   do_count(n, 1);
   if (runcount > 1)
-    log::fatal("more than one run operator in expression", "");
+    loger::fatal("more than one run operator in expression", "");
   if (runcount == 1 && opcount > 1)
-    log::fatal("use of run operator in compound expression", "");
+    loger::fatal("use of run operator in compound expression", "");
 }
 
 void any_runs(Lextok *n) {
   runcount = opcount = 0;
   do_count(n, 0);
   if (runcount >= 1)
-    log::fatal("run operator used in invalid context", "");
+    loger::fatal("run operator used in invalid context", "");
 }

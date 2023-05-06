@@ -1,16 +1,11 @@
 /***** spin: msc_tcl.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
-#include "utils/seed/seed.hpp"
 #include "spin.hpp"
+#include "utils/seed/seed.hpp"
 #include "version/version.hpp"
 #include <stdlib.h>
+#include <fmt/core.h>
 
 #define MW 500 /* page width */
 #define RH 100 /* right margin */
@@ -18,9 +13,9 @@
 #define HH 12  /* vertical distance between steps */
 #define LW 2   /* line width of message arrows */
 
-#define RVC "darkred"   /* rendezvous arrows */
-#define MPC "darkblue"  /* asynchronous message passing arrow */
-#define GRC "lightgrey" /* grid lines */
+const std::string RVC = "darkred";   // rendezvous arrows
+const std::string MPC = "darkblue";  // asynchronous message passing arrow
+const std::string GRC = "lightgrey"; // grid lines
 
 static int MH = 600; /* anticipated page-length */
 static FILE *pfd;
@@ -42,21 +37,21 @@ static int no_box;
 
 extern int ntrail, s_trail, prno, depth;
 extern short Have_claim;
-extern Symbol *oFname;
+extern models::Symbol *oFname;
 
 extern void exit(int);
 extern void putpostlude(void);
 
 static void putpages(void);
 
-static void psline(int x0, int y0, int x1, int y1, char *color) {
-  char *side = "last";
+static void psline(int x0, int y0, int x1, int y1, const std::string &color) {
+  std::string side = "last";
 
   if (x0 == x1) /* gridline */
   {
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags grid -width 1 \n",
             xscale * (x0 + 1) * WW - 20, yscale * y0 + 20,
-            xscale * (x1 + 1) * WW - 20, yscale * y1 + 20, color);
+            xscale * (x1 + 1) * WW - 20, yscale * y1 + 20, color.c_str());
     fprintf(pfd, ".c lower grid\n");
   } else {
     int xm =
@@ -68,32 +63,33 @@ static void psline(int x0, int y0, int x1, int y1, char *color) {
 
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags mesg -width %d\n",
             xscale * (x0 + 1) * WW - 20, yscale * y0 + 20 + 10, xm,
-            yscale * y0 + 20 + 10, color, LW);
+            yscale * y0 + 20 + 10, color.c_str(), LW);
 
     if (y1 != y0 + 20) {
       fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags mesg -width %d\n",
-              xm, yscale * y0 + 20 + 10, xm, yscale * y1 + 20 - 10, color, LW);
+              xm, yscale * y0 + 20 + 10, xm, yscale * y1 + 20 - 10,
+              color.c_str(), LW);
     }
 
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -width %d ", xm,
             yscale * y1 + 20 - 10, xscale * (x1 + 1) * WW - 20,
-            yscale * y1 + 20 - 10, color, LW);
+            yscale * y1 + 20 - 10, color.c_str(), LW);
 
-    if (strcmp(color, RVC) == 0) {
+    if (color == RVC) {
       side = "both";
     }
-    fprintf(pfd, "-arrow %s -arrowshape {5 5 5} -tags mesg\n", side);
+    fprintf(pfd, "-arrow %s -arrowshape {5 5 5} -tags mesg\n", side.c_str());
     fprintf(pfd, ".c raise mesg\n");
   }
 }
 
-static void colbox(int ix, int iy, int w, int h_unused, char *color) {
+static void colbox(int ix, int iy, int w, int h_unused, const std::string& color) {
   int x = ix * WW;
   int y = iy * HH;
 
   if (ix < 0 || ix > 255) {
     fprintf(stderr, "saw ix=%d\n", ix);
-    log::fatal("msc_tcl: unexpected\n");
+    loger::fatal("msc_tcl: unexpected\n");
   }
 
   if (ProcLine[ix] < iy) { /* if (ProcLine[ix] > 0) */
@@ -110,7 +106,7 @@ static void colbox(int ix, int iy, int w, int h_unused, char *color) {
     no_box = 2;
   }
 
-  if (strcmp(color, "black") == 0) {
+  if (color ==  "black") {
     if (no_box == 0) /* shadow */
     {
       fprintf(pfd, ".c create rectangle %d %d %d %d -fill black\n",
@@ -153,7 +149,7 @@ static void spitbox(int ix, int y, char *s) {
   float bw; /* box width */
   char d[256], *t, *z;
   int a, i, x = ix + 1;
-  char *color = "black";
+  std::string color = "black";
 
   if (y > 0) {
     stepnumber(y);
@@ -286,10 +282,9 @@ static void putbox(int x) {
 
 /* functions called externally: */
 
-
 void putpostlude(void) {
-  char cmd[512];
-  auto& seed = utils::seed::Seed::getInstance();
+  std::string cmd;
+  auto &seed = utils::seed::Seed::getInstance();
 
   putpages();
   fprintf(pfd, ".c lower grid\n");
@@ -297,10 +292,10 @@ void putpostlude(void) {
   fclose(pfd);
 
   fprintf(stderr, "seed used: -n%d\n", seed.GetSeed());
-  sprintf(cmd, "wish -f %s.tcl &", oFname ? oFname->name : "msc");
-  fprintf(stderr, "%s\n", cmd);
+  cmd = fmt::format("wish -f {}.tcl &", oFname ? oFname->name : "msc");
+  fprintf(stderr, "%s\n", cmd.c_str());
   (void)unlink("pan.pre");
-  exit(system(cmd));
+  exit(system(cmd.c_str()));
 }
 
 void putprelude(void) {
@@ -309,7 +304,7 @@ void putprelude(void) {
 
   sprintf(snap, "%s.tcl", oFname ? oFname->name : "msc");
   if (!(pfd = fopen(snap, MFLAGS))) {
-    log::fatal("cannot create file '%s'", snap);
+    loger::fatal("cannot create file '%s'", snap);
   }
   if (s_trail) {
     if (ntrail)
@@ -319,7 +314,7 @@ void putprelude(void) {
     if (!(fd = fopen(snap, "r"))) {
       snap[strlen(snap) - 2] = '\0';
       if (!(fd = fopen(snap, "r")))
-        log::fatal("cannot open trail file");
+        loger::fatal("cannot open trail file");
     }
     TotSteps = 1;
     while (fgets(snap, 256, fd))
@@ -354,7 +349,7 @@ void pstext(int x, char *s) {
   } else {
     if (depth >= TotSteps || ldepth >= TotSteps) {
       fprintf(stderr, "spin: error: max nr of %d steps exceeded\n", TotSteps);
-      log::fatal("use -uN to limit steps");
+      loger::fatal("use -uN to limit steps");
     }
     putbox(x);
     D[depth] = ldepth;

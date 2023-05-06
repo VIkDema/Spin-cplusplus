@@ -1,11 +1,5 @@
 /***** spin: pangen6.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
@@ -43,7 +37,7 @@ struct AST {
 };
 
 struct RPN { /* relevant proctype names */
-  Symbol *rn;
+  models::Symbol *rn;
   struct RPN *nxt;
 };
 
@@ -97,7 +91,7 @@ static void show_expl(void);
 
 static int AST_isini(Lextok *n) /* is this an initialized channel */
 {
-  Symbol *s;
+  models::Symbol *s;
 
   if (!n || !n->sym)
     return 0;
@@ -105,7 +99,7 @@ static int AST_isini(Lextok *n) /* is this an initialized channel */
   s = n->sym;
 
   if (s->type == CHAN)
-    return (s->ini->ntyp == CHAN); /* freshly instantiated */
+    return (s->init_value->ntyp == CHAN); /* freshly instantiated */
 
   if (s->type == STRUCT && n->rgt)
     return AST_isini(n->rgt->lft);
@@ -113,17 +107,17 @@ static int AST_isini(Lextok *n) /* is this an initialized channel */
   return 0;
 }
 
-static void AST_var(Lextok *n, Symbol *s, int toplevel) {
+static void AST_var(Lextok *n, models::Symbol *s, int toplevel) {
   if (!s)
     return;
 
   if (toplevel) {
     if (s->context && s->type)
-      printf(":%s:L:", s->context->name);
+      printf(":%s:L:", s->context->name.c_str());
     else
       printf("G:");
   }
-  printf("%s", s->name); /* array indices ignored */
+  printf("%s", s->name.c_str()); /* array indices ignored */
 
   if (s->type == STRUCT && n && n->rgt && n->rgt->lft) {
     printf(":");
@@ -135,7 +129,7 @@ static void name_def_indices(Lextok *n, int code) {
   if (!n || !n->sym)
     return;
 
-  if (n->sym->nel > 1 || n->sym->isarray)
+  if (n->sym->value_type > 1 || n->sym->is_array)
     def_use(n->lft, code); /* process the index */
 
   if (n->sym->type == STRUCT /* and possible deeper ones */
@@ -151,11 +145,11 @@ static void name_def_use(Lextok *n, int code) {
 
   if ((code & USE) && cur_t->step && cur_t->step->n) {
     switch (cur_t->step->n->ntyp) {
-    case 'c':             /* possible predicate abstraction? */
-      n->sym->colnr |= 2; /* yes */
+    case 'c':                    /* possible predicate abstraction? */
+      n->sym->color_number |= 2; /* yes */
       break;
     default:
-      n->sym->colnr |= 1; /* no  */
+      n->sym->color_number |= 1; /* no  */
       break;
     }
   }
@@ -347,7 +341,7 @@ static int AST_add_alias(Lextok *n, int nr) {
   return 1;
 }
 
-static void AST_run_alias(char *pn, char *s, Lextok *t, int parno) {
+static void AST_run_alias(const std::string &s, Lextok *t, int parno) {
   Lextok *v;
   int cnt;
 
@@ -355,19 +349,19 @@ static void AST_run_alias(char *pn, char *s, Lextok *t, int parno) {
     return;
 
   if (t->ntyp == RUN) {
-    if (strcmp(t->sym->name, s) == 0)
+    if (t->sym->name == s)
       for (v = t->lft, cnt = 1; v; v = v->rgt, cnt++)
         if (cnt == parno) {
           AST_add_alias(v->lft, 1); /* RUN */
           break;
         }
   } else {
-    AST_run_alias(pn, s, t->lft, parno);
-    AST_run_alias(pn, s, t->rgt, parno);
+    AST_run_alias(s, t->lft, parno);
+    AST_run_alias(s, t->rgt, parno);
   }
 }
 
-static void AST_findrun(char *s, int parno) {
+static void AST_findrun(std::string &s, int parno) {
   FSM_state *f;
   FSM_trans *t;
   AST *a;
@@ -377,7 +371,7 @@ static void AST_findrun(char *s, int parno) {
       for (t = f->t; t; t = t->nxt) /* transitions    */
       {
         if (t->step)
-          AST_run_alias(a->p->n->name, s, t->step->n, parno);
+          AST_run_alias(s, t->step->n, parno);
       }
 }
 
@@ -385,18 +379,19 @@ static void AST_par_chans(
     ProcList *p) /* find local chan's init'd to chan passed as param */
 {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
-    if (sp && sp->context && strcmp(sp->context->name, p->n->name) == 0 &&
-        sp->Nid >= 0                                  /* not itself a param */
-        && sp->type == CHAN && sp->ini->ntyp == NAME) /* != CONST and != CHAN */
+    if (sp && sp->context && sp->context->name == p->n->name &&
+        sp->id >= 0 /* not itself a param */
+        && sp->type == CHAN &&
+        sp->init_value->ntyp == NAME) /* != CONST and != CHAN */
     {
       Lextok *x = nn(ZN, 0, ZN, ZN);
       x->sym = sp;
       AST_setcur(x);
-      AST_add_alias(sp->ini, 2); /* ASGN */
+      AST_add_alias(sp->init_value, 2); /* ASGN */
     }
   }
 }
@@ -459,9 +454,8 @@ static int AST_ord(Lextok *n, Lextok *s) {
   return 0;
 }
 
-
 static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
-  Symbol *as, *bs;
+  models::Symbol *as, *bs;
 
   if (!a && !b)
     return 1;
@@ -481,7 +475,7 @@ static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
   if (as->type != bs->type)
     return 0;
 
-  if (strcmp(as->name, bs->name) != 0)
+  if (as->name != bs->name)
     return 0;
 
   if (as->type == STRUCT && a->rgt &&
@@ -544,7 +538,7 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
             break;
           default:
             printf("type = %d\n", t->step->n->ntyp);
-            log::non_fatal("unexpected chan def type");
+            loger::non_fatal("unexpected chan def type");
             break;
           }
         }
@@ -579,7 +573,8 @@ static void AST_aliases(void) {
   printf("\n");
 }
 
-static void AST_indirect(FSM_use *uin, FSM_trans *t, char *cause, char *pn) {
+static void AST_indirect(FSM_use *uin, FSM_trans *t, const std::string &cause,
+                         const std::string &pn) {
   FSM_use *u;
 
   /* this is a newly discovered relevant statement */
@@ -593,9 +588,9 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, char *cause, char *pn) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (verbose_flags.NeedToPrintVerbose() && t->step) {
-    printf("\tDR %s [[ ", pn);
+    printf("\tDR %s [[ ", pn.c_str());
     comment(stdout, t->step->n, 0);
-    printf("]]\n\t\tfully relevant %s", cause);
+    printf("]]\n\t\tfully relevant %s", cause.c_str());
     if (uin) {
       printf(" due to ");
       AST_var(uin->n, uin->n->sym, 1);
@@ -613,7 +608,8 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, char *cause, char *pn) {
     }
 }
 
-static void def_relevant(char *pn, FSM_trans *t, Lextok *n, int ischan) {
+static void def_relevant(const std::string &pn, FSM_trans *t, Lextok *n,
+                         int ischan) {
   FSM_use *u;
   ALIAS *na, *ca;
   int chanref;
@@ -695,7 +691,7 @@ static void AST_relevant(Lextok *n) {
   }
 }
 
-static int AST_relpar(char *s) {
+static int AST_relpar(const std::string &s) {
   FSM_trans *t, *T;
   FSM_use *u;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -705,9 +701,9 @@ static int AST_relpar(char *s) {
       if (t->relevant & 1)
         for (u = t->Val[0]; u; u = u->nxt) {
           if (u->n->sym->type && u->n->sym->context &&
-              strcmp(u->n->sym->context->name, s) == 0) {
+              u->n->sym->context->name == s) {
             if (verbose_flags.NeedToPrintVerbose()) {
-              printf("proctype %s relevant, due to symbol ", s);
+              printf("proctype %s relevant, due to symbol ", s.c_str());
               AST_var(u->n, u->n->sym, 1);
               printf("\n");
             }
@@ -724,19 +720,19 @@ static void AST_dorelevant(void) {
 
   for (r = rpn; r; r = r->nxt) {
     for (a = ast; a; a = a->nxt)
-      if (strcmp(a->p->n->name, r->rn->name) == 0) {
+      if (a->p->n->name == r->rn->name) {
         a->relevant |= 1;
         break;
       }
     if (!a)
-      log::fatal("cannot find proctype %s", r->rn->name);
+      loger::fatal("cannot find proctype %s", r->rn->name);
   }
 }
 
-static void AST_procisrelevant(Symbol *s) {
+static void AST_procisrelevant(models::Symbol *s) {
   RPN *r;
   for (r = rpn; r; r = r->nxt)
-    if (strcmp(r->rn->name, s->name) == 0)
+    if (r->rn->name == s->name)
       return;
   r = (RPN *)emalloc(sizeof(RPN));
   r->rn = s;
@@ -744,13 +740,13 @@ static void AST_procisrelevant(Symbol *s) {
   rpn = r;
 }
 
-static int AST_proc_isrel(char *s) {
+static int AST_proc_isrel(const std::string &s) {
   AST *a;
 
   for (a = ast; a; a = a->nxt)
-    if (strcmp(a->p->n->name, s) == 0)
+    if (a->p->n->name == s)
       return (a->relevant & 1);
-  log::non_fatal("cannot happen, missing proc in ast");
+  loger::non_fatal("cannot happen, missing proc in ast");
   return 0;
 }
 
@@ -806,9 +802,9 @@ static void AST_report(AST *a, Element *e) /* ALSO deduce irrelevant vars */
   if (!(a->relevant & 2)) {
     a->relevant |= 2;
     printf("spin: redundant in proctype %s (for given property):\n",
-           a->p->n->name);
+           a->p->n->name.c_str());
   }
-  printf("      %s:%d (state %d)", e->n ? e->n->fn->name : "-",
+  printf("      %s:%d (state %d)", e->n ? e->n->fn->name.c_str() : "-",
          e->n ? e->n->ln : -1, e->seqno);
   printf("	[");
   comment(stdout, e->n, 0);
@@ -918,7 +914,7 @@ static void AST_dump(AST *a) {
   }
 
   if (verbose_flags.NeedToPrintVerbose())
-    printf("AST_START %s from %d\n", a->p->n->name, a->i_st);
+    printf("AST_START %s from %d\n", a->p->n->name.c_str(), a->i_st);
 
   AST_dfs(a, a->i_st, 1);
 }
@@ -1000,7 +996,7 @@ static void name_AST_track(Lextok *n, int code) {
   extern int nr_errs;
   if (in_recv && (code & DEF) && (code & USE)) {
     printf("spin: %s:%d, error: DEF and USE of same var in rcv stmnt: ",
-           n->fn->name, n->ln);
+           n->fn->name.c_str(), n->ln);
     AST_var(n, n->sym, 1);
     printf(" -- %d\n", code);
     nr_errs++;
@@ -1067,7 +1063,7 @@ void AST_track(Lextok *now, int code) /* called from main.c */
 
     case NAME:
       name_AST_track(now, code);
-      if (now->sym->nel > 1 || now->sym->isarray)
+      if (now->sym->value_type > 1 || now->sym->is_array)
         AST_track(now->lft, USE); /* index, was USE|code */
       break;
 
@@ -1176,14 +1172,14 @@ static int AST_dump_rel(void) {
     return 1;
   }
   for (rv = rel_vars; rv; rv = rv->nxt)
-    rv->n->sym->setat = 1; /* mark it */
+    rv->n->sym->last_depth = 1; /* mark it */
 
   for (walk = all_names; walk; walk = walk->next) {
-    Symbol *s;
+    models::Symbol *s;
     s = walk->entry;
-    if (!s->setat && (s->type != MTYPE || s->ini->ntyp != CONST) &&
+    if (!s->last_depth && (s->type != MTYPE || s->init_value->ntyp != CONST) &&
         s->type != STRUCT /* report only fields */
-        && s->type != PROCTYPE && !s->owner && sputtype(buf, s->type)) {
+        && s->type != PROCTYPE && !s->owner_name && sputtype(buf, s->type)) {
       if (!banner) {
         banner = 1;
         printf("spin: redundant vars (for given property):\n");
@@ -1196,7 +1192,7 @@ static int AST_dump_rel(void) {
 }
 
 static void AST_suggestions(void) {
-  Symbol *s;
+  models::Symbol *s;
   Ordered *walk;
   FSM_state *f;
   FSM_trans *t;
@@ -1206,7 +1202,7 @@ static void AST_suggestions(void) {
 
   for (walk = all_names; walk; walk = walk->next) {
     s = walk->entry;
-    if (s->colnr == 2 /* only used in conditionals */
+    if (s->color_number == 2 /* only used in conditionals */
         && (s->type == BYTE || s->type == SHORT || s->type == INT ||
             s->type == MTYPE)) {
       if (!banner) {
@@ -1802,18 +1798,18 @@ AST_var_init(void) /* initialized vars (not chans) - hidden assignments */
 {
   Ordered *walk;
   Lextok *x;
-  Symbol *sp;
+  models::Symbol *sp;
   AST *a;
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
     if (sp && !sp->context /* globals */
-        && sp->type != PROCTYPE && sp->ini &&
-        (sp->type != MTYPE || sp->ini->ntyp != CONST) /* not mtype defs */
-        && sp->ini->ntyp != CHAN) {
+        && sp->type != PROCTYPE && sp->init_value &&
+        (sp->type != MTYPE || sp->init_value->ntyp != CONST) /* not mtype defs */
+        && sp->init_value->ntyp != CHAN) {
       x = nn(ZN, TYPE, ZN, ZN);
       x->sym = sp;
-      AST_add_explicit(x, sp->ini);
+      AST_add_explicit(x, sp->init_value);
     }
   }
 
@@ -1824,11 +1820,11 @@ AST_var_init(void) /* initialized vars (not chans) - hidden assignments */
         sp = walk->entry;
         if (sp && sp->context &&
             strcmp(sp->context->name, a->p->n->name) == 0 &&
-            sp->Nid >= 0 /* not a param */
-            && sp->type != LABEL && sp->ini && sp->ini->ntyp != CHAN) {
+            sp->id >= 0 /* not a param */
+            && sp->type != LABEL && sp->init_value && sp->init_value->ntyp != CHAN) {
           x = nn(ZN, TYPE, ZN, ZN);
           x->sym = sp;
-          AST_add_explicit(x, sp->ini);
+          AST_add_explicit(x, sp->init_value);
         }
       }
   }
@@ -1872,7 +1868,7 @@ static void AST_hidden(void) /* reveal all hidden assignments */
 
 static int bad_scratch(FSM_state *f, int upto) {
   FSM_trans *t;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 #if 0
 	1. all internal branch-points have else-s
 	2. all non-branchpoints have non-blocking out-edge

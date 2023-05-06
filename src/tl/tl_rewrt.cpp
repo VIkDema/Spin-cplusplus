@@ -117,7 +117,7 @@ static void addcan(int tok, Node *n) {
   Node *m, *prev = ZN;
   Node **ptr;
   Node *N;
-  Symbol *s, *t;
+  models::Symbol *s, *t;
   int cmp;
 
   if (!n)
@@ -137,7 +137,7 @@ static void addcan(int tok, Node *n) {
 
   s = DoDump(N);
   if (!s) {
-    log::fatal("unexpected error 6");
+    loger::fatal("unexpected error 6");
   }
   if (can->ntyp != tok) /* only one element in list so far */
   {
@@ -293,7 +293,7 @@ Node *Canonical(Node *n) {
 out:
   if (!can) {
     if (!dflt)
-      log::fatal("cannot happen, Canonical");
+      loger::fatal("cannot happen, Canonical");
     return dflt;
   }
 

@@ -3,7 +3,7 @@
 #include "../spin.hpp"
 #include <fmt/core.h>
 
-extern Symbol *context;
+extern models::Symbol *context;
 
 namespace lexer {
 ScopeProcessor::ScopeProcessor() : scope_level_(0) {}

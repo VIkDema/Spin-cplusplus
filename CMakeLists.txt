@@ -56,6 +56,17 @@ set(SPIN_SOURCES
     src/lexer/deferred.cpp
     src/lexer/scope.hpp
     src/lexer/scope.cpp
+    src/new_main.cpp
+    src/main/arguments_parser.hpp
+    src/main/arguments_parser.cpp
+    src/main/help.cpp
+    src/main/help.hpp
+    src/main/launch_settings.hpp
+    src/main/launch_settings.cpp
+    src/main/main_processor.hpp
+    src/main/main_processor.cpp
+    src/main/pre_proc_settings.hpp
+    src/main/pre_proc_settings.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

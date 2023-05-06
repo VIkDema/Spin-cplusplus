@@ -9,7 +9,7 @@
 extern std::string yytext;
 extern int need_arguments;
 extern YYSTYPE yylval;
-extern Symbol *context, *owner;
+extern models::Symbol *context, *owner;
 lexer::Lexer lexer_;
 
 namespace {

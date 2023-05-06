@@ -1,24 +1,18 @@
 /***** spin: sym.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
-extern Symbol *Fname, *owner;
+extern models::Symbol *Fname, *owner;
 extern int lineno, depth, verbose, NamesNotAdded, deadvar;
 extern int has_hidden, m_loss, old_scope_rules;
 extern short has_xu;
 extern char CurScope[MAXSCOPESZ];
 
-Symbol *context = ZS;
+models::Symbol *context = ZS;
 Ordered *all_names = (Ordered *)0;
 int Nid_nr = 0;
 
@@ -26,14 +20,14 @@ Mtypes_t *Mtypes;
 Lextok *runstmnts = ZN;
 
 static Ordered *last_name = (Ordered *)0;
-static Symbol *symtab[Nhash + 1];
+static models::Symbol *symtab[Nhash + 1];
 
-static int samename(Symbol *a, Symbol *b) {
+static int samename(models::Symbol *a, models::Symbol *b) {
   if (!a && !b)
     return 1;
   if (!a || !b)
     return 0;
-  return !strcmp(a->name, b->name);
+  return a->name != b->name;
 }
 
 unsigned int hash(const char *s) {
@@ -50,7 +44,7 @@ unsigned int hash(const char *s) {
 
 void disambiguate(void) {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
   char *n, *m;
 
   if (old_scope_rules)
@@ -61,11 +55,11 @@ void disambiguate(void) {
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
     if (sp->type != 0 && sp->type != LABEL &&
-        strlen((const char *)sp->bscp) > 1) {
+        sp->bscp.size() > 1) {
       if (sp->context) {
-        m = (char *)emalloc(strlen((const char *)sp->bscp) + 1);
+        m = (char *)emalloc(sp->bscp.size() + 1);
         sprintf(m, "_%d_", sp->context->sc);
-        if (strcmp((const char *)m, (const char *)sp->bscp) == 0) {
+        if (strcmp((const char *)m, (const char *)sp->bscp.c_str()) == 0) {
           continue;
           /* 6.2.0: only prepend scope for inner-blocks,
              not for top-level locals within a proctype
@@ -83,31 +77,31 @@ void disambiguate(void) {
   }
 }
 
-Symbol *lookup(char *s) {
-  Symbol *sp;
+models::Symbol *lookup(const std::string &s) {
+  models::Symbol *sp;
   Ordered *no;
-  unsigned int h = hash(s);
+  unsigned int h = hash(s.c_str());
 
   if (old_scope_rules) { /* same scope - global refering to global or local to
                             local */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s) == 0 && samename(sp->context, context) &&
+      if (strcmp(sp->name, s.c_str()) == 0 && samename(sp->context, context) &&
           samename(sp->owner, owner)) {
         return sp; /* found */
       }
     }
   } else { /* added 6.0.0: more traditional, scope rule */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s) == 0 && samename(sp->context, context) &&
+      if (strcmp(sp->name, s.c_str()) == 0 && samename(sp->context, context) &&
           (strcmp((const char *)sp->bscp, CurScope) == 0 ||
            strncmp((const char *)sp->bscp, CurScope,
                    strlen((const char *)sp->bscp)) == 0) &&
           samename(sp->owner, owner)) {
         if (!samename(sp->owner, owner)) {
           printf("spin: different container %s\n", sp->name);
-          printf("	old: %s\n", sp->owner ? sp->owner->name : "--");
-          printf("	new: %s\n", owner ? owner->name : "--");
-          /*	alldone(1);	*/
+          printf("    old: %s\n", sp->owner ? sp->owner->name : "--");
+          printf("    new: %s\n", owner ? owner->name : "--");
+          /*    alldone(1);    */
         }
         return sp; /* found */
       }
@@ -116,16 +110,16 @@ Symbol *lookup(char *s) {
 
   if (context) /* in proctype, refers to global */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s) == 0 && !sp->context &&
+      if (strcmp(sp->name, s.c_str()) == 0 && !sp->context &&
           samename(sp->owner, owner)) {
         return sp; /* global */
       }
     }
 
-  sp = (Symbol *)emalloc(sizeof(Symbol));
-  sp->name = (char *)emalloc(strlen(s) + 1);
-  strcpy(sp->name, s);
-  sp->nel = 1;
+  sp = (models::Symbol *)emalloc(sizeof(models::Symbol));
+  sp->name = (char *)emalloc(s.length() + 1);
+  strcpy(sp->name, s.c_str());
+  sp->value_type = 1;
   sp->setat = depth;
   sp->context = context;
   sp->owner = owner; /* if fld in struct */
@@ -149,7 +143,7 @@ Symbol *lookup(char *s) {
 }
 
 void trackvar(Lextok *n, Lextok *m) {
-  Symbol *sp = n->sym;
+  models::Symbol *sp = n->sym;
 
   if (!sp)
     return; /* a structure list */
@@ -174,7 +168,7 @@ void trackvar(Lextok *n, Lextok *m) {
 
 void trackrun(Lextok *n) { runstmnts = nn(ZN, 0, n, runstmnts); }
 
-void checkrun(Symbol *parnm, int posno) {
+void checkrun(models::Symbol *parnm, int posno) {
   Lextok *n, *now, *v;
   int i, m;
   int res = 0;
@@ -243,7 +237,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     if (n->sym->type && !(n->sym->hidden & 32)) {
       lineno = n->ln;
       Fname = n->fn;
-      log::fatal("redeclaration of '%s'", n->sym->name);
+      loger::fatal("redeclaration of '%s'", n->sym->name);
       lineno = oln;
     }
     n->sym->type = (short)t;
@@ -251,7 +245,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     if (mtype_name && t != MTYPE) {
       lineno = n->ln;
       Fname = n->fn;
-      log::fatal("missing semi-colon after '%s'?", mtype_name->sym->name);
+      loger::fatal("missing semi-colon after '%s'?", mtype_name->sym->name);
       lineno = oln;
     }
 
@@ -261,7 +255,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
               n->fn->name, n->ln, n->sym->name, mtype_name->sym->name,
               n->sym->mtype_name->name);
-      log::non_fatal("type error");
+      loger::non_fatal("type error");
     }
 
     n->sym->mtype_name =
@@ -275,14 +269,14 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
 
     if (t == UNSIGNED) {
       if (n->sym->nbits < 0 || n->sym->nbits >= 32)
-        log::fatal("(%s) has invalid width-field", n->sym->name);
+        loger::fatal("(%s) has invalid width-field", n->sym->name);
       if (n->sym->nbits == 0) {
         n->sym->nbits = 16;
-        log::non_fatal("unsigned without width-field");
+        loger::non_fatal("unsigned without width-field");
       }
     } else if (n->sym->nbits > 0) {
-      log::non_fatal("(%s) only an unsigned can have width-field",
-                     n->sym->name);
+      loger::non_fatal("(%s) only an unsigned can have width-field",
+                       n->sym->name);
     }
 
     if (vis) {
@@ -290,7 +284,7 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
         n->sym->hidden |= 1;
         has_hidden++;
         if (t == BIT)
-          log::fatal("bit variable (%s) cannot be hidden", n->sym->name);
+          loger::fatal("bit variable (%s) cannot be hidden", n->sym->name);
       } else if (strncmp(vis->sym->name, ":show:", (size_t)6) == 0) {
         n->sym->hidden |= 2;
       } else if (strncmp(vis->sym->name, ":local:", (size_t)7) == 0) {
@@ -299,20 +293,20 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     }
 
     if (t == CHAN) {
-      n->sym->Nid = ++Nid_nr;
+      n->sym->id = ++Nid_nr;
     } else {
-      n->sym->Nid = 0;
-      if (n->sym->ini && n->sym->ini->ntyp == CHAN) {
+      n->sym->id = 0;
+      if (n->sym->init_value && n->sym->init_value->ntyp == CHAN) {
         Fname = n->fn;
         lineno = n->ln;
-        log::fatal("chan initializer for non-channel %s", n->sym->name);
+        loger::fatal("chan initializer for non-channel %s", n->sym->name);
       }
     }
 
-    if (n->sym->nel <= 0) {
+    if (n->sym->value_type <= 0) {
       lineno = n->ln;
       Fname = n->fn;
-      log::non_fatal("bad array size for '%s'", n->sym->name);
+      loger::non_fatal("bad array size for '%s'", n->sym->name);
       lineno = oln;
     }
 
@@ -321,13 +315,13 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
   }
 }
 
-static void setonexu(Symbol *sp, int t) {
+static void setonexu(models::Symbol *sp, int t) {
   sp->xu |= t;
   if (t == XR || t == XS) {
     if (sp->xup[t - 1] && strcmp(sp->xup[t - 1]->name, context->name)) {
       printf("error: x[rs] claims from %s and %s\n", sp->xup[t - 1]->name,
              context->name);
-      log::non_fatal("conflicting claims on chan '%s'", sp->name);
+      loger::non_fatal("conflicting claims on chan '%s'", sp->name);
     }
     sp->xup[t - 1] = context;
   }
@@ -361,7 +355,7 @@ void setxus(Lextok *p, int t) {
   if (!context) {
     lineno = p->ln;
     Fname = p->fn;
-    log::fatal("non-local x[rs] assertion");
+    loger::fatal("non-local x[rs] assertion");
   }
   for (m = p; m; m = m->rgt) {
     Lextok *Xu_new = (Lextok *)emalloc(sizeof(Lextok));
@@ -381,24 +375,24 @@ void setxus(Lextok *p, int t) {
       int oln = lineno;
       lineno = n->ln;
       Fname = n->fn;
-      log::non_fatal("xr or xs of non-chan '%s'", n->sym->name);
+      loger::non_fatal("xr or xs of non-chan '%s'", n->sym->name);
       lineno = oln;
     }
   }
 }
 
-Lextok **find_mtype_list(const char *s) {
+Lextok **find_mtype_list(const std::string &) {
   Mtypes_t *lst;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
-    if (strcmp(lst->nm, s) == 0) {
+    if (strcmp(lst->nm, s.c_str()) == 0) {
       return &(lst->mt);
     }
   }
 
   /* not found, create it */
   lst = (Mtypes_t *)emalloc(sizeof(Mtypes_t));
-  lst->nm = (char *)emalloc(strlen(s) + 1);
+  lst->nm = (char *)emalloc(s.size() + 1);
   strcpy(lst->nm, s);
   lst->nxt = Mtypes;
   Mtypes = lst;
@@ -436,23 +430,23 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
   {
     if (!n->lft || !n->lft->sym || n->lft->ntyp != NAME ||
         n->lft->lft) /* indexed variable */
-      log::fatal("bad mtype definition");
+      loger::fatal("bad mtype definition");
 
     /* label the name */
     if (n->lft->sym->type != MTYPE) {
       n->lft->sym->hidden |= 128; /* is used */
       n->lft->sym->type = MTYPE;
-      n->lft->sym->ini = nn(ZN, CONST, ZN, ZN);
-      n->lft->sym->ini->val = cnt;
-    } else if (n->lft->sym->ini->val != cnt) {
-      log::non_fatal("name %s appears twice in mtype declaration",
-                     n->lft->sym->name);
+      n->lft->sym->init_value = nn(ZN, CONST, ZN, ZN);
+      n->lft->sym->init_value->val = cnt;
+    } else if (n->lft->sym->init_value->val != cnt) {
+      loger::non_fatal("name %s appears twice in mtype declaration",
+                       n->lft->sym->name);
     }
   }
 
   lineno = oln;
   if (cnt > 256) {
-    log::fatal("too many mtype elements (>255)");
+    loger::fatal("too many mtype elements (>255)");
   }
 }
 
@@ -559,7 +553,7 @@ static int puttype(int m) {
   return 0;
 }
 
-void symvar(Symbol *sp) {
+void symvar(models::Symbol *sp) {
   Lextok *m;
 
   if (!puttype(sp->type))
@@ -569,15 +563,15 @@ void symvar(Symbol *sp) {
   if (sp->owner)
     printf("%s.", sp->owner->name);
   printf("%s", sp->name);
-  if (sp->nel > 1 || sp->isarray == 1)
-    printf("[%d]", sp->nel);
+  if (sp->value_type > 1 || sp->is_array == 1)
+    printf("[%d]", sp->value_type);
 
   if (sp->type == CHAN)
-    printf("\t%d", (sp->ini) ? sp->ini->val : 0);
+    printf("\t%d", (sp->init_value) ? sp->init_value->val : 0);
   else if (sp->type == STRUCT && sp->Snm != NULL) /* Frank Weil, 2.9.8 */
     printf("\t%s", sp->Snm->name);
   else
-    printf("\t%d", eval(sp->ini));
+    printf("\t%d", eval(sp->init_value));
 
   if (sp->owner)
     printf("\t<:struct-field:>");
@@ -586,21 +580,21 @@ void symvar(Symbol *sp) {
   else
     printf("\t<%s>", sp->context->name);
 
-  if (sp->Nid < 0) /* formal parameter */
-    printf("\t<parameter %d>", -(sp->Nid));
+  if (sp->id < 0) /* formal parameter */
+    printf("\t<parameter %d>", -(sp->id));
   else if (sp->type == MTYPE)
     printf("\t<constant>");
-  else if (sp->isarray)
+  else if (sp->is_array)
     printf("\t<array>");
   else
     printf("\t<variable>");
 
-  if (sp->type == CHAN && sp->ini) {
+  if (sp->type == CHAN && sp->init_value) {
     int i;
-    for (m = sp->ini->rgt, i = 0; m; m = m->rgt)
+    for (m = sp->init_value->rgt, i = 0; m; m = m->rgt)
       i++;
     printf("\t%d\t", i);
-    for (m = sp->ini->rgt; m; m = m->rgt) {
+    for (m = sp->init_value->rgt; m; m = m->rgt) {
       if (m->ntyp == STRUCT)
         printf("struct %s", m->sym->name);
       else
@@ -624,15 +618,15 @@ void symdump(void) {
     symvar(walk->entry);
 }
 
-void chname(Symbol *sp) {
+void chname(models::Symbol *sp) {
   printf("chan ");
   if (sp->context)
     printf("%s-", sp->context->name);
   if (sp->owner)
     printf("%s.", sp->owner->name);
   printf("%s", sp->name);
-  if (sp->nel > 1 || sp->isarray == 1)
-    printf("[%d]", sp->nel);
+  if (sp->value_type > 1 || sp->is_array == 1)
+    printf("[%d]", sp->value_type);
   printf("\t");
 }
 
@@ -651,7 +645,7 @@ static struct X_lkp {
     {'s', "sent to"},
 };
 
-static void chan_check(Symbol *sp) {
+static void chan_check(models::Symbol *sp) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   Access *a;
@@ -718,7 +712,8 @@ void chanaccess(void) {
         if ((walk->entry->hidden & 128)) /* was: 32 */
           continue;
 
-        if (!separate && !walk->entry->context && !lexer_.GetHasCode() && deadvar)
+        if (!separate && !walk->entry->context && !lexer_.GetHasCode() &&
+            deadvar)
           walk->entry->hidden |= 1; /* auto-hide */
 
         if (!verbose_flags.NeedToPrintVerbose() || lexer_.GetHasCode())

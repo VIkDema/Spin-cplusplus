@@ -1,21 +1,13 @@
-/***** spin: flow.c *****/
-
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
-#include "lexer/lexer.hpp"
 
 #include "y.tab.h"
 
 extern lexer::Lexer lexer_;
-extern Symbol *Fname;
-extern int nr_errs, lineno,  old_scope_rules, s_trail;
+extern models::Symbol *Fname;
+extern int nr_errs, lineno, old_scope_rules, s_trail;
 extern short has_unless, has_badelse, has_xu;
 extern char CurScope[MAXSCOPESZ];
 
@@ -35,7 +27,7 @@ static Element *new_el(Lextok *);
 static Element *unless_seq(Lextok *);
 static void add_el(Element *, Sequence *);
 static void attach_escape(Sequence *, Sequence *);
-static void mov_lab(Symbol *, Element *, Element *);
+static void mov_lab(models::Symbol *, Element *, Element *);
 static void walk_atomic(Element *, Element *, int);
 
 void open_seq(int top) {
@@ -84,7 +76,7 @@ void cross_dsteps(Lextok *a, Lextok *b) {
     lineno = a->ln;
     Fname = a->fn;
     if (!s_trail)
-      log::fatal("jump into d_step sequence");
+      loger::fatal("jump into d_step sequence");
   }
 }
 
@@ -106,7 +98,7 @@ void check_sequence(Sequence *s) {
       cnt++;
       if (cnt > 1 && n->ntyp != PRINT && n->ntyp != PRINTM) {
         if (verbose_flags.NeedToPrintVerbose()) {
-          printf("spin: %s:%d, redundant skip\n", n->fn->name, n->ln);
+          printf("spin: %s:%d, redundant skip\n", n->fn->name.c_str(), n->ln);
         }
         if (e != s->frst && e != s->last && e != s->extent) {
           e->status |= DONE; /* not unreachable */
@@ -121,10 +113,11 @@ void check_sequence(Sequence *s) {
 
 void prune_opts(Lextok *n) {
   SeqList *l;
-  extern Symbol *context;
+  extern models::Symbol *context;
   extern char *claimproc;
 
-  if (!n || (context && claimproc && strcmp(context->name, claimproc) == 0))
+  if (!n ||
+      (context && claimproc && strcmp(context->name.c_str(), claimproc) == 0))
     return;
 
   for (l = n->sl; l; l = l->nxt) /* find sequences of unlabeled skips */
@@ -133,7 +126,7 @@ void prune_opts(Lextok *n) {
 
 Sequence *close_seq(int nottop) {
   Sequence *s = cur_s->this_sequence;
-  Symbol *z;
+  models::Symbol *z;
 
   if (nottop == 0) /* end of proctype body */
   {
@@ -142,8 +135,8 @@ Sequence *close_seq(int nottop) {
 
   if (nottop > 0 && s->frst && (z = has_lab(s->frst, 0))) {
     printf("error: (%s:%d) label %s placed incorrectly\n",
-           (s->frst->n) ? s->frst->n->fn->name : "-",
-           (s->frst->n) ? s->frst->n->ln : 0, z->name);
+           (s->frst->n) ? s->frst->n->fn->name.c_str() : "-",
+           (s->frst->n) ? s->frst->n->ln : 0, z->name.c_str());
     switch (nottop) {
     case 1:
       printf("=====> stmnt unless Label: stmnt\n");
@@ -196,13 +189,13 @@ Sequence *close_seq(int nottop) {
   }
 
   if (nottop == 4 && !Rjumpslocal(s->frst, s->last))
-    log::fatal("non_local jump in d_step sequence");
+    loger::fatal("non_local jump in d_step sequence");
 
   cur_s = cur_s->nxt;
   s->maxel = Elcnt;
   s->extent = s->last;
   if (!s->last)
-    log::fatal("sequence must have at least one statement");
+    loger::fatal("sequence must have at least one statement");
   return s;
 }
 
@@ -328,7 +321,7 @@ void loose_ends(void) /* properly tie-up ends of sub-sequences */
       else {
         if (e->n->sl->this_sequence->last->nxt->n->ntyp != GOTO) {
           if (!f || e->n->sl->this_sequence->last->nxt->seqno != f->seqno)
-            log::non_fatal("unexpected: loose ends");
+            loger::non_fatal("unexpected: loose ends");
         } else
           e->n->sl->this_sequence->last = e->n->sl->this_sequence->last->nxt;
         /*
@@ -344,7 +337,7 @@ void loose_ends(void) /* properly tie-up ends of sub-sequences */
 
 void popbreak(void) {
   if (!breakstack)
-    log::fatal("cannot happen, breakstack");
+    loger::fatal("cannot happen, breakstack");
 
   breakstack = breakstack->nxt; /* pop stack */
 }
@@ -375,7 +368,7 @@ static Element *if_seq(Lextok *n) {
       continue;
     if (z->this_sequence->frst->n->ntyp == ELSE) {
       if (move_else)
-        log::fatal("duplicate `else'");
+        loger::fatal("duplicate `else'");
       if (z->nxt) /* is not already at the end */
       {
         move_else = z;
@@ -393,7 +386,7 @@ static Element *if_seq(Lextok *n) {
     move_else->nxt = (SeqList *)0;
     /* if there is no prev, then else was at the end */
     if (!prev_z)
-      log::fatal("cannot happen - if_seq");
+      loger::fatal("cannot happen - if_seq");
     prev_z->nxt = move_else;
     prev_z = move_else;
   }
@@ -401,11 +394,11 @@ static Element *if_seq(Lextok *n) {
     prev_z->this_sequence->frst->n->val = 1;
     has_badelse++;
     if (has_xu) {
-      log::fatal(
+      loger::fatal(
           "invalid use of 'else' combined with i/o and xr/xs assertions,",
           (char *)0);
     } else {
-      log::non_fatal("dubious use of 'else' combined with i/o,");
+      loger::non_fatal("dubious use of 'else' combined with i/o,");
     }
     nr_errs--;
   }
@@ -491,7 +484,7 @@ static Element *unless_seq(Lextok *n) {
 
   /* need 2 sequences: normal execution and escape */
   if (!s || !s->nxt || s->nxt->nxt)
-    log::fatal("unexpected unless structure");
+    loger::fatal("unexpected unless structure");
 
   /* append the target state to both */
   for (z = s; z; z = z->nxt)
@@ -524,7 +517,7 @@ Element *mk_skip(void) {
 
 static void add_el(Element *e, Sequence *s) {
   if (e->n->ntyp == GOTO) {
-    Symbol *z = has_lab(e, (1 | 2 | 4));
+    models::Symbol *z = has_lab(e, (1 | 2 | 4));
     if (z) {
       Element *y; /* insert a skip */
       y = mk_skip();
@@ -568,26 +561,24 @@ void add_seq(Lextok *n) {
     add_el(e, cur_s->this_sequence);
 }
 
-void set_lab(Symbol *s, Element *e) {
+void set_lab(models::Symbol *s, Element *e) {
   Label *l;
-  extern Symbol *context;
+  extern models::Symbol *context;
   int cur_uiid = is_inline();
 
   if (!s)
     return;
 
   for (l = labtab; l; l = l->nxt) {
-    if (strcmp(l->s->name, s->name) == 0 && l->c == context &&
-        (old_scope_rules ||
-         strcmp((const char *)s->bscp, (const char *)l->s->bscp) == 0) &&
-        l->uiid == cur_uiid) {
-      log::non_fatal("label %s redeclared", s->name);
+    if (l->s->name == s->name && l->c == context &&
+        (old_scope_rules || s->bscp == l->s->bscp) && l->uiid == cur_uiid) {
+      loger::non_fatal("label %s redeclared", s->name);
       break;
     }
   }
 
-  if (strncmp(s->name, "accept", 6) == 0 &&
-      strncmp(s->name, "accept_all", 10) != 0) {
+  if (s->name.substr(0, 6) == "accept" &&
+      s->name.substr(0, 10) != "accept_all") {
     has_accept = 1;
   }
 
@@ -601,25 +592,23 @@ void set_lab(Symbol *s, Element *e) {
 }
 
 static Label *get_labspec(Lextok *n) {
-  Symbol *s = n->sym;
+  models::Symbol *s = n->sym;
   Label *l, *anymatch = (Label *)0;
-  int ln;
   /*
    * try to find a label with the same inline id (uiid)
    * but if it doesn't exist, return any other match
    * within the same scope
    */
   for (l = labtab; l; l = l->nxt) {
-    if (strcmp(l->s->name, s->name) == 0 /* labelname matches */
-        && s->context == l->s->context)  /* same scope */
+    if (l->s->name == s->name           /* labelname matches */
+        && s->context == l->s->context) /* same scope */
     {
       /* same block scope */
-      if (strcmp((const char *)s->bscp, (const char *)l->s->bscp) == 0) {
+      if (s->bscp == l->s->bscp) {
         return l; /* definite match */
       }
       /* higher block scope */
-      ln = strlen((const char *)l->s->bscp);
-      if (strncmp((const char *)s->bscp, (const char *)l->s->bscp, ln) == 0) {
+      if (s->bscp.substr(0, l->s->bscp.length()) == l->s->bscp) {
         anymatch = l; /* possible match */
       } else if (!anymatch) {
         anymatch = l; /* somewhere else in same context */
@@ -640,26 +629,28 @@ Element *get_lab(Lextok *n, int md) {
   if (md) {
     lineno = n->ln;
     Fname = n->fn;
-    log::fatal("undefined label %s", n->sym->name);
+    loger::fatal("undefined label %s", n->sym->name);
   }
   return ZE;
 }
 
-Symbol *has_lab(Element *e, int special) {
+models::Symbol *has_lab(Element *e, int special) {
   Label *l;
 
   for (l = labtab; l; l = l->nxt) {
     if (e != l->e)
       continue;
-    if (special == 0 || ((special & 1) && !strncmp(l->s->name, "accept", 6)) ||
-        ((special & 2) && !strncmp(l->s->name, "end", 3)) ||
-        ((special & 4) && !strncmp(l->s->name, "progress", 8)))
+    if (special == 0 ||
+        ((special & 1) && l->s->name.substr(0, 6) == "accept") ||
+        ((special & 2) && l->s->name.substr(0, 3) == "end") ||
+        ((special & 4) && l->s->name.substr(0, 8) == "progress")) {
       return (l->s);
+    }
   }
   return ZS;
 }
 
-static void mov_lab(Symbol *z, Element *e, Element *y) {
+static void mov_lab(models::Symbol *z, Element *e, Element *y) {
   Label *l;
 
   for (l = labtab; l; l = l->nxt)
@@ -671,32 +662,33 @@ static void mov_lab(Symbol *z, Element *e, Element *y) {
     lineno = e->n->ln;
     Fname = e->n->fn;
   }
-  log::fatal("cannot happen - mov_lab %s", z->name);
+  loger::fatal("cannot happen - mov_lab %s", z->name);
 }
 
-void fix_dest(Symbol *c, Symbol *a) /* c:label name, a:proctype name */
+void fix_dest(models::Symbol *c,
+              models::Symbol *a) /* c:label name, a:proctype name */
 {
   Label *l;
-  extern Symbol *context;
+  extern models::Symbol *context;
 
   for (l = labtab; l; l = l->nxt) {
-    if (strcmp(c->name, l->s->name) == 0 &&
-        strcmp(a->name, l->c->name) == 0) /* ? */
+    if (c->name == l->s->name && a->name == l->c->name) /* ? */
       break;
   }
   if (!l) {
-    printf("spin: label '%s' (proctype %s)\n", c->name, a->name);
-    log::non_fatal("unknown label '%s'", c->name);
+    printf("spin: label '%s' (proctype %s)\n", c->name.c_str(),
+           a->name.c_str());
+    loger::non_fatal("unknown label '%s'", c->name);
     if (context == a)
       printf("spin: cannot remote ref a label inside the same proctype\n");
     return;
   }
   if (!l->e || !l->e->n)
-    log::fatal("fix_dest error (%s)", c->name);
+    loger::fatal("fix_dest error (%s)", c->name);
   if (l->e->n->ntyp == GOTO) {
     Element *y = (Element *)emalloc(sizeof(Element));
     int keep_ln = l->e->n->ln;
-    Symbol *keep_fn = l->e->n->fn;
+    models::Symbol *keep_fn = l->e->n->fn;
 
     /* insert skip - or target is optimized away */
     y->n = l->e->n;           /* copy of the goto   */
@@ -715,29 +707,31 @@ void fix_dest(Symbol *c, Symbol *a) /* c:label name, a:proctype name */
   }
   l->e->status |= CHECK2; /* treat as if global */
   if (l->e->status & (ATOM | L_ATOM | D_ATOM)) {
-    printf("spin: %s:%d, warning, reference to label ", Fname->name, lineno);
-    printf("from inside atomic or d_step (%s)\n", c->name);
+    printf("spin: %s:%d, warning, reference to label ", Fname->name.c_str(),
+           lineno);
+    printf("from inside atomic or d_step (%s)\n", c->name.c_str());
   }
 }
 
-int find_lab(Symbol *s, Symbol *c, int markit) {
+int find_lab(models::Symbol *s, models::Symbol *c, int markit) {
   Label *l, *pm = (Label *)0, *apm = (Label *)0;
   int ln;
 
   /* generally called for remote references in never claims */
   for (l = labtab; l; l = l->nxt) {
-    if (strcmp(s->name, l->s->name) == 0 && strcmp(c->name, l->c->name) == 0) {
-      ln = strlen((const char *)l->s->bscp);
+    if (s->name == l->s->name && c->name == l->c->name) {
+      ln = l->s->bscp.length();
       if (0) {
         printf("want '%s' in context '%s', scope ref '%s' - label '%s'\n",
-               s->name, c->name, s->bscp, l->s->bscp);
+               s->name.c_str(), c->name.c_str(), s->bscp.c_str(),
+               l->s->bscp.c_str());
       }
       /* same or higher block scope */
-      if (strcmp((const char *)s->bscp, (const char *)l->s->bscp) == 0) {
+      if (s->bscp == l->s->bscp) {
         pm = l; /* definite match */
         break;
       }
-      if (strncmp((const char *)s->bscp, (const char *)l->s->bscp, ln) == 0) {
+      if (s->bscp.substr(0, ln) == l->s->bscp) {
         pm = l; /* possible match */
       } else {
         apm = l; /* remote */
@@ -758,7 +752,7 @@ int find_lab(Symbol *s, Symbol *c, int markit) {
 
 void pushbreak(void) {
   Lbreak *r = (Lbreak *)emalloc(sizeof(Lbreak));
-  Symbol *l;
+  models::Symbol *l;
   char buf[64];
 
   sprintf(buf, ":b%d", break_id++);
@@ -768,9 +762,9 @@ void pushbreak(void) {
   breakstack = r;
 }
 
-Symbol *break_dest(void) {
+models::Symbol *break_dest(void) {
   if (!breakstack)
-    log::fatal("misplaced break statement");
+    loger::fatal("misplaced break statement");
   return breakstack->l;
 }
 
@@ -799,31 +793,33 @@ void make_atomic(Sequence *s, int added) {
   }
 }
 
-int match_struct(Symbol *s, Symbol *t) {
-  if (!t || !t->ini || !t->ini->rgt || !t->ini->rgt->sym || t->ini->rgt->rgt) {
+int match_struct(models::Symbol *s, models::Symbol *t) {
+  if (!t || !t->init_value || !t->init_value->rgt || !t->init_value->rgt->sym ||
+      t->init_value->rgt->rgt) {
     char *t_name = "--";
-    log::fatal("chan %s in for should have only one field (a typedef)", t_name);
+    loger::fatal("chan %s in for should have only one field (a typedef)",
+                 t_name);
   }
   /* we already know that s is a STRUCT */
   if (0) {
-    printf("index type %s %p ==\n", s->Snm->name, (void *)s->Snm);
-    printf("chan type  %s %p --\n\n", t->ini->rgt->sym->name,
-           (void *)t->ini->rgt->sym);
+    printf("index type %s %p ==\n", s->Snm->name.c_str(), (void *)s->Snm);
+    printf("chan type  %s %p --\n\n", t->init_value->rgt->sym->name.c_str(),
+           (void *)t->init_value->rgt->sym);
   }
 
-  return (s->Snm == t->ini->rgt->sym);
+  return (s->Snm == t->init_value->rgt->sym);
 }
 
 void valid_name(Lextok *a3, Lextok *a5, Lextok *a8, char *tp) {
   if (a3->ntyp != NAME) {
-    log::fatal("%s ( .name : from .. to ) { ... }", tp);
+    loger::fatal("%s ( .name : from .. to ) { ... }", tp);
   }
   if (a3->sym->type == CHAN || a3->sym->type == STRUCT ||
-      a3->sym->isarray != 0) {
-    log::fatal("bad index in for-construct %s", a3->sym->name);
+      a3->sym->is_array != 0) {
+    loger::fatal("bad index in for-construct %s", a3->sym->name.c_str());
   }
   if (a5->ntyp == CONST && a8->ntyp == CONST && a5->val > a8->val) {
-    log::non_fatal("start value for %s exceeds end-value", a3->sym->name);
+    loger::non_fatal("start value for %s exceeds end-value", a3->sym->name.c_str());
   }
 }
 
@@ -838,30 +834,30 @@ void for_setup(Lextok *a3, Lextok *a5, Lextok *a8) { /* for ( a3 : a5 .. a8 ) */
 
 Lextok *for_index(Lextok *a3, Lextok *a5) {
   Lextok *z0, *z1, *z2, *z3;
-  Symbol *tmp_cnt;
+  models::Symbol *tmp_cnt;
   char tmp_nm[MAXSCOPESZ + 16];
   /* for ( a3 in a5 ) { ... } */
 
   if (a3->ntyp != NAME) {
-    log::fatal("for ( .name in name ) { ... }");
+    loger::fatal("for ( .name in name ) { ... }");
   }
 
   if (a5->ntyp != NAME) {
-    log::fatal("for ( %s in .name ) { ... }", a3->sym->name);
+    loger::fatal("for ( %s in .name ) { ... }", a3->sym->name.c_str());
   }
 
   if (a3->sym->type == STRUCT) {
     if (a5->sym->type != CHAN) {
-      log::fatal("for ( %s in .channel_name ) { ... }", a3->sym->name);
+      loger::fatal("for ( %s in .channel_name ) { ... }", a3->sym->name.c_str());
     }
-    z0 = a5->sym->ini;
+    z0 = a5->sym->init_value;
     if (!z0 || z0->val <= 0 || z0->rgt->ntyp != STRUCT ||
         z0->rgt->rgt != NULL) {
-      log::fatal("bad channel type %s in for", a5->sym->name);
+      loger::fatal("bad channel type %s in for", a5->sym->name.c_str());
     }
 
     if (!match_struct(a3->sym, a5->sym)) {
-      log::fatal("type of %s does not match chan", a3->sym->name);
+      loger::fatal("type of %s does not match chan", a3->sym->name.c_str());
     }
 
     z1 = nn(ZN, CONST, ZN, ZN);
@@ -899,18 +895,17 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
         leaf = leaf->rgt;
       }
       leaf = leaf->lft;
-      // printf("%s %d\n", leaf->sym->name, leaf->sym->isarray);
     }
     if (!leaf) {
-      log::fatal("unexpected type of for-loop");
+      loger::fatal("unexpected type of for-loop");
     }
-    if (leaf->sym->isarray == 0 || leaf->sym->nel <= 0) {
-      log::fatal("bad arrayname %s", leaf->sym->name);
+    if (leaf->sym->is_array == 0 || leaf->sym->value_type <= 0) {
+      loger::fatal("bad arrayname %s", leaf->sym->name.c_str());
     }
     z1 = nn(ZN, CONST, ZN, ZN);
     z1->val = 0;
     z2 = nn(ZN, CONST, ZN, ZN);
-    z2->val = leaf->sym->nel - 1;
+    z2->val = leaf->sym->value_type - 1;
     for_setup(a3, z1, z2);
     return a3;
   }
@@ -964,7 +959,7 @@ Lextok *sel_index(Lextok *a3, Lextok *a5,
 
 static void walk_atomic(Element *a, Element *b, int added) {
   Element *f;
-  Symbol *ofn;
+  models::Symbol *ofn;
   int oln;
   SeqList *h;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -977,7 +972,7 @@ static void walk_atomic(Element *a, Element *b, int added) {
     case ATOMIC:
       if (verbose_flags.NeedToPrintVerbose()) {
         printf("spin: %s:%d, warning, atomic inside %s (ignored)\n",
-               f->n->fn->name, f->n->ln, (added) ? "d_step" : "atomic");
+               f->n->fn->name.c_str(), f->n->ln, (added) ? "d_step" : "atomic");
       }
       goto mknonat;
     case D_STEP:
@@ -986,7 +981,7 @@ static void walk_atomic(Element *a, Element *b, int added) {
           goto mknonat;
         break;
       }
-      printf("spin: %s:%d, warning, d_step inside ", f->n->fn->name, f->n->ln);
+      printf("spin: %s:%d, warning, d_step inside ", f->n->fn->name.c_str(), f->n->ln);
       if (added) {
         printf("d_step (ignored)\n");
         goto mknonat;
@@ -1002,7 +997,7 @@ static void walk_atomic(Element *a, Element *b, int added) {
     case UNLESS:
       if (added) {
         printf("spin: error, %s:%d, unless in d_step (ignored)\n",
-               f->n->fn->name, f->n->ln);
+               f->n->fn->name.c_str(), f->n->ln);
       }
     }
     for (h = f->sub; h; h = h->nxt)
@@ -1019,13 +1014,13 @@ void dumplabels(void) {
 
   for (l = labtab; l; l = l->nxt)
     if (l->c != 0 && l->s->name[0] != ':') {
-      printf("label	%s	%d	", l->s->name, l->e->seqno);
+      printf("label	%s	%d	", l->s->name.c_str(), l->e->seqno);
       if (l->uiid == 0)
         printf("<%s>", l->c->name);
       else
         printf("<%s i%d>", l->c->name, l->uiid);
       if (!old_scope_rules) {
-        printf("\t{scope %s}", l->s->bscp);
+        printf("\t{scope %s}", l->s->block_scope.c_str());
       }
       printf("\n");
     }

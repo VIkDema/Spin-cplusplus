@@ -1,18 +1,13 @@
 /***** spin: pangen4.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
-#include "../spin.hpp"
 #include "../fatal/fatal.hpp"
+#include "../spin.hpp"
 #include "y.tab.h"
+#include <fmt/format.h>
 
 extern FILE *fd_tc, *fd_tb;
 extern Queue *qtab;
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 extern int lineno, m_loss, Pid_nr, eventmapnr, multi_oval;
 extern short nocast, has_provided, has_sorted;
 extern const char *R13_[], *R14_[], *R15_[];
@@ -135,7 +130,7 @@ void undostmnt(Lextok *now, int m) {
             fprintf(fd_tb, "unrecv");
             putname(fd_tb, "(", now->lft, m, ", XX-1, ");
             fprintf(fd_tb, "%d, ", i);
-            if (v->lft->sym && !strcmp(v->lft->sym->name, "_")) {
+            if (v->lft->sym && v->lft->sym->name != "_") {
               fprintf(fd_tb, "trpt->bup.oval");
               if (multi_oval > 0)
                 fprintf(fd_tb, "s[%d]", jj);
@@ -159,7 +154,7 @@ void undostmnt(Lextok *now, int m) {
         case EVAL:
           break;
         default:
-          if (!v->lft->sym || strcmp(v->lft->sym->name, "_") != 0) {
+          if (!v->lft->sym || v->lft->sym->name != "_") {
             nocast = 1;
             putstmnt(fd_tb, v->lft, m);
             nocast = 0;
@@ -277,7 +272,7 @@ static void check_proc(Lextok *now, int m) {
 }
 
 void genunio(void) {
-  char buf1[256];
+  std::string buf1;
   Queue *q;
   int i;
 
@@ -286,22 +281,22 @@ void genunio(void) {
     fprintf(fd_tc, "\tcase %d:\n", q->qid);
 
     if (has_sorted) {
-      sprintf(buf1, "((Q%d *)z)->contents", q->qid);
+      buf1 = fmt::format("((Q{} *)z)->contents", q->qid);
       fprintf(fd_tc, "#ifdef HAS_SORTED\n");
       fprintf(fd_tc, "\t\tj = trpt->ipt;\n"); /* ipt was bup.oval */
       fprintf(fd_tc, "#endif\n");
       fprintf(fd_tc, "\t\tfor (k = j; k < ((Q%d *)z)->Qlen; k++)\n", q->qid);
       fprintf(fd_tc, "\t\t{\n");
       for (i = 0; i < q->nflds; i++)
-        fprintf(fd_tc, "\t\t\t%s[k].fld%d = %s[k+1].fld%d;\n", buf1, i, buf1,
-                i);
+        fprintf(fd_tc, "\t\t\t%s[k].fld%d = %s[k+1].fld%d;\n", buf1.c_str(), i,
+                buf1.c_str(), i);
       fprintf(fd_tc, "\t\t}\n");
       fprintf(fd_tc, "\t\tj = ((Q0 *)z)->Qlen;\n");
     }
+    buf1 = fmt::format("((Q{} *)z)->contents[j].fld", q->qid);
 
-    sprintf(buf1, "((Q%d *)z)->contents[j].fld", q->qid);
     for (i = 0; i < q->nflds; i++)
-      fprintf(fd_tc, "\t\t%s%d = 0;\n", buf1, i);
+      fprintf(fd_tc, "\t\t%s%d = 0;\n", buf1.c_str(), i);
     if (q->nslots == 0) { /* check if rendezvous succeeded, 1 level down */
       fprintf(fd_tc, "\t\t_m = (trpt+1)->o_m;\n");
       fprintf(fd_tc, "\t\tif (_m) (trpt-1)->o_pm |= 1;\n");
@@ -313,7 +308,7 @@ void genunio(void) {
   }
   ntimes(fd_tc, 0, 1, R14_);
   for (q = qtab; q; q = q->nxt) {
-    sprintf(buf1, "((Q%d *)z)->contents", q->qid);
+    buf1 = fmt::format("((Q{} *)z)->contents", q->qid);
     fprintf(fd_tc, "	case %d:\n", q->qid);
     if (q->nslots == 0)
       fprintf(fd_tc, "\t\tif (strt) boq = from+1;\n");
@@ -323,22 +318,22 @@ void genunio(void) {
       fprintf(fd_tc, "\t\t{\tfor (j--; j>=slot; j--)\n");
       fprintf(fd_tc, "\t\t\t{");
       for (i = 0; i < q->nflds; i++) {
-        fprintf(fd_tc, "\t%s[j+1].fld%d =\n\t\t\t", buf1, i);
-        fprintf(fd_tc, "\t%s[j].fld%d;\n\t\t\t", buf1, i);
+        fprintf(fd_tc, "\t%s[j+1].fld%d =\n\t\t\t", buf1.c_str(), i);
+        fprintf(fd_tc, "\t%s[j].fld%d;\n\t\t\t", buf1.c_str(), i);
       }
       fprintf(fd_tc, "}\n\t\t}\n");
     }
-    strcat(buf1, "[slot].fld");
+    buf1 += "[slot].fld";
     fprintf(fd_tc, "\t\tif (strt) {\n");
     for (i = 0; i < q->nflds; i++)
-      fprintf(fd_tc, "\t\t\t%s%d = 0;\n", buf1, i);
+      fprintf(fd_tc, "\t\t\t%s%d = 0;\n", buf1.c_str(), i);
     fprintf(fd_tc, "\t\t}\n");
     if (q->nflds == 1) /* set */
-      fprintf(fd_tc, "\t\tif (fld == 0) %s0 = fldvar;\n", buf1);
+      fprintf(fd_tc, "\t\tif (fld == 0) %s0 = fldvar;\n", buf1.c_str());
     else {
       fprintf(fd_tc, "\t\tswitch (fld) {\n");
       for (i = 0; i < q->nflds; i++) {
-        fprintf(fd_tc, "\t\tcase %d:\t%s", i, buf1);
+        fprintf(fd_tc, "\t\tcase %d:\t%s", i, buf1.c_str());
         fprintf(fd_tc, "%d = fldvar; break;\n", i);
       }
       fprintf(fd_tc, "\t\t}\n");
@@ -407,7 +402,7 @@ int proper_enabler(Lextok *n) {
     break;
   }
   printf("spin: saw ");
-  log::explainToString(n->ntyp);
+  loger::explainToString(n->ntyp);
   printf("\n");
   return 0;
 }

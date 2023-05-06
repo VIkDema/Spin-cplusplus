@@ -1,15 +1,12 @@
 /***** spin: vars.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
+#include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include <fmt/core.h>
+#include <iostream>
 
 extern char GBuf[];
 extern int analyze, jumpsteps, nproc, nstop, columns, old_priority_rules;
@@ -18,7 +15,7 @@ extern Lextok *Xu_List;
 extern Ordered *all_names;
 extern RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 
 extern void sr_buf(int, int, const char *);
 extern void sr_mesg(FILE *, int, int, const char *);
@@ -28,33 +25,33 @@ static int setglobal(Lextok *, int);
 static int maxcolnr = 1;
 
 int getval(Lextok *sn) {
-  Symbol *s = sn->sym;
+  models::Symbol *s = sn->sym;
 
-  if (strcmp(s->name, "_") == 0) {
-    log::non_fatal("attempt to read value of '_'");
+  if (s->name == "_") {
+    loger::non_fatal("attempt to read value of '_'");
     return 0;
   }
-  if (strcmp(s->name, "_last") == 0)
+  if (s->name == "_last")
     return (LastX) ? LastX->pid : 0;
-  if (strcmp(s->name, "_p") == 0)
+  if (s->name == "_p")
     return (X_lst && X_lst->pc) ? X_lst->pc->seqno : 0;
-  if (strcmp(s->name, "_pid") == 0) {
+  if (s->name == "_pid") {
     if (!X_lst)
       return 0;
     return X_lst->pid - Have_claim;
   }
-  if (strcmp(s->name, "_priority") == 0) {
+  if (s->name == "_priority") {
     if (!X_lst)
       return 0;
 
     if (old_priority_rules) {
-      log::non_fatal("cannot refer to _priority with -o6");
+      loger::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
     return X_lst->priority;
   }
 
-  if (strcmp(s->name, "_nr_pr") == 0) {
+  if (s->name == "_nr_pr") {
     return nproc - nstop; /* new 3.3.10 */
   }
 
@@ -72,19 +69,18 @@ int getval(Lextok *sn) {
 }
 
 int setval(Lextok *v, int n) {
-  if (strcmp(v->sym->name, "_last") == 0 || strcmp(v->sym->name, "_p") == 0 ||
-      strcmp(v->sym->name, "_pid") == 0 ||
-      strcmp(v->sym->name, "_nr_qs") == 0 ||
-      strcmp(v->sym->name, "_nr_pr") == 0) {
-    log::non_fatal("illegal assignment to %s", v->sym->name);
+  if (v->sym->name == "_last" || v->sym->name == "_p" ||
+      v->sym->name == "_pid" || v->sym->name == "_nr_qs" ||
+      v->sym->name == "_nr_pr") {
+    loger::non_fatal("illegal assignment to %s", v->sym->name.c_str());
   }
-  if (strcmp(v->sym->name, "_priority") == 0) {
+  if (v->sym->name == "_priority") {
     if (old_priority_rules) {
-      log::non_fatal("cannot refer to _priority with -o6");
+      loger::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
     if (!X_lst) {
-      log::non_fatal("no context for _priority");
+      loger::non_fatal("no context for _priority");
       return 1;
     }
     X_lst->priority = n;
@@ -97,17 +93,17 @@ int setval(Lextok *v, int n) {
   return setglobal(v, n);
 }
 
-void rm_selfrefs(Symbol *s, Lextok *i) {
+void rm_selfrefs(models::Symbol *s, Lextok *i) {
   if (!i)
     return;
 
-  if (i->ntyp == NAME && strcmp(i->sym->name, s->name) == 0 &&
+  if (i->ntyp == NAME && i->sym->name == s->name &&
       ((!i->sym->context && !s->context) ||
        (i->sym->context && s->context &&
-        strcmp(i->sym->context->name, s->context->name) == 0))) {
+        i->sym->context->name == s->context->name))) {
     lineno = i->ln;
     Fname = i->fn;
-    log::non_fatal("self-reference initializing '%s'", s->name);
+    loger::non_fatal("self-reference initializing '%s'", s->name);
     i->ntyp = CONST;
     i->val = 0;
   } else {
@@ -116,35 +112,35 @@ void rm_selfrefs(Symbol *s, Lextok *i) {
   }
 }
 
-int checkvar(Symbol *s, int n) {
+int checkvar(models::Symbol *s, int n) {
   int i, oln = lineno; /* calls on eval() change it */
-  Symbol *ofnm = Fname;
+  models::Symbol *ofnm = Fname;
   Lextok *z, *y;
 
   if (!in_bound(s, n))
     return 0;
 
   if (s->type == 0) {
-    log::non_fatal("undecl var %s (assuming int)", s->name);
-    s->type = INT;
+    loger::non_fatal("undecl var %s (assuming int)", s->name.c_str());
+    s->type = models::kInt;
   }
   /* not a STRUCT */
-  if (s->val == (int *)0) /* uninitialized */
+  if (s->value.empty()) /* uninitialized */
   {
-    s->val = (int *)emalloc(s->nel * sizeof(int));
-    z = s->ini;
-    for (i = 0; i < s->nel; i++) {
+    s->value.resize(s->value_type);
+    z = s->init_value;
+    for (i = 0; i < s->value_type; i++) {
       if (z && z->ntyp == ',') {
         y = z->lft;
         z = z->rgt;
       } else {
         y = z;
       }
-      if (s->type != CHAN) {
+      if (s->type != models::kChan) {
         rm_selfrefs(s, y);
-        s->val[i] = eval(y);
+        s->value[i] = eval(y);
       } else if (!analyze) {
-        s->val[i] = qmake(s);
+        s->value[i] = qmake(s);
       }
     }
   }
@@ -155,19 +151,20 @@ int checkvar(Symbol *s, int n) {
 }
 
 static int getglobal(Lextok *sn) {
-  Symbol *s = sn->sym;
+  models::Symbol *s = sn->sym;
   int i, n = eval(sn->lft);
 
   if (s->type == 0 && X_lst && (i = find_lab(s, X_lst->n, 0))) /* getglobal */
   {
-    printf("findlab through getglobal on %s\n", s->name);
+    std::cout << fmt::format("findlab through getglobal on {}", s->name)
+              << std::endl;
     return i; /* can this happen? */
   }
   if (s->type == STRUCT) {
     return Rval_struct(sn, s, 1); /* 1 = check init */
   }
   if (checkvar(s, n)) {
-    return cast_val(s->type, s->val[n], s->nbits);
+    return cast_val(s->type, s->value[n], (int)s->nbits.value());
   }
   return 0;
 }
@@ -187,7 +184,7 @@ int cast_val(int t, int v, int w) {
     u = (unsigned char)(v & 1);
   else if (t == UNSIGNED) {
     if (w == 0)
-      log::fatal("cannot happen, cast_val");
+      loger::fatal("cannot happen, cast_val");
     /*	u = (unsigned)(v& ((1<<w)-1));		problem when w=32	*/
     u = (unsigned)(v & (~0u >> (8 * sizeof(unsigned) - w))); /* doug */
   }
@@ -195,7 +192,7 @@ int cast_val(int t, int v, int w) {
   if (v != i + s + (int)u) {
     char buf[64];
     sprintf(buf, "%d->%d (%d)", v, i + s + (int)u, t);
-    log::non_fatal("value (%s) truncated in assignment", buf);
+    loger::non_fatal("value (%s) truncated in assignment", buf);
   }
   return (int)(i + s + (int)u);
 }
@@ -206,9 +203,9 @@ static int setglobal(Lextok *v, int m) {
   } else {
     int n = eval(v->lft);
     if (checkvar(v->sym, n)) {
-      int oval = v->sym->val[n];
+      int oval = v->sym->value[n];
       int nval = cast_val(v->sym->type, m, v->sym->nbits);
-      v->sym->val[n] = nval;
+      v->sym->value[n] = nval;
       if (oval != nval) {
         v->sym->setat = depth;
       }
@@ -251,7 +248,7 @@ void dumpclaims(FILE *fd, int pid, char *s) {
 void dumpglobals(void) {
   Ordered *walk;
   static Lextok *dummy = ZN;
-  Symbol *sp;
+  models::Symbol *sp;
   int j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (!dummy)
@@ -273,7 +270,7 @@ void dumpglobals(void) {
       dump_struct(sp, sp->name, 0);
       continue;
     }
-    for (j = 0; j < sp->nel; j++) {
+    for (j = 0; j < sp->value_type; j++) {
       int prefetch;
       char *s = 0;
       if (sp->type == CHAN) {
@@ -291,7 +288,7 @@ void dumpglobals(void) {
       /* in case of cast_val warnings, do this first: */
       prefetch = getglobal(dummy);
       printf("\t\t%s", sp->name);
-      if (sp->nel > 1 || sp->isarray)
+      if (sp->value_type > 1 || sp->is_array)
         printf("[%d]", j);
       printf(" = ");
       if (sp->type == MTYPE && sp->mtype_name) {
@@ -309,11 +306,11 @@ void dumpglobals(void) {
             sprintf(GBuf, "%s = ", sp->name);
         }
         sr_buf(prefetch, sp->type == MTYPE, s);
-        if (sp->colnr == 0) {
-          sp->colnr = (unsigned char)maxcolnr;
+        if (sp->color_number == 0) {
+          sp->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
         }
-        colpos = nproc + sp->colnr - 1;
+        colpos = nproc + sp->color_number - 1;
         if (columns == 2) {
           pstext(colpos, GBuf);
           continue;
@@ -326,7 +323,7 @@ void dumpglobals(void) {
         printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
         printf("(state 0)\t[printf('MSC: globvar\\\\n')]\n");
         printf("\t\t%s", sp->name);
-        if (sp->nel > 1 || sp->isarray)
+        if (sp->value_type > 1 || sp->is_array)
           printf("[%d]", j);
         printf(" = %s\n", GBuf);
       }
@@ -336,7 +333,7 @@ void dumpglobals(void) {
 
 void dumplocal(RunList *r, int final) {
   static Lextok *dummy = ZN;
-  Symbol *z, *s;
+  models::Symbol *z, *s;
   int i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -354,7 +351,7 @@ void dumplocal(RunList *r, int final) {
       dump_struct(z, z->name, r);
       continue;
     }
-    for (i = 0; i < z->nel; i++) {
+    for (i = 0; i < z->value_type; i++) {
       char *t = 0;
       if (z->type == CHAN) {
         doq(z, i, r);
@@ -371,7 +368,7 @@ void dumplocal(RunList *r, int final) {
       dummy->lft->val = i;
 
       printf("\t\t%s(%d):%s", r->n->name, r->pid - Have_claim, z->name);
-      if (z->nel > 1 || z->isarray)
+      if (z->value_type > 1 || z->is_array)
         printf("[%d]", i);
       printf(" = ");
 
@@ -390,11 +387,11 @@ void dumplocal(RunList *r, int final) {
             sprintf(GBuf, "%s(%d):%s = ", r->n->name, r->pid, z->name);
         }
         sr_buf(getval(dummy), z->type == MTYPE, t);
-        if (z->colnr == 0) {
-          z->colnr = (unsigned char)maxcolnr;
+        if (z->color_number == 0) {
+          z->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
         }
-        colpos = nproc + z->colnr - 1;
+        colpos = nproc + z->color_number - 1;
         if (columns == 2) {
           pstext(colpos, GBuf);
           continue;
@@ -408,7 +405,7 @@ void dumplocal(RunList *r, int final) {
         printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
         printf("(state 0)\t[printf('MSC: locvar\\\\n')]\n");
         printf("\t\t%s(%d):%s", r->n->name, r->pid, z->name);
-        if (z->nel > 1 || z->isarray)
+        if (z->value_type > 1 || z->is_array)
           printf("[%d]", i);
         printf(" = %s\n", GBuf);
       }

@@ -46,7 +46,7 @@ static Node *tl_factor(void) {
     tl_yychar = tl_yylex();
     ptr->lft = tl_factor();
     if (!ptr->lft) {
-      log::fatal("malformed expression");
+      loger::fatal("malformed expression");
     }
     ptr = push_negation(ptr);
     break;

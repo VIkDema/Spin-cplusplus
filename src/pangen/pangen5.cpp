@@ -1,11 +1,5 @@
 /***** spin: pangen5.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
@@ -67,7 +61,7 @@ static int FSM_DFS(int from, FSM_use *u) {
 
   if (!f) {
     printf("cannot find state %d\n", from);
-    log::fatal("fsm_dfs: cannot happen\n");
+    loger::fatal("fsm_dfs: cannot happen\n");
   }
 
   if (f->seen)
@@ -107,7 +101,6 @@ static int good_dead(Element *e, FSM_use *u) {
   }
   return 1;
 }
-
 
 static int eligible(FSM_trans *v) {
   Element *el = ZE;
@@ -181,7 +174,7 @@ static int pushbuild(FSM_trans *v) {
 static void popbuild(void) {
   BuildStack *f;
   if (!bs)
-    log::fatal("cannot happen, popbuild");
+    loger::fatal("cannot happen, popbuild");
   f = bs;
   bs = bs->nxt;
   f->nxt = bf;
@@ -352,7 +345,7 @@ void rel_use(FSM_use *u) {
   if (!u)
     return;
   rel_use(u->nxt);
-  u->var = (Symbol *)0;
+  u->var = (models::Symbol *)0;
   u->special = 0;
   u->nxt = use_free;
   use_free = u;
@@ -456,11 +449,9 @@ static void ana_var(FSM_trans *t, Lextok *now, int usage) {
 
   if (!t || !now || !now->sym)
     return;
-
-  if (now->sym->name[0] == '_' && (strcmp(now->sym->name, "_") == 0 ||
-                                   strcmp(now->sym->name, "_pid") == 0 ||
-                                   strcmp(now->sym->name, "_priority") == 0 ||
-                                   strcmp(now->sym->name, "_last") == 0))
+  if (now->sym->name[0] == '_' &&
+      (now->sym->name == "_" || now->sym->name == "_pid" ||
+       now->sym->name == "_priority" || now->sym->name == "_last"))
     return;
 
   v = t->Val[usage];
@@ -629,8 +620,8 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
   default:
     if (0)
       printf("spin: %s:%d, bad node type %d usage %d (ana_stmnt)\n",
-             now->fn->name, now->ln, now->ntyp, usage);
-    log::fatal("aborting (ana_stmnt)");
+             now->fn->name.c_str(), now->ln, now->ntyp, usage);
+    loger::fatal("aborting (ana_stmnt)");
   }
 }
 
@@ -659,7 +650,7 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
   for (e = Al_El; e; e = e->Nxt) {
     if (!(e->status & DONE) && verbose_flags.NeedToPrintVerbose()) {
       printf("unreachable code: ");
-      printf("%s:%3d  ", e->n->fn->name, e->n->ln);
+      printf("%s:%3d  ", e->n->fn->name.c_str(), e->n->ln);
       comment(stdout, e->n, 0);
       printf("\n");
     }
@@ -693,7 +684,7 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
       s = e->n->sl->this_sequence;
       switch (s->frst->n->ntyp) {
       case DO:
-        log::fatal("unexpected: do at start of d_step");
+        loger::fatal("unexpected: do at start of d_step");
       case IF: /* conservative: fall through */
       case 'r':
         goto markit;
@@ -761,13 +752,13 @@ static void ana_seq(Sequence *s) {
         g = get_lab(e->n, 1);
         g = huntele(g, e->status, -1);
         if (!g) {
-          log::fatal("unexpected error 2");
+          loger::fatal("unexpected error 2");
         }
         To = g->seqno;
       } else if (e->nxt) {
         g = huntele(e->nxt, e->status, -1);
         if (!g) {
-          log::fatal("unexpected error 3");
+          loger::fatal("unexpected error 3");
         }
         To = g->seqno;
       } else

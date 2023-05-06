@@ -22,7 +22,7 @@ public:
 
   void push_back(const std::string &value) {
     if (pushed_back_ + value.size() > 4094) {
-      log::fatal("select statement too large");
+      loger::fatal("select statement too large");
     }
     pushed_back_stream_ += value;
     pushed_back_ += value.size();

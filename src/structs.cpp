@@ -1,10 +1,6 @@
 /***** spin: structs.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
+ 
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
@@ -12,33 +8,33 @@
 #include "y.tab.h"
 
 struct UType {
-  Symbol *nm;        /* name of the type */
+  models::Symbol *nm;        /* name of the type */
   Lextok *cn;        /* contents */
   struct UType *nxt; /* linked list */
 };
 
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 extern int lineno, depth, Expand_Ok, has_hidden;
 extern lexer::Lexer lexer_;
 
-Symbol *owner;
+models::Symbol *owner;
 
 static UType *Unames = 0;
 static UType *Pnames = 0;
 
 static Lextok *cpnn(Lextok *, int, int, int);
 extern void sr_mesg(FILE *, int, int, const char *);
-extern void Done_case(char *, Symbol *);
+extern void Done_case(char *, models::Symbol *);
 
 void setuname(Lextok *n) {
   UType *tmp;
 
   if (!owner)
-    log::fatal("illegal reference inside typedef");
+    loger::fatal("illegal reference inside typedef");
 
   for (tmp = Unames; tmp; tmp = tmp->nxt)
     if (!strcmp(owner->name, tmp->nm->name)) {
-      log::non_fatal("typename %s was defined before", tmp->nm->name);
+      loger::non_fatal("typename %s was defined before", tmp->nm->name);
       return;
     }
 
@@ -85,21 +81,21 @@ bool IsUtype(const std::string &value) {
   return false;
 }
 
-Lextok *getuname(Symbol *t) {
+Lextok *getuname(models::Symbol *t) {
   UType *tmp;
 
   for (tmp = Unames; tmp; tmp = tmp->nxt) {
     if (!strcmp(t->name, tmp->nm->name))
       return tmp->cn;
   }
-  log::fatal("%s is not a typename", t->name);
+  loger::fatal("%s is not a typename", t->name);
   return (Lextok *)0;
 }
 
-void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
+void setutype(Lextok *p, models::Symbol *t, Lextok *vis) /* user-defined types */
 {
   int oln = lineno;
-  Symbol *ofn = Fname;
+  models::Symbol *ofn = Fname;
   Lextok *m, *n;
 
   m = getuname(t);
@@ -107,11 +103,11 @@ void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
     lineno = n->ln;
     Fname = n->fn;
     if (n->sym->type) {
-      log::fatal("redeclaration of '%s'", n->sym->name);
+      loger::fatal("redeclaration of '%s'", n->sym->name);
     }
 
     if (n->sym->nbits > 0)
-      log::non_fatal("(%s) only an unsigned can have width-field",
+      loger::non_fatal("(%s) only an unsigned can have width-field",
                      n->sym->name);
 
     if (Expand_Ok)
@@ -129,20 +125,20 @@ void setutype(Lextok *p, Symbol *t, Lextok *vis) /* user-defined types */
     n->sym->type = STRUCT; /* classification   */
     n->sym->Slst = m;      /* structure itself */
     n->sym->Snm = t;       /* name of typedef  */
-    n->sym->Nid = 0;       /* this is no chan  */
+    n->sym->id = 0;       /* this is no chan  */
     n->sym->hidden |= 4;
-    if (n->sym->nel <= 0)
-      log::non_fatal("bad array size for '%s'", n->sym->name);
+    if (n->sym->value_type <= 0)
+      loger::non_fatal("bad array size for '%s'", n->sym->name);
   }
   lineno = oln;
   Fname = ofn;
 }
 
-static Symbol *do_same(Lextok *n, Symbol *v, int xinit) {
+static models::Symbol *do_same(Lextok *n, models::Symbol *v, int xinit) {
   Lextok *tmp, *fp, *tl;
   int ix = eval(n->lft);
   int oln = lineno;
-  Symbol *ofn = Fname;
+  models::Symbol *ofn = Fname;
 
   lineno = n->ln;
   Fname = n->fn;
@@ -156,12 +152,12 @@ static Symbol *do_same(Lextok *n, Symbol *v, int xinit) {
   if (xinit)
     ini_struct(v); /* once, at top level */
 
-  if (ix >= v->nel || ix < 0) {
-    printf("spin: indexing %s[%d] - size is %d\n", v->name, ix, v->nel);
-    log::fatal("indexing error \'%s\'", v->name);
+  if (ix >= v->value_type || ix < 0) {
+    printf("spin: indexing %s[%d] - size is %d\n", v->name, ix, v->value_type);
+    loger::fatal("indexing error \'%s\'", v->name);
   }
   if (!n->rgt || !n->rgt->lft) {
-    log::non_fatal("no subfields %s", v->name); /* i.e., wants all */
+    loger::non_fatal("no subfields %s", v->name); /* i.e., wants all */
     lineno = oln;
     Fname = ofn;
     return ZS;
@@ -184,13 +180,13 @@ static Symbol *do_same(Lextok *n, Symbol *v, int xinit) {
         Fname = ofn;
         return tl->sym;
       }
-  log::fatal("cannot locate subfield %s", tmp->sym->name);
+  loger::fatal("cannot locate subfield %s", tmp->sym->name);
   return ZS;
 }
 
-int Rval_struct(Lextok *n, Symbol *v, int xinit) /* n varref, v valref */
+int Rval_struct(Lextok *n, models::Symbol *v, int xinit) /* n varref, v valref */
 {
-  Symbol *tl;
+  models::Symbol *tl;
   Lextok *tmp;
   int ix;
 
@@ -201,19 +197,19 @@ int Rval_struct(Lextok *n, Symbol *v, int xinit) /* n varref, v valref */
   if (tmp->sym->type == STRUCT) {
     return Rval_struct(tmp, tl, 0);
   } else if (tmp->rgt)
-    log::fatal("non-zero 'rgt' on non-structure");
+    loger::fatal("non-zero 'rgt' on non-structure");
 
   ix = eval(tmp->lft);
-  /*	printf("%d: ix: %d (%d) %d\n", depth, ix, tl->nel, tl->val[ix]); */
-  if (ix >= tl->nel || ix < 0)
-    log::fatal("indexing error \'%s\'", tl->name);
+  /*	printf("%d: ix: %d (%d) %d\n", depth, ix, tl->value_type, tl->val[ix]); */
+  if (ix >= tl->value_type || ix < 0)
+    loger::fatal("indexing error \'%s\'", tl->name);
 
   return cast_val(tl->type, tl->val[ix], tl->nbits);
 }
 
-int Lval_struct(Lextok *n, Symbol *v, int xinit, int a) /* a = assigned value */
+int Lval_struct(Lextok *n, models::Symbol *v, int xinit, int a) /* a = assigned value */
 {
-  Symbol *tl;
+  models::Symbol *tl;
   Lextok *tmp;
   int ix;
 
@@ -224,11 +220,11 @@ int Lval_struct(Lextok *n, Symbol *v, int xinit, int a) /* a = assigned value */
   if (tmp->sym->type == STRUCT)
     return Lval_struct(tmp, tl, 0, a);
   else if (tmp->rgt)
-    log::fatal("non-zero 'rgt' on non-structure");
+    loger::fatal("non-zero 'rgt' on non-structure");
 
   ix = eval(tmp->lft);
-  if (ix >= tl->nel || ix < 0)
-    log::fatal("indexing error \'%s\'", tl->name);
+  if (ix >= tl->value_type || ix < 0)
+    loger::fatal("indexing error \'%s\'", tl->name);
 
   if (tl->nbits > 0)
     a = (a & ((1 << tl->nbits) - 1));
@@ -261,17 +257,17 @@ is_lst:
   for (fp = n; fp; fp = fp->rgt)
     for (tl = fp->lft; tl; tl = tl->rgt) {
       if (tl->sym->type == STRUCT) {
-        if (tl->sym->nel > 1 || tl->sym->isarray)
-          log::fatal("array of structures in param list, %s", tl->sym->name);
+        if (tl->sym->value_type > 1 || tl->sym->is_array)
+          loger::fatal("array of structures in param list, %s", tl->sym->name);
         cnt += Cnt_flds(tl->sym->Slst);
       } else
-        cnt += tl->sym->nel;
+        cnt += tl->sym->value_type;
     }
   return cnt;
 }
 
 int Sym_typ(Lextok *t) {
-  Symbol *s = t->sym;
+  models::Symbol *s = t->sym;
 
   if (!s)
     return 0;
@@ -295,14 +291,14 @@ int Width_set(int *wdth, int i, Lextok *n) {
       if (tl->sym->type == STRUCT)
         j = Width_set(wdth, j, tl->sym->Slst);
       else {
-        for (k = 0; k < tl->sym->nel; k++, j++)
+        for (k = 0; k < tl->sym->value_type; k++, j++)
           wdth[j] = tl->sym->type;
       }
     }
   return j;
 }
 
-void ini_struct(Symbol *s) {
+void ini_struct(models::Symbol *s) {
   int i;
   Lextok *fp, *tl;
 
@@ -312,8 +308,8 @@ void ini_struct(Symbol *s) {
     return;
   }
   if (s->Sval == (Lextok **)0) {
-    s->Sval = (Lextok **)emalloc(s->nel * sizeof(Lextok *));
-    for (i = 0; i < s->nel; i++) {
+    s->Sval = (Lextok **)emalloc(s->value_type * sizeof(Lextok *));
+    for (i = 0; i < s->value_type; i++) {
       s->Sval[i] = cpnn(s->Slst, 1, 1, 1);
 
       for (fp = s->Sval[i]; fp; fp = fp->rgt)
@@ -343,19 +339,19 @@ static Lextok *cpnn(Lextok *s, int L, int R, int S) {
     d->rgt = cpnn(s->rgt, 1, 1, S);
 
   if (S && s->sym) {
-    d->sym = (Symbol *)emalloc(sizeof(Symbol));
-    memcpy(d->sym, s->sym, sizeof(Symbol));
+    d->sym = (models::Symbol *)emalloc(sizeof(models::Symbol));
+    memcpy(d->sym, s->sym, sizeof(models::Symbol));
     if (d->sym->type == CHAN)
-      d->sym->Nid = ++Nid_nr;
+      d->sym->id = ++Nid_nr;
   }
   if (s->sq || s->sl)
-    log::fatal("cannot happen cpnn");
+    loger::fatal("cannot happen cpnn");
 
   return d;
 }
 
-int full_name(FILE *fd, Lextok *n, Symbol *v, int xinit) {
-  Symbol *tl;
+int full_name(FILE *fd, Lextok *n, models::Symbol *v, int xinit) {
+  models::Symbol *tl;
   Lextok *tmp;
   int hiddenarrays = 0;
 
@@ -372,7 +368,7 @@ int full_name(FILE *fd, Lextok *n, Symbol *v, int xinit) {
   }
   fprintf(fd, ".%s", tl->name);
 out:
-  if (tmp->sym->nel > 1 || tmp->sym->isarray == 1) {
+  if (tmp->sym->value_type > 1 || tmp->sym->is_array == 1) {
     fprintf(fd, "[%d]", eval(tmp->lft));
     hiddenarrays = 1;
   }
@@ -390,11 +386,11 @@ void validref(Lextok *p, Lextok *c) {
 
   sprintf(lbuf, "no field '%s' defined in structure '%s'\n", c->sym->name,
           p->sym->name);
-  log::non_fatal(lbuf);
+  loger::non_fatal(lbuf);
 }
 
-void struct_name(Lextok *n, Symbol *v, int xinit, char *buf) {
-  Symbol *tl;
+void struct_name(Lextok *n, models::Symbol *v, int xinit, char *buf) {
+  models::Symbol *tl;
   Lextok *tmp;
   char lbuf[512];
 
@@ -408,23 +404,23 @@ void struct_name(Lextok *n, Symbol *v, int xinit, char *buf) {
   }
   sprintf(lbuf, ".%s", tl->name);
   strcat(buf, lbuf);
-  if (tmp->sym->nel > 1 || tmp->sym->isarray == 1) {
+  if (tmp->sym->value_type > 1 || tmp->sym->is_array == 1) {
     sprintf(lbuf, "[%d]", eval(tmp->lft));
     strcat(buf, lbuf);
   }
 }
 
-void walk2_struct(char *s, Symbol *z) {
+void walk2_struct(char *s, models::Symbol *z) {
   Lextok *fp, *tl;
   char eprefix[128];
   int ix;
 
   memset(eprefix, 0, sizeof(eprefix));
   ini_struct(z);
-  if (z->nel == 1 && z->isarray == 0)
+  if (z->value_type == 1 && z->is_array == 0)
     snprintf(eprefix, sizeof(eprefix) - 1, "%s%s.", s, z->name);
-  for (ix = 0; ix < z->nel; ix++) {
-    if (z->nel > 1 || z->isarray == 1)
+  for (ix = 0; ix < z->value_type; ix++) {
+    if (z->value_type > 1 || z->is_array == 1)
       snprintf(eprefix, sizeof(eprefix) - 1, "%s%s[%d].", s, z->name, ix);
     for (fp = z->Sval[ix]; fp; fp = fp->rgt)
       for (tl = fp->lft; tl; tl = tl->rgt) {
@@ -436,7 +432,7 @@ void walk2_struct(char *s, Symbol *z) {
   }
 }
 
-void walk_struct(FILE *ofd, int dowhat, char *s, Symbol *z, char *a, char *b,
+void walk_struct(FILE *ofd, int dowhat, char *s, models::Symbol *z, char *a, char *b,
                  char *c) {
   Lextok *fp, *tl;
   char eprefix[128];
@@ -444,10 +440,10 @@ void walk_struct(FILE *ofd, int dowhat, char *s, Symbol *z, char *a, char *b,
 
   memset(eprefix, 0, sizeof(eprefix));
   ini_struct(z);
-  if (z->nel == 1 && z->isarray == 0)
+  if (z->value_type == 1 && z->is_array == 0)
     snprintf(eprefix, sizeof(eprefix) - 1, "%s%s.", s, z->name);
-  for (ix = 0; ix < z->nel; ix++) {
-    if (z->nel > 1 || z->isarray == 1)
+  for (ix = 0; ix < z->value_type; ix++) {
+    if (z->value_type > 1 || z->is_array == 1)
       snprintf(eprefix, sizeof(eprefix) - 1, "%s%s[%d].", s, z->name, ix);
     for (fp = z->Sval[ix]; fp; fp = fp->rgt)
       for (tl = fp->lft; tl; tl = tl->rgt) {
@@ -459,18 +455,18 @@ void walk_struct(FILE *ofd, int dowhat, char *s, Symbol *z, char *a, char *b,
   }
 }
 
-void c_struct(FILE *fd, char *ipref, Symbol *z) {
+void c_struct(FILE *fd, char *ipref, models::Symbol *z) {
   Lextok *fp, *tl;
   char pref[256], eprefix[300];
   int ix;
 
   ini_struct(z);
 
-  for (ix = 0; ix < z->nel; ix++)
+  for (ix = 0; ix < z->value_type; ix++)
     for (fp = z->Sval[ix]; fp; fp = fp->rgt)
       for (tl = fp->lft; tl; tl = tl->rgt) {
         strcpy(eprefix, ipref);
-        if (z->nel > 1 || z->isarray == 1) { /* insert index before last '.' */
+        if (z->value_type > 1 || z->is_array == 1) { /* insert index before last '.' */
           eprefix[strlen(eprefix) - 1] = '\0';
           sprintf(pref, "[ %d ].", ix);
           strcat(eprefix, pref);
@@ -484,15 +480,15 @@ void c_struct(FILE *fd, char *ipref, Symbol *z) {
       }
 }
 
-void dump_struct(Symbol *z, char *prefix, RunList *r) {
+void dump_struct(models::Symbol *z, char *prefix, RunList *r) {
   Lextok *fp, *tl;
   char eprefix[256];
   int ix, jx;
 
   ini_struct(z);
 
-  for (ix = 0; ix < z->nel; ix++) {
-    if (z->nel > 1 || z->isarray == 1)
+  for (ix = 0; ix < z->value_type; ix++) {
+    if (z->value_type > 1 || z->is_array == 1)
       sprintf(eprefix, "%s[%d]", prefix, ix);
     else
       strcpy(eprefix, prefix);
@@ -506,7 +502,7 @@ void dump_struct(Symbol *z, char *prefix, RunList *r) {
           strcat(pref, tl->sym->name);
           dump_struct(tl->sym, pref, r);
         } else
-          for (jx = 0; jx < tl->sym->nel; jx++) {
+          for (jx = 0; jx < tl->sym->value_type; jx++) {
             if (tl->sym->type == CHAN)
               doq(tl->sym, jx, r);
             else {
@@ -515,7 +511,7 @@ void dump_struct(Symbol *z, char *prefix, RunList *r) {
               if (r)
                 printf("%s(%d):", r->n->name, r->pid);
               printf("%s.%s", eprefix, tl->sym->name);
-              if (tl->sym->nel > 1 || tl->sym->isarray == 1)
+              if (tl->sym->value_type > 1 || tl->sym->is_array == 1)
                 printf("[%d]", jx);
               printf(" = ");
 
@@ -546,7 +542,7 @@ static int retrieve(Lextok **targ, int i, int want, Lextok *n, int Ntyp) {
           return -1;
         }
       } else {
-        for (k = 0; k < tl->sym->nel; k++, j++) {
+        for (k = 0; k < tl->sym->value_type; k++, j++) {
           if (j == want) {
             *targ = cpnn(tl, 1, 0, 0);
             (*targ)->lft = nn(ZN, CONST, ZN, ZN);
@@ -565,7 +561,7 @@ static int is_explicit(Lextok *n) {
   if (!n)
     return 0;
   if (!n->sym)
-    log::fatal("unexpected - no symbol");
+    loger::fatal("unexpected - no symbol");
   if (n->sym->type != STRUCT)
     return 1;
   if (!n->rgt)
@@ -574,7 +570,7 @@ static int is_explicit(Lextok *n) {
     lineno = n->ln;
     Fname = n->fn;
     printf("ntyp %d\n", n->rgt->ntyp);
-    log::fatal("unexpected %s, no '.'", n->sym->name);
+    loger::fatal("unexpected %s, no '.'", n->sym->name);
   }
   return is_explicit(n->rgt->lft);
 }
@@ -628,7 +624,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
     printf("spin: saw '");
     comment(stdout, n, 0);
     printf("'\n");
-    log::fatal("incomplete structure ref '%s'", n->sym->name);
+    loger::fatal("incomplete structure ref '%s'", n->sym->name);
   }
 
   cnt = Cnt_flds(n->sym->Slst);
@@ -636,7 +632,7 @@ Lextok *mk_explicit(Lextok *n, int Ok, int Ntyp)
     bld = nn(ZN, ',', ZN, bld);
     if (retrieve(&(bld->lft), 0, i, n->sym->Slst, Ntyp) >= 0) {
       printf("cannot retrieve field %d\n", i);
-      log::fatal("bad structure %s", n->sym->name);
+      loger::fatal("bad structure %s", n->sym->name);
     }
     x = cpnn(n, 1, 0, 0);
     x->rgt = nn(ZN, '.', bld->lft, ZN);
@@ -650,7 +646,7 @@ Lextok *tail_add(Lextok *a, Lextok *b) {
 
   for (t = a; t->rgt; t = t->rgt)
     if (t->ntyp != ',')
-      log::fatal("unexpected type - tail_add");
+      loger::fatal("unexpected type - tail_add");
   t->rgt = b;
   return a;
 }
@@ -660,7 +656,7 @@ void setpname(Lextok *n) {
 
   for (tmp = Pnames; tmp; tmp = tmp->nxt)
     if (!strcmp(n->sym->name, tmp->nm->name)) {
-      log::non_fatal("proctype %s redefined", n->sym->name);
+      loger::non_fatal("proctype %s redefined", n->sym->name);
       return;
     }
   tmp = (UType *)emalloc(sizeof(UType));

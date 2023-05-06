@@ -1,11 +1,3 @@
-/***** spin: guided.c *****/
-
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "spin.hpp"
@@ -17,7 +9,7 @@
 
 extern RunList *run_lst, *X_lst;
 extern Element *Al_El;
-extern Symbol *Fname, *oFname;
+extern models::Symbol *Fname, *oFname;
 extern int lineno, xspin, jumpsteps, depth, merger, cutoff;
 extern int nproc, nstop, Tval, ntrail, columns;
 extern short Have_claim, Skip_claim;
@@ -145,13 +137,13 @@ void match_trail(void) {
     if (strlen(*trailfilename) < sizeof(snap)) {
       strcpy(snap, (const char *)*trailfilename);
     } else {
-      log::fatal("filename %s too long", *trailfilename);
+      loger::fatal("filename %s too long", *trailfilename);
     }
   } else {
     if (ntrail)
-      sprintf(snap, "%s%d.trail", oFname->name, ntrail);
+      sprintf(snap, "%s%d.trail", oFname->name.c_str(), ntrail);
     else
-      sprintf(snap, "%s.trail", oFname->name);
+      sprintf(snap, "%s.trail", oFname->name.c_str());
   }
 
   if ((fd = fopen(snap, "r")) == NULL) {

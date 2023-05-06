@@ -10,7 +10,7 @@
 #include <optional>
 
 extern std::string yytext;
-extern Symbol *Fname, *oFname;
+extern models::Symbol *Fname, *oFname;
 extern YYSTYPE yylval;
 
 #define ValToken(x, y)                                                         \
@@ -34,15 +34,17 @@ extern YYSTYPE yylval;
 
 namespace lexer {
 Lexer::Lexer()
-    : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
-      last_token_(0), pp_mode_(false), temp_has_(0), parameter_count_(0),
-      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
-      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
+    : scope_(scope_processor_), inline_arguments_({}), curr_inline_argument_(0),
+      argument_nesting_(0), last_token_(0), pp_mode_(false), temp_has_(0),
+      parameter_count_(0), has_last_(0), has_code_(0), has_priority_(0),
+      in_for_(0), in_comment_(0), ltl_mode_(false), has_ltl_(false),
+      implied_semis_(1), in_seq_(0) {}
 Lexer::Lexer(bool pp_mode)
-    : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
-      last_token_(0), pp_mode_(pp_mode), temp_has_(0), parameter_count_(0),
-      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
-      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
+    : scope_(scope_processor_), inline_arguments_({}), curr_inline_argument_(0),
+      argument_nesting_(0), last_token_(0), pp_mode_(pp_mode), temp_has_(0),
+      parameter_count_(0), has_last_(0), has_code_(0), has_priority_(0),
+      in_for_(0), in_comment_(0), ltl_mode_(false), has_ltl_(false),
+      implied_semis_(1), in_seq_(0) {}
 
 void Lexer::SetLastToken(int last_token) { last_token_ = last_token; }
 int Lexer::GetLastToken() { return last_token_; }
@@ -85,7 +87,7 @@ int Lexer::CheckName(const std::string &value) {
 
   if ((yylval->val = ismtype(value)) != 0) {
     yylval->ismtyp = 1;
-    yylval->sym = (Symbol *)emalloc(sizeof(Symbol));
+    yylval->sym = (models::Symbol *)emalloc(sizeof(models::Symbol));
     yylval->sym->name = (char *)emalloc(value.length() + 1);
     strcpy(yylval->sym->name, value.c_str());
     return CONST;
@@ -121,7 +123,7 @@ int Lexer::CheckName(const std::string &value) {
                                  stream_.GetLineNumber(), tt->lft->sym->name)
                   << std::endl;
 
-        log::fatal("formal par of %s contains replacement value",
+        loger::fatal("formal par of %s contains replacement value",
                    inline_stub[stream_.GetInlining()].nm->name);
         yylval->ntyp = tt->lft->ntyp;
         yylval->sym = lookup(tt->lft->sym->name);
@@ -135,7 +137,7 @@ int Lexer::CheckName(const std::string &value) {
         while ((ptr = strstr(ptr, value.c_str())) != nullptr) {
           if ((ptr > optr && *(ptr - 1) == '.') ||
               *(ptr + value.size()) == '.') {
-            log::fatal("formal par of %s used in structure name",
+            loger::fatal("formal par of %s used in structure name",
                        inline_stub[stream_.GetInlining()].nm->name);
           }
           ptr++;
@@ -196,11 +198,11 @@ void Lexer::do_directive(int first_char) {
   }
 
   if ((new_char = stream_.GetChar()) != ' ') {
-    log::fatal("malformed preprocessor directive - # .");
+    loger::fatal("malformed preprocessor directive - # .");
   }
 
   if (!helpers::isdigit_(new_char = stream_.GetChar())) {
-    log::fatal("malformed preprocessor directive - # .lineno");
+    loger::fatal("malformed preprocessor directive - # .lineno");
   }
 
   yytext = stream_.GetWord(new_char, helpers::isdigit_);
@@ -212,20 +214,20 @@ void Lexer::do_directive(int first_char) {
   }
 
   if (new_char != ' ') {
-    log::fatal("malformed preprocessor directive - .fname");
+    loger::fatal("malformed preprocessor directive - .fname");
   }
 
   if ((new_char = stream_.GetChar()) != '\"') {
     std::cout << fmt::format("got {}, expected \" -- lineno {}", new_char,
                              stream_.GetLineNumber())
               << std::endl;
-    log::fatal("malformed preprocessor directive - .fname (%s)", yytext);
+    loger::fatal("malformed preprocessor directive - .fname (%s)", yytext);
   }
 
   yytext = stream_.GetWord(stream_.GetChar(), helpers::IsNotQuote);
 
   if (stream_.GetChar() != '\"') {
-    log::fatal("malformed preprocessor directive - fname.");
+    loger::fatal("malformed preprocessor directive - fname.");
   }
 
   Fname = lookup(yytext.data());
@@ -254,7 +256,7 @@ bool Lexer::ScatTo(int stop) {
       stream_.push_back(temp_hold_);
       return false; /* internal expansion fails */
     } else {
-      log::fatal("expecting select ( name : constant .. constant )");
+      loger::fatal("expecting select ( name : constant .. constant )");
     }
   }
   return true; /* success */
@@ -276,7 +278,7 @@ bool Lexer::ScatTo(int stop, int (*Predicate)(int), std::string &buf,
     } else if (i < max_size - 1) {
       buf.push_back(curr);
     } else if (i >= max_size - 1) {
-      log::fatal("name too long", buf);
+      loger::fatal("name too long", buf);
     }
 
     if (Predicate && !Predicate(curr) && curr != ' ' && curr != '\t') {
@@ -286,7 +288,7 @@ bool Lexer::ScatTo(int stop, int (*Predicate)(int), std::string &buf,
   } while (curr != stop && curr != EOF);
 
   if (i <= 0) {
-    log::fatal("input error");
+    loger::fatal("input error");
   }
 
   if (curr != stop) {
@@ -294,7 +296,7 @@ bool Lexer::ScatTo(int stop, int (*Predicate)(int), std::string &buf,
       stream_.push_back(temp_hold_);
       return false; /* internal expansion fails */
     } else {
-      log::fatal("expecting select ( name : constant .. constant )");
+      loger::fatal("expecting select ( name : constant .. constant )");
     }
   }
   return true; /* success */
@@ -359,7 +361,7 @@ again:
   case '\"': {
     yytext = stream_.GetWord(new_char, helpers::IsNotQuote);
     if (stream_.GetChar() != '\"') {
-      log::fatal("string not terminated", yytext);
+      loger::fatal("string not terminated", yytext);
     }
     yytext += "\"";
     { SymToken(lookup(yytext.data()), STRING) }
@@ -367,7 +369,7 @@ again:
   case '$': {
     yytext = stream_.GetWord(new_char, helpers::IsNotDollar);
     if (stream_.GetChar() != '$') {
-      log::fatal("ltl definition not terminated", yytext);
+      loger::fatal("ltl definition not terminated", yytext);
     }
     yytext += "\"";
     { SymToken(lookup(yytext.data()), STRING) }
@@ -387,7 +389,7 @@ again:
       }
     }
     if (stream_.GetChar() != '\'' && !in_comment_)
-      log::fatal("character quote missing: %s", yytext);
+      loger::fatal("character quote missing: %s", yytext);
     { ValToken(new_char, CONST) }
   }
   default:
@@ -432,7 +434,7 @@ again:
         int a = std::stoi(from);
         int b = std::stoi(upto);
         if (a > b) {
-          log::non_fatal("bad range in select statement");
+          loger::non_fatal("bad range in select statement");
           goto again;
         }
         if (b - a <= 32) {

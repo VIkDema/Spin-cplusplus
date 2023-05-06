@@ -1,10 +1,6 @@
 /***** spin: pangen1.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
+ 
 
 #include "pangen1.hpp"
 #include "../fatal/fatal.hpp"
@@ -25,7 +21,7 @@ extern Label *labtab;
 extern Ordered *all_names;
 extern ProcList *ready;
 extern Queue *qtab;
-extern Symbol *Fname;
+extern models::Symbol *Fname;
 extern int lineno, verbose, Pid_nr, separate, old_scope_rules, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
 extern short has_sorted, has_random, has_provided;
@@ -38,31 +34,31 @@ short has_state = 0; /* code contains c_state */
 extern void c_add_stack(FILE *);
 extern void c_stack_size(FILE *);
 
-static Symbol *LstSet = ZS;
+static models::Symbol *LstSet = ZS;
 static int acceptors = 0, progressors = 0, nBits = 0;
 static int Types[] = {UNSIGNED, BIT, BYTE, CHAN, MTYPE, SHORT, INT, STRUCT};
 
 static int doglobal(char *, int);
 static void dohidden(void);
-static void do_init(FILE *, Symbol *);
-static void end_labs(Symbol *, int);
-static void put_ptype(char *, int, int, int, enum btypes);
+static void do_init(FILE *, models::Symbol *);
+static void end_labs(models::Symbol *, int);
+static void put_ptype(const std::string& , int , int , int , enum btypes);
 static void tc_predef_np(void);
 static void put_pinit(ProcList *);
 static void multi_init(void);
-void walk_struct(FILE *, int, char *, Symbol *, char *, char *, char *);
+void walk_struct(FILE *, int, char *, models::Symbol *, char *, char *, char *);
 
 static void reverse_names(ProcList *p) {
   if (!p)
     return;
   reverse_names(p->nxt);
-  fprintf(fd_tc, "   \"%s\",\n", p->n->name);
+  fprintf(fd_tc, "   \"%s\",\n", p->n->name.c_str());
 }
 static void reverse_types(ProcList *p) {
   if (!p)
     return;
   reverse_types(p->nxt);
-  fprintf(fd_tc, "   %d,	/* %s */\n", p->b, p->n->name);
+  fprintf(fd_tc, "   %d,	/* %s */\n", p->b, p->n->name.c_str());
 }
 
 static int blog(int n) /* for small log2 without rounding problems */
@@ -213,7 +209,7 @@ here:
   ntimes(fd_th, 0, 1, Head1);
 
   LstSet = ZS;
-  (void)doglobal("", PUTV);
+  doglobal("", PUTV);
 
   hastrack = c_add_sv(fd_th);
 
@@ -449,9 +445,9 @@ static struct {
     {0, 0, 0, 0, 0},
 };
 
-static void end_labs(Symbol *s, int i) {
+static void end_labs(models::Symbol *s, int i) {
   int oln = lineno;
-  Symbol *ofn = Fname;
+  models::Symbol *ofn = Fname;
   Label *l;
   int j;
   char foo[128];
@@ -498,19 +494,19 @@ void ntimes(FILE *fd, int n, int m, const char *c[]) {
     }
 }
 
-void prehint(Symbol *s) {
+void prehint(models::Symbol *s) {
   Lextok *n;
 
   printf("spin: warning, ");
   if (!s)
     return;
 
-  n = (s->context != ZS) ? s->context->ini : s->ini;
+  n = (s->context != ZS) ? s->context->init_value : s->init_value;
   if (n)
     printf("line %s:%d, ", n->fn->name, n->ln);
 }
 
-void checktype(Symbol *sp, char *s) {
+void checktype(models::Symbol *sp, char *s) {
   char buf[128];
   int i;
   auto& verbose_flags = utils::verbose::Flags::getInstance();
@@ -567,7 +563,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
   int h, j, k = 0;
   extern int nr_errs;
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
   char buf[128], buf2[128], buf3[128];
   auto& verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -589,8 +585,8 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
         for (walk = all_names; walk; walk = walk->next) {
           sp = walk->entry;
           if (sp->context && !sp->owner && sp->type == Types[j] &&
-              ((h == 0 && (sp->nel == 1 && sp->isarray == 0)) ||
-               (h == 1 && (sp->nel > 1 || sp->isarray == 1))) &&
+              ((h == 0 && (sp->value_type == 1 && sp->is_array == 0)) ||
+               (h == 1 && (sp->value_type > 1 || sp->is_array == 1))) &&
               strcmp(s, sp->context->name) == 0) {
             switch (dowhat) {
             case LOGV:
@@ -669,12 +665,12 @@ void c_chandump(FILE *fd) {
   fprintf(fd, "	printf(\"\\n\");\n}\n");
 }
 
-void c_var(FILE *fd, char *pref, Symbol *sp) {
+void c_var(FILE *fd, char *pref, models::Symbol *sp) {
   char *ptr, buf[256];
   int i;
 
   if (!sp) {
-    log::fatal("cannot happen - c_var");
+    loger::fatal("cannot happen - c_var");
   }
 
   ptr = sp->name;
@@ -698,7 +694,7 @@ void c_var(FILE *fd, char *pref, Symbol *sp) {
   case INT:
   case UNSIGNED:
     sputtype(buf, sp->type);
-    if (sp->nel == 1 && sp->isarray == 0) {
+    if (sp->value_type == 1 && sp->is_array == 0) {
       if (sp->type == MTYPE && ismtype(sp->name)) {
         fprintf(fd, "\tprintf(\"\t%s %s:\t%d\\n\");\n", buf, ptr,
                 ismtype(sp->name));
@@ -708,7 +704,7 @@ void c_var(FILE *fd, char *pref, Symbol *sp) {
       }
     } else {
       fprintf(fd, "\t{\tint l_in;\n");
-      fprintf(fd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n", sp->nel);
+      fprintf(fd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n", sp->value_type);
       fprintf(fd, "\t\t{\n");
       fprintf(fd,
               "\t\t\tprintf(\"\t%s %s[%%d]:\t%%d\\n\", l_in, %s%s[l_in]);\n",
@@ -718,12 +714,12 @@ void c_var(FILE *fd, char *pref, Symbol *sp) {
     }
     break;
   case CHAN:
-    if (sp->nel == 1 && sp->isarray == 0) {
+    if (sp->value_type == 1 && sp->is_array == 0) {
       fprintf(fd, "\tprintf(\"\tchan %s (=%%d):\tlen %%d:\\t\", ", ptr);
       fprintf(fd, "%s%s, q_len(%s%s));\n", pref, sp->name, pref, sp->name);
       fprintf(fd, "\tc_chandump(%s%s);\n", pref, sp->name);
     } else
-      for (i = 0; i < sp->nel; i++) {
+      for (i = 0; i < sp->value_type; i++) {
         fprintf(fd, "\tprintf(\"\tchan %s[%d] (=%%d):\tlen %%d:\\t\", ", ptr,
                 i);
         fprintf(fd, "%s%s[%d], q_len(%s%s[%d]));\n", pref, sp->name, i, pref,
@@ -736,7 +732,7 @@ void c_var(FILE *fd, char *pref, Symbol *sp) {
 
 int c_splurge_any(ProcList *p) {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
 
   if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
@@ -753,7 +749,7 @@ int c_splurge_any(ProcList *p) {
 
 void c_splurge(FILE *fd, ProcList *p) {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
   char pref[64];
 
   if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
@@ -773,7 +769,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 {
   Ordered *walk;
   ProcList *p;
-  Symbol *sp;
+  models::Symbol *sp;
   Mtypes_t *lst;
   Lextok *n;
   int j;
@@ -819,14 +815,14 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 
 static int doglobal(char *pre, int dowhat) {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
   int j, cnt = 0;
   auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   for (j = 0; j < 8; j++)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
-      if (!sp->context && !sp->owner && sp->type == Types[j]) {
+      if (!sp->context && !sp->owner_name && sp->type == Types[j]) {
         if (Types[j] != MTYPE || !ismtype(sp->name))
           switch (dowhat) {
           case LOGV:
@@ -854,30 +850,30 @@ static int doglobal(char *pre, int dowhat) {
 
 static void dohidden(void) {
   Ordered *walk;
-  Symbol *sp;
+  models::Symbol *sp;
   int j;
 
   for (j = 0; j < 8; j++)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if ((sp->hidden & 1) && sp->type == Types[j]) {
-        if (sp->context || sp->owner)
-          log::fatal("cannot hide non-globals (%s)", sp->name);
+        if (sp->context || sp->owner_name)
+          loger::fatal("cannot hide non-globals (%s)", sp->name);
         if (sp->type == CHAN)
-          log::fatal("cannot hide channels (%s)", sp->name);
+          loger::fatal("cannot hide channels (%s)", sp->name);
         fprintf(fd_th, "/* hidden variable: */");
         typ2c(sp);
       }
     }
 }
 
-void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
+void do_var(FILE *ofd, int dowhat, char *s, models::Symbol *sp, char *pre, char *sep,
             char *ter) {
   int i;
   char *ptr = const_cast<char *>(sp ? sp->name : "");
 
   if (!sp) {
-    log::fatal("cannot happen - do_var");
+    loger::fatal("cannot happen - do_var");
   }
 
   switch (dowhat) {
@@ -900,9 +896,9 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
       walk_struct(ofd, dowhat, s, sp, pre, sep, ter);
       break;
     }
-    if (!sp->ini && dowhat != LOGV) /* it defaults to 0 */
+    if (!sp->init_value && dowhat != LOGV) /* it defaults to 0 */
       break;
-    if (sp->nel == 1 && sp->isarray == 0) {
+    if (sp->value_type == 1 && sp->is_array == 0) {
       if (dowhat == LOGV) {
         fprintf(ofd, "\t\t%s%s%s%s", pre, s, ptr, sep);
         fprintf(ofd, "%s%s", s, sp->name);
@@ -912,8 +908,8 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
       }
       fprintf(ofd, "%s", ter);
     } else {
-      if (sp->ini && sp->ini->ntyp == CHAN) {
-        for (i = 0; i < sp->nel; i++) {
+      if (sp->init_value && sp->init_value->ntyp == CHAN) {
+        for (i = 0; i < sp->value_type; i++) {
           fprintf(ofd, "\t\t%s%s%s[%d]%s", pre, s, sp->name, i, sep);
           if (dowhat == LOGV)
             fprintf(ofd, "%s%s[%d]", s, sp->name, i);
@@ -921,11 +917,11 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
             do_init(ofd, sp);
           fprintf(ofd, "%s", ter);
         }
-      } else if (sp->ini) {
-        if (dowhat != LOGV && sp->isarray && sp->ini->ntyp == ',') {
+      } else if (sp->init_value) {
+        if (dowhat != LOGV && sp->is_array && sp->init_value->ntyp == ',') {
           Lextok *z, *y;
-          z = sp->ini;
-          for (i = 0; i < sp->nel; i++) {
+          z = sp->init_value;
+          for (i = 0; i < sp->value_type; i++) {
             if (z && z->ntyp == ',') {
               y = z->lft;
               z = z->rgt;
@@ -938,13 +934,13 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
           }
         } else {
           fprintf(ofd, "\t{\tint l_in;\n");
-          fprintf(ofd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n", sp->nel);
+          fprintf(ofd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n", sp->value_type);
           fprintf(ofd, "\t\t{\n");
           fprintf(ofd, "\t\t\t%s%s%s[l_in]%s", pre, s, sp->name, sep);
           if (dowhat == LOGV) {
             fprintf(ofd, "%s%s[l_in]", s, sp->name);
           } else {
-            putstmnt(ofd, sp->ini, 0);
+            putstmnt(ofd, sp->init_value, 0);
           }
           fprintf(ofd, "%s", ter);
           fprintf(ofd, "\t\t}\n");
@@ -956,31 +952,30 @@ void do_var(FILE *ofd, int dowhat, char *s, Symbol *sp, char *pre, char *sep,
   }
 }
 
-static void do_init(FILE *ofd, Symbol *sp) {
+static void do_init(FILE *ofd, models::Symbol *sp) {
   int i;
 
-  if (sp->ini && sp->type == CHAN && ((i = qmake(sp)) > 0)) {
-    if (sp->ini->ntyp == CHAN) {
+  if (sp->init_value && sp->type == CHAN && ((i = qmake(sp)) > 0)) {
+    if (sp->init_value->ntyp == CHAN) {
       fprintf(ofd, "addqueue(calling_pid, %d, %d)", i,
               ltab[i - 1]->nslots == 0);
     } else {
       fprintf(ofd, "%d", i);
     }
   } else {
-    putstmnt(ofd, sp->ini, 0);
+    putstmnt(ofd, sp->init_value, 0);
   }
 }
-
-static void put_ptype(char *s, int i, int m0, int m1, enum btypes b) {
+static void put_ptype(const std::string& s, int i, int m0, int m1, enum btypes b) {
   int k;
 
   if (b == I_PROC) {
     fprintf(fd_th, "#define Pinit	((P%d *)_this)\n", i);
   } else if (b == P_PROC || b == A_PROC) {
-    fprintf(fd_th, "#define P%s	((P%d *)_this)\n", s, i);
+    fprintf(fd_th, "#define P%s	((P%d *)_this)\n", s.c_str(), i);
   }
 
-  fprintf(fd_th, "struct P%d { /* %s */\n", i, s);
+  fprintf(fd_th, "struct P%d { /* %s */\n", i, s.c_str());
   fprintf(fd_th, "	unsigned _pid : 8;  /* 0..255 */\n");
   fprintf(fd_th, "	unsigned _t   : %d; /* proctype */\n", blog(m1));
   fprintf(fd_th, "	unsigned _p   : %d; /* state    */\n", blog(m0));
@@ -1002,16 +997,16 @@ static void put_ptype(char *s, int i, int m0, int m1, enum btypes b) {
       fprintf(fd_th, "%d", (nBits + 7) / 8);
       goto done;
     }
-    if ((LstSet->type != BIT && LstSet->type != UNSIGNED) || LstSet->nel != 1) {
+    if ((LstSet->type != BIT && LstSet->type != UNSIGNED) || LstSet->value_type != 1) {
       fprintf(fd_th, "Offsetof(P%d, %s) - %d*sizeof(", i, LstSet->name,
-              LstSet->nel);
+              LstSet->value_type);
     }
     switch (LstSet->type) {
     case UNSIGNED:
       fprintf(fd_th, "%d", (nBits + 7) / 8);
       break;
     case BIT:
-      if (LstSet->nel == 1) {
+      if (LstSet->value_type == 1) {
         fprintf(fd_th, "%d", (nBits + 7) / 8);
         break;
       } /* else fall through */
@@ -1027,12 +1022,13 @@ static void put_ptype(char *s, int i, int m0, int m1, enum btypes b) {
       fprintf(fd_th, "int)");
       break;
     default:
-      log::fatal("cannot happen Air %s", LstSet->name);
+      loger::fatal("cannot happen Air %s", LstSet->name);
     }
   done:
     fprintf(fd_th, ")\n\n");
   }
 }
+
 
 static void tc_predef_np(void) {
   fprintf(fd_th, "#define _NP_	%d\n", nrRdy); /* 1+ highest proctype nr */
@@ -1062,7 +1058,7 @@ static void multi_init(void) {
   ProcList *p;
   Element *e;
   int i = nrRdy + 1;
-  int ini, j;
+  int init_value, j;
   int nrc = nclaims;
 
   fprintf(fd_tc, "#ifndef NOCLAIM\n");
@@ -1070,17 +1066,17 @@ static void multi_init(void) {
   for (p = ready, j = 0; p; p = p->nxt, j++) {
     if (p->b == N_CLAIM) {
       e = p->s->frst;
-      ini = huntele(e, e->status, -1)->seqno;
+      init_value = huntele(e, e->status, -1)->seqno;
 
       fprintf(fd_tc, "\t\tspin_c_typ[%d] = %d; /* %s */\n", j, p->tn,
               p->n->name);
-      fprintf(fd_tc, "\t\t((P%d *)pptr(h))->c_cur[%d] = %d;\n", i, j, ini);
-      fprintf(fd_tc, "\t\treached%d[%d]=1;\n", p->tn, ini);
+      fprintf(fd_tc, "\t\t((P%d *)pptr(h))->c_cur[%d] = %d;\n", i, j, init_value);
+      fprintf(fd_tc, "\t\treached%d[%d]=1;\n", p->tn, init_value);
 
       /* the default initial claim is first one in model */
       if (--nrc == 0) {
         fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_t = %d;\n", i, p->tn);
-        fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, ini);
+        fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, init_value);
         fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_n = %d; /* %s */\n", i, j,
                 p->n->name);
         fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", p->tn);
@@ -1102,10 +1098,10 @@ static void multi_init(void) {
 static void put_pinit(ProcList *P) {
   Lextok *fp, *fpt, *t;
   Element *e = P->s->frst;
-  Symbol *s = P->n;
+  models::Symbol *s = P->n;
   Lextok *p = P->p;
   int i = P->tn;
-  int ini, j, k;
+  int init_value, j, k;
 
   if (pid_is_claim(i) && separate == 1) {
     fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name);
@@ -1116,22 +1112,22 @@ static void put_pinit(ProcList *P) {
   if (!pid_is_claim(i) && separate == 2)
     return;
 
-  ini = huntele(e, e->status, -1)->seqno;
-  fprintf(fd_th, "#define _start%d	%d\n", i, ini);
+  init_value = huntele(e, e->status, -1)->seqno;
+  fprintf(fd_th, "#define _start%d	%d\n", i, init_value);
   if (i == eventmapnr)
-    fprintf(fd_th, "#define start_event	%d\n", ini);
+    fprintf(fd_th, "#define start_event	%d\n", init_value);
 
   fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name);
 
   fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_t = %d;\n", i, i);
-  fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, ini);
+  fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, init_value);
   fprintf(fd_tc, "#ifdef HAS_PRIORITY\n");
 
   fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_priority = priority; /* was: %d */\n",
           i, (P->priority < 1) ? 1 : P->priority);
 
   fprintf(fd_tc, "#endif\n");
-  fprintf(fd_tc, "\t\treached%d[%d]=1;\n", i, ini);
+  fprintf(fd_tc, "\t\treached%d[%d]=1;\n", i, init_value);
   if (P->b == N_CLAIM) {
     fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", i);
   }
@@ -1152,17 +1148,17 @@ static void put_pinit(ProcList *P) {
   for (fp = p, j = 0; fp; fp = fp->rgt)
     for (fpt = fp->lft; fpt; fpt = fpt->rgt, j++) {
       t = (fpt->ntyp == ',') ? fpt->lft : fpt;
-      if (t->sym->nel > 1 || t->sym->isarray) {
+      if (t->sym->value_type > 1 || t->sym->is_array) {
         lineno = t->ln;
         Fname = t->fn;
-        log::fatal("array in parameter list, %s", t->sym->name);
+        loger::fatal("array in parameter list, %s", t->sym->name);
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->sym->type == STRUCT) {
         if (full_name(fd_tc, t, t->sym, 1)) {
           lineno = t->ln;
           Fname = t->fn;
-          log::fatal("hidden array in parameter %s", t->sym->name);
+          loger::fatal("hidden array in parameter %s", t->sym->name);
         }
       } else
         fprintf(fd_tc, "%s", t->sym->name);
@@ -1202,7 +1198,7 @@ Element *huntstart(Element *f) {
 
   if (cnt >= 200 || !e) {
     lineno = (f && f->n) ? f->n->ln : lineno;
-    log::fatal("confusing control. structure");
+    loger::fatal("confusing control. structure");
   }
   return e;
 }
@@ -1221,7 +1217,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
         g = get_lab(e->n, 1);
         if (e == g) {
           lineno = (f && f->n) ? f->n->ln : lineno;
-          log::fatal("infinite goto loop");
+          loger::fatal("infinite goto loop");
         }
         cross_dsteps(e->n, g->n);
         break;
@@ -1234,7 +1230,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       case UNLESS:
         g = huntele(e->sub->this_sequence->frst, o, stopat);
         if (!g) {
-          log::fatal("unexpected error 1");
+          loger::fatal("unexpected error 1");
         }
         break;
       case D_STEP:
@@ -1249,12 +1245,12 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
     }
   if (cnt >= 500 || !e) {
     lineno = (f && f->n) ? f->n->ln : lineno;
-    log::fatal("confusing control structure");
+    loger::fatal("confusing control structure");
   }
   return e;
 }
 
-void typ2c(Symbol *sp) {
+void typ2c(models::Symbol *sp) {
   auto& verbose_flags = utils::verbose::Flags::getInstance();
 
   int wsbits = sizeof(long) * 8; /* wordsize in bits */
@@ -1273,7 +1269,7 @@ void typ2c(Symbol *sp) {
     nBits += sp->nbits;
     break;
   case BIT:
-    if (sp->nel == 1 && sp->isarray == 0 && !(sp->hidden & 1)) {
+    if (sp->value_type == 1 && sp->is_array == 0 && !(sp->hidden & 1)) {
       fprintf(fd_th, "\tunsigned %s : 1", sp->name);
       LstSet = sp;
       nBits++;
@@ -1281,8 +1277,8 @@ void typ2c(Symbol *sp) {
     } /* else fall through */
     if (!(sp->hidden & 1) && verbose_flags.NeedToPrintVerbose())
       printf("spin: warning: bit-array %s[%d] mapped to byte-array\n", sp->name,
-             sp->nel);
-    nBits += 8 * sp->nel; /* mapped onto array of uchars */
+             sp->value_type);
+    nBits += 8 * sp->value_type; /* mapped onto array of uchars */
   case MTYPE:
   case BYTE:
   case CHAN: /* good for up to 255 channels */
@@ -1299,7 +1295,7 @@ void typ2c(Symbol *sp) {
     break;
   case STRUCT:
     if (!sp->Snm)
-      log::fatal("undeclared structure element %s", sp->name);
+      loger::fatal("undeclared structure element %s", sp->name);
     fprintf(fd_th, "\tstruct %s %s", sp->Snm->name, sp->name);
     LstSet = ZS;
     break;
@@ -1307,11 +1303,11 @@ void typ2c(Symbol *sp) {
   case PREDEF:
     return;
   default:
-    log::fatal("variable %s undeclared", sp->name);
+    loger::fatal("variable %s undeclared", sp->name);
   }
 
-  if (sp->nel > 1 || sp->isarray)
-    fprintf(fd_th, "[%d]", sp->nel);
+  if (sp->value_type > 1 || sp->is_array)
+    fprintf(fd_th, "[%d]", sp->value_type);
   fprintf(fd_th, ";\n");
 }
 
@@ -1384,7 +1380,7 @@ void genaddqueue(void) {
         fprintf(fd_th, "\t\tint fld%d;\n", j);
         break;
       default:
-        log::fatal("bad channel spec", "");
+        loger::fatal("bad channel spec", "");
       }
     }
     fprintf(fd_th, "	} contents[%d];\n", max(1, q->nslots));

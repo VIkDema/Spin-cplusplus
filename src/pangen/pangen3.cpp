@@ -1,11 +1,5 @@
 /***** spin: pangen3.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "../lexer/lexer.hpp"
 #include "../spin.hpp"
 #include "y.tab.h"
@@ -15,21 +9,21 @@ extern FILE *fd_th, *fd_tc;
 extern int eventmapnr, old_priority_rules, in_settr;
 
 struct SRC {
-  int ln, st; /* linenr, statenr */
-  Symbol *fn; /* filename */
+  int ln, st;         /* linenr, statenr */
+  models::Symbol *fn; /* filename */
   struct SRC *nxt;
 };
 
 static int col;
-static Symbol *lastfnm;
-static Symbol lastdef;
+static models::Symbol *lastfnm;
+static models::Symbol lastdef;
 static int lastfrom;
 static SRC *frst = (SRC *)0;
 static SRC *skip = (SRC *)0;
 extern lexer::Lexer lexer_;
 
 extern void sr_mesg(FILE *, int, int, const char *);
-extern Lextok **find_mtype_list(const char *);
+extern Lextok **find_mtype_list(const std::string&);
 
 static void putnr(int n) {
   if (col++ == 8) {
@@ -39,13 +33,13 @@ static void putnr(int n) {
   fprintf(fd_tc, "%3d, ", n); /* was th */
 }
 
-static void putfnm(int j, Symbol *s) {
+static void putfnm(int j, models::Symbol *s) {
   if (lastfnm && lastfnm == s && j != -1)
     return;
 
   if (lastfnm)
     fprintf(fd_tc, "{ \"%s\", %d, %d },\n\t", /* was th */
-            lastfnm->name, lastfrom, j - 1);
+            lastfnm->name.c_str(), lastfrom, j - 1);
   lastfnm = s;
   lastfrom = j;
 }
@@ -53,7 +47,7 @@ static void putfnm(int j, Symbol *s) {
 static void putfnm_flush(int j) {
   if (lastfnm)
     fprintf(fd_tc, "{ \"%s\", %d, %d }\n", /* was th */
-            lastfnm->name, lastfrom, j);
+            lastfnm->name.c_str(), lastfrom, j);
 }
 
 static SRC *newsrc(int m, SRC *n) {
@@ -127,7 +121,7 @@ void putsrc(Element *e) /* match states to source lines */
     if (tmp->st == m) {
       if (tmp->ln != n || tmp->fn != e->n->fn)
         printf("putsrc mismatch seqno %d, line %d - %d, file %s\n", m, n,
-               tmp->ln, tmp->fn->name);
+               tmp->ln, tmp->fn->name.c_str());
       return;
     }
     if (tmp->st > m) /* insert before */
@@ -218,7 +212,7 @@ void dumpsrc(int n, int m) {
   }
   fprintf(tz, "};\n");
 
-  lastfnm = (Symbol *)0;
+  lastfnm = (models::Symbol *)0;
   lastdef.name = "-";
   fprintf(tz, "S_F_MAP src_file%d [] = {\n\t", m);
   tmp = frst;
@@ -277,7 +271,7 @@ static int symbolic(FILE *fd, Lextok *tv) {
   int cnt = 1;
 
   if (tv->ismtyp) {
-    char *s = "_unnamed_";
+    std::string s = "_unnamed_";
     if (tv->sym && tv->sym->mtype_name) {
       s = tv->sym->mtype_name->name;
     }

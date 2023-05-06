@@ -1,18 +1,12 @@
-/***** spin: spin.h *****/
-
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #ifndef SEEN_SPIN_H
 #define SEEN_SPIN_H
 
+#include "models/symbol.hpp"
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
 #include <string.h>
+
 #if !defined(WIN32) && !defined(WIN64)
 #include <unistd.h>
 #endif
@@ -30,8 +24,8 @@ struct Lextok {
   int ln;                   /* line number */
   int indstep;              /* part of d_step sequence */
   int uiid;                 /* inline id, if non-zero */
-  struct Symbol *fn;        /* file name */
-  struct Symbol *sym;       /* symbol reference */
+  models::Symbol *fn;       /* file name */
+  models::Symbol *sym;      /* symbol reference */
   struct Sequence *sq;      /* sequence */
   struct SeqList *sl;       /* sequence list */
   struct Lextok *lft, *rgt; /* children in parse tree */
@@ -45,46 +39,14 @@ struct Slicer {
 };
 
 struct Access {
-  struct Symbol *who;  /* proctype name of accessor */
-  struct Symbol *what; /* proctype name of accessed */
-  int cnt, typ;        /* parameter nr and, e.g., 's' or 'r' */
-  struct Access *lnk;  /* linked list */
-};
-
-struct Symbol {
-  char *name;
-  int Nid;               /* unique number for the name */
-  unsigned short type;   /* bit,short,.., chan,struct  */
-  unsigned char hidden;  /* bit-flags:
-                            1=hide, 2=show,
-                            4=bit-equiv,   8=byte-equiv,
-                           16=formal par, 32=inline par,
-                           64=treat as if local; 128=read at least once
-                          */
-  unsigned char colnr;   /* for use with xspin during simulation */
-  unsigned char isarray; /* set if decl specifies array bound */
-  unsigned char *bscp;   /* block scope */
-  int sc;                /* scope seq no -- set only for proctypes */
-  int nbits;             /* optional width specifier */
-  int nel;               /* 1 if scalar, >1 if array   */
-  int setat;             /* last depth value changed   */
-  int *val;              /* runtime value(s), initl 0  */
-  Lextok **Sval;         /* values for structures */
-
-  int xu;                    /* exclusive r or w by 1 pid  */
-  struct Symbol *xup[2];     /* xr or xs proctype  */
-  struct Access *access;     /* e.g., senders and receives of chan */
-  Lextok *ini;               /* initial value, or chan-def */
-  Lextok *Slst;              /* template for structure if struct */
-  struct Symbol *mtype_name; /* if type == MTYPE else nil */
-  struct Symbol *Snm;        /* name of the defining struct */
-  struct Symbol *owner;      /* set for names of subfields in typedefs */
-  struct Symbol *context;    /* 0 if global, or procname */
-  struct Symbol *next;       /* linked list */
+  models::Symbol *who;  /* proctype name of accessor */
+  models::Symbol *what; /* proctype name of accessed */
+  int cnt, typ;         /* parameter nr and, e.g., 's' or 'r' */
+  struct Access *lnk;   /* linked list */
 };
 
 struct Ordered { /* links all names in Symbol table */
-  struct Symbol *entry;
+  models::Symbol *entry;
   struct Ordered *next;
 };
 
@@ -129,7 +91,7 @@ struct FSM_trans { /* used in pangen5.c - dataflow */
 
 struct FSM_use { /* used in pangen5.c - dataflow */
   Lextok *n;
-  Symbol *var;
+  models::Symbol *var;
   int special;
   struct FSM_use *nxt;
 };
@@ -165,8 +127,8 @@ struct SeqList {
 };
 
 struct Label {
-  Symbol *s;
-  Symbol *c;
+  models::Symbol *s;
+  models::Symbol *c;
   Element *e;
   int uiid;    /* non-zero if label appears in an inline */
   int visible; /* label referenced in claim (slice relevant) */
@@ -174,7 +136,7 @@ struct Label {
 };
 
 struct Lbreak {
-  Symbol *l;
+  models::Symbol *l;
   struct Lbreak *nxt;
 };
 
@@ -184,20 +146,20 @@ struct L_List {
 };
 
 struct RunList {
-  Symbol *n;           /* name            */
-  int tn;              /* ordinal of type */
-  int pid;             /* process id      */
-  int priority;        /* for simulations only */
-  enum btypes b;       /* the type of process */
-  Element *pc;         /* current stmnt   */
-  struct Sequence *ps; /* used by analyzer generator */
-  Lextok *prov;        /* provided clause */
-  Symbol *symtab;      /* local variables */
-  struct RunList *nxt; /* linked list */
+  models::Symbol *n;      /* name            */
+  int tn;                 /* ordinal of type */
+  int pid;                /* process id      */
+  int priority;           /* for simulations only */
+  enum btypes b;          /* the type of process */
+  Element *pc;            /* current stmnt   */
+  struct Sequence *ps;    /* used by analyzer generator */
+  Lextok *prov;           /* provided clause */
+  models::Symbol *symtab; /* local variables */
+  struct RunList *nxt;    /* linked list */
 };
 
 struct ProcList {
-  Symbol *n;              /* name       */
+  models::Symbol *n;      /* name       */
   Lextok *p;              /* parameters */
   Sequence *s;            /* body       */
   Lextok *prov;           /* provided clause */
@@ -219,7 +181,7 @@ typedef Lextok *Lexptr;
 #define YYSTYPE Lexptr
 
 #define ZN (Lextok *)0
-#define ZS (Symbol *)0
+#define ZS (models::Symbol *)0
 #define ZE (Element *)0
 
 #define DONE 1      /* status bits of elements */
@@ -279,24 +241,25 @@ Element *target(Element *);
 
 Lextok *do_unless(Lextok *, Lextok *);
 Lextok *expand(Lextok *, int);
-Lextok *getuname(Symbol *);
+Lextok *getuname(models::Symbol *);
 Lextok *mk_explicit(Lextok *, int, int);
 Lextok *nn(Lextok *, int, Lextok *, Lextok *);
-Lextok *rem_lab(Symbol *, Lextok *, Symbol *);
-Lextok *rem_var(Symbol *, Lextok *, Symbol *, Lextok *);
+Lextok *rem_lab(models::Symbol *, Lextok *, models::Symbol *);
+Lextok *rem_var(models::Symbol *, Lextok *, models::Symbol *, Lextok *);
 Lextok *tail_add(Lextok *, Lextok *);
 Lextok *return_statement(Lextok *);
 
-ProcList *mk_rdy(Symbol *, Lextok *, Sequence *, int, Lextok *, enum btypes);
+ProcList *mk_rdy(models::Symbol *, Lextok *, Sequence *, int, Lextok *,
+                 enum btypes);
 
 SeqList *seqlist(Sequence *, SeqList *);
 Sequence *close_seq(int);
 
-Symbol *break_dest(void);
-Symbol *findloc(Symbol *);
-Symbol *has_lab(Element *, int);
-Symbol *lookup(char *);
-Symbol *prep_inline(Symbol *, Lextok *);
+models::Symbol *break_dest(void);
+models::Symbol *findloc(models::Symbol *);
+models::Symbol *has_lab(Element *, int);
+models::Symbol *lookup(const std::string &s);
+models::Symbol *prep_inline(models::Symbol *, Lextok *);
 
 char *put_inline(FILE *, char *);
 char *emalloc(size_t);
@@ -307,7 +270,7 @@ int any_oper(Lextok *, int);
 int any_undo(Lextok *);
 int c_add_sv(FILE *);
 int cast_val(int, int, int);
-int checkvar(Symbol *, int);
+int checkvar(models::Symbol *, int);
 int check_track(Lextok *);
 int Cnt_flds(Lextok *);
 int cnt_mpars(Lextok *);
@@ -315,14 +278,14 @@ int complete_rendez(void);
 int enable(Lextok *);
 int Enabled0(Element *);
 int eval(Lextok *);
-int find_lab(Symbol *, Symbol *, int);
-int find_maxel(Symbol *);
-int full_name(FILE *, Lextok *, Symbol *, int);
+int find_lab(models::Symbol *, models::Symbol *, int);
+int find_maxel(models::Symbol *);
+int full_name(FILE *, Lextok *, models::Symbol *, int);
 int getlocal(Lextok *);
 int getval(Lextok *);
 int glob_inline(char *);
 int has_typ(Lextok *, int);
-int in_bound(Symbol *, int);
+int in_bound(models::Symbol *, int);
 int interprint(FILE *, Lextok *);
 int printm(FILE *, Lextok *);
 int is_inline(void);
@@ -330,7 +293,7 @@ int ismtype(char *);
 int isproctype(char *);
 int isutype(char *);
 
-int Lval_struct(Lextok *, Symbol *, int, int);
+int Lval_struct(Lextok *, models::Symbol *, int, int);
 int main(int, char **);
 int pc_value(Lextok *);
 int pid_is_claim(int);
@@ -339,12 +302,12 @@ int putcode(FILE *, Sequence *, Element *, int, int, int);
 int q_is_sync(Lextok *);
 int qlen(Lextok *);
 int qfull(Lextok *);
-int qmake(Symbol *);
+int qmake(models::Symbol *);
 int qrecv(Lextok *, int);
 int qsend(Lextok *);
 int remotelab(Lextok *);
 int remotevar(Lextok *);
-int Rval_struct(Lextok *, Symbol *, int);
+int Rval_struct(Lextok *, models::Symbol *, int);
 int setlocal(Lextok *, int);
 int setval(Lextok *, int);
 int sputtype(char *, int);
@@ -357,33 +320,33 @@ void AST_track(Lextok *, int);
 void add_seq(Lextok *);
 void alldone(int);
 void announce(char *);
-void c_state(Symbol *, Symbol *, Symbol *);
+void c_state(models::Symbol *, models::Symbol *, models::Symbol *);
 void c_add_def(FILE *);
 void c_add_loc(FILE *, char *);
 void c_add_locinit(FILE *, int, char *);
 void c_chandump(FILE *);
 void c_preview(void);
-void c_struct(FILE *, char *, Symbol *);
-void c_track(Symbol *, Symbol *, Symbol *);
-void c_var(FILE *, char *, Symbol *);
+void c_struct(FILE *, char *, models::Symbol *);
+void c_track(models::Symbol *, models::Symbol *, models::Symbol *);
+void c_var(FILE *, char *, models::Symbol *);
 void c_wrapper(FILE *);
 void chanaccess(void);
 void check_param_count(int, Lextok *);
-void checkrun(Symbol *, int);
+void checkrun(models::Symbol *, int);
 void comment(FILE *, Lextok *, int);
 void cross_dsteps(Lextok *, Lextok *);
 void disambiguate(void);
-void doq(Symbol *, int, RunList *);
+void doq(models::Symbol *, int, RunList *);
 void dotag(FILE *, char *);
 void do_locinits(FILE *);
-void do_var(FILE *, int, char *, Symbol *, char *, char *, char *);
-void dump_struct(Symbol *, char *, RunList *);
+void do_var(FILE *, int, char *, models::Symbol *, char *, char *, char *);
+void dump_struct(models::Symbol *, char *, RunList *);
 void dumpclaims(FILE *, int, char *);
 void dumpglobals(void);
 void dumplabels(void);
 void dumplocal(RunList *, int);
 void dumpsrc(int, int);
-void fix_dest(Symbol *, Symbol *);
+void fix_dest(models::Symbol *, models::Symbol *);
 void genaddproc(void);
 void genaddqueue(void);
 void gencodetable(FILE *);
@@ -392,7 +355,7 @@ void genother(void);
 void gensrc(void);
 void gensvmap(void);
 void genunio(void);
-void ini_struct(Symbol *);
+void ini_struct(models::Symbol *);
 void loose_ends(void);
 void make_atomic(Sequence *, int);
 void mark_last(void);
@@ -402,17 +365,17 @@ void nochan_manip(Lextok *, Lextok *, int);
 void ntimes(FILE *, int, int, const char *c[]);
 void open_seq(int);
 void p_talk(Element *, int);
-void pickup_inline(Symbol *, Lextok *, Lextok *);
+void pickup_inline(models::Symbol *, Lextok *, Lextok *);
 void plunk_c_decls(FILE *);
 void plunk_c_fcts(FILE *);
 void plunk_expr(FILE *, char *);
 void plunk_inline(FILE *, char *, int, int);
-void prehint(Symbol *);
+void prehint(models::Symbol *);
 void preruse(FILE *, Lextok *);
 void prune_opts(Lextok *);
 void pstext(int, char *);
 void pushbreak(void);
-void putname(FILE *, char *, Lextok *, int, char *);
+void putname(FILE *, const std::string &, Lextok *, int, const std::string &);
 void putremote(FILE *, Lextok *, int);
 void putskip(int);
 void putsrc(Element *);
@@ -421,25 +384,25 @@ void putunames(FILE *);
 void rem_Seq(void);
 void runnable(ProcList *, int, int);
 void sched(void);
-void setaccess(Symbol *, Symbol *, int, int);
-void set_lab(Symbol *, Element *);
+void setaccess(models::Symbol *, models::Symbol *, int, int);
+void set_lab(models::Symbol *, Element *);
 void setmtype(Lextok *, Lextok *);
 void setpname(Lextok *);
 void setptype(Lextok *, Lextok *, int, Lextok *);
 void setuname(Lextok *);
-void setutype(Lextok *, Symbol *, Lextok *);
+void setutype(Lextok *, models::Symbol *, Lextok *);
 void setxus(Lextok *, int);
 void start_claim(int);
-void struct_name(Lextok *, Symbol *, int, char *);
+void struct_name(Lextok *, models::Symbol *, int, char *);
 void symdump(void);
-void symvar(Symbol *);
+void symvar(models::Symbol *);
 void sync_product(void);
 void trackchanuse(Lextok *, Lextok *, int);
 void trackvar(Lextok *, Lextok *);
 void trackrun(Lextok *);
 void trapwonly(Lextok * /* , char * */); /* spin.y and main.c */
-void typ2c(Symbol *);
-void typ_ck(int, int, char *);
+void typ2c(models::Symbol *);
+void typ_ck(int, int,const std::string &);
 void undostmnt(Lextok *, int);
 void unrem_Seq(void);
 void unskip(int);

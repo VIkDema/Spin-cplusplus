@@ -184,7 +184,7 @@ sameform(Node *a, Node *b) {
     return 1;
   case PREDICATE:
     if (!a->sym || !b->sym)
-      log::fatal("sameform...");
+      loger::fatal("sameform...");
     return !strcmp(a->sym->name, b->sym->name);
 
   case NOT:
@@ -207,7 +207,7 @@ sameform(Node *a, Node *b) {
 
   default:
     printf("type: %d\n", a->ntyp);
-    log::fatal("cannot happen, sameform");
+    loger::fatal("cannot happen, sameform");
   }
 
   return 0;
@@ -298,6 +298,6 @@ int anywhere(int tok, Node *srch, Node *in) {
   case 0:
     return any_term(srch, in);
   }
-  log::fatal("cannot happen, anywhere");
+  loger::fatal("cannot happen, anywhere");
   return 0;
 }

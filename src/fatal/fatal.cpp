@@ -1,21 +1,22 @@
 
 #include "fatal.hpp"
-#include "../utils/verbose/verbose.hpp"
 #include "../spin.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
 #include <sstream>
 
-extern Symbol *Fname;
-extern Symbol *oFname;
+extern models::Symbol *Fname;
+extern models::Symbol *oFname;
+//TODO: fix it
 extern int nr_errs;
 extern int lineno;
 extern int yychar;
 extern char yytext[];
 
-namespace log {
+namespace loger {
 static constexpr std::string_view kOperator = "operator: ";
 static constexpr std::string_view kKeyword = "keyword: ";
 static constexpr std::string_view kFunction = "function-name: ";
@@ -354,4 +355,4 @@ std::string explainToString(int n) {
   }
   return ss.str();
 }
-} // namespace log
+} // namespace loger

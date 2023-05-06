@@ -33,8 +33,8 @@ static Graph *findgraph(char *);
 static Graph *pop_stack(void);
 static Node *Duplicate(Node *);
 static Node *flatten(Node *);
-static Symbol *catSlist(Symbol *, Symbol *);
-static Symbol *dupSlist(Symbol *);
+static models::Symbol *catSlist(models::Symbol *, models::Symbol *);
+static models::Symbol *dupSlist(models::Symbol *);
 static char *newname(void);
 static int choueka(Graph *, int);
 static int not_new(Graph *);
@@ -47,7 +47,7 @@ static void fixinit(Node *);
 static void liveness(Node *);
 static void mk_grn(Node *);
 static void mk_red(Node *);
-static void ng(Symbol *, Symbol *, Node *, Node *, Node *);
+static void ng(models::Symbol *, models::Symbol *, Node *, Node *, Node *);
 static void push_stack(Graph *);
 static void sdump(Node *);
 
@@ -116,7 +116,7 @@ static void push_stack(Graph *g) {
   g->nxt = Nodes_Stack;
   Nodes_Stack = g;
   if (tl_verbose) {
-    Symbol *z;
+    models::Symbol *z;
     printf("\nPush %s, from ", g->name->name);
     for (z = g->incoming; z; z = z->next)
       printf("%s, ", z->name);
@@ -193,7 +193,7 @@ static void mk_red(Node *n) {
   for (p = Nodes_Set; p; p = p->nxt) {
     if (p->outgoing && has_clause(0, p, n)) {
       if (p->redcnt >= 63)
-        log::fatal("too many Untils", (char *)0);
+        loger::fatal("too many Untils", (char *)0);
       p->isred[p->redcnt++] = (unsigned char)Red_cnt;
       Lab_cnt++;
       Max_Red = Red_cnt;
@@ -240,7 +240,7 @@ static Graph *findgraph(char *nm) {
 
 static void Addout(char *to, char *from) {
   Graph *p = findgraph(from);
-  Symbol *s;
+  models::Symbol *s;
 
   if (!p)
     return;
@@ -381,7 +381,7 @@ static int set_prefix(char *pref, int count, Graph *r2) {
 
 static void fsm_trans(Graph *p, int count, char *curnm) {
   Graph *r;
-  Symbol *s;
+  models::Symbol *s;
   char prefix[128], nwnm[256];
 
   if (!p->outgoing)
@@ -431,8 +431,8 @@ static void mkbuchi(void) {
   fsm_print();
 }
 
-static Symbol *dupSlist(Symbol *s) {
-  Symbol *p1, *p2, *p3, *d = ZS;
+static models::Symbol *dupSlist(models::Symbol *s) {
+  models::Symbol *p1, *p2, *p3, *d = ZS;
 
   for (p1 = s; p1; p1 = p1->next) {
     for (p3 = d; p3; p3 = p3->next) {
@@ -449,8 +449,8 @@ static Symbol *dupSlist(Symbol *s) {
   return d;
 }
 
-static Symbol *catSlist(Symbol *a, Symbol *b) {
-  Symbol *p1, *p2, *p3, *tmp;
+static models::Symbol *catSlist(models::Symbol *a, models::Symbol *b) {
+  models::Symbol *p1, *p2, *p3, *tmp;
 
   /* remove duplicates from b */
   for (p1 = a; p1; p1 = p1->next) {
@@ -488,7 +488,7 @@ static Symbol *catSlist(Symbol *a, Symbol *b) {
 
 static void fixinit(Node *orig) {
   Graph *p1, *g;
-  Symbol *q1, *q2 = ZS;
+  models::Symbol *q1, *q2 = ZS;
 
   ng(tl_lookup("init"), ZS, ZN, ZN, ZN);
   p1 = pop_stack();
@@ -538,7 +538,7 @@ static Node *Duplicate(Node *n) {
   return d;
 }
 
-static void ng(Symbol *s, Symbol *in, Node *isnew, Node *isold, Node *next) {
+static void ng(models::Symbol *s, models::Symbol *in, Node *isnew, Node *isold, Node *next) {
   Graph *g = (Graph *)tl_emalloc(sizeof(Graph));
 
   if (s)
@@ -604,7 +604,7 @@ static void sdump(Node *n) {
   }
 }
 
-Symbol *DoDump(Node *n) {
+models::Symbol *DoDump(Node *n) {
   if (!n)
     return ZS;
 
@@ -738,7 +738,7 @@ static void expand_g(Graph *g) {
   }
 
   if (tl_verbose) {
-    Symbol *z;
+    models::Symbol *z;
     printf("\nExpand %s, from ", g->name->name);
     for (z = g->incoming; z; z = z->next)
       printf("%s, ", z->name);

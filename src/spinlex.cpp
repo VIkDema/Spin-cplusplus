@@ -1,11 +1,5 @@
 /***** spin: spinlex.c *****/
 
-/*
- * This file is part of the public release of Spin. It is subject to the
- * terms in the LICENSE file that is included in this source directory.
- * Tool documentation is available at http://spinroot.com
- */
-
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "spin.hpp"
@@ -23,32 +17,32 @@
 #define MAXLEN 512 /* max len of an actual parameter text */
 
 struct IType {
-  Symbol *nm;        /* name of the type */
-  Lextok *cn;        /* contents */
-  Lextok *params;    /* formal pars if any */
-  Lextok *rval;      /* variable to assign return value, if any */
-  char **anms;       /* literal text for actual pars */
-  char *prec;        /* precondition for c_code or c_expr */
-  int uiid;          /* unique inline id */
-  int is_expr;       /* c_expr in an ltl formula */
-  int dln, cln;      /* def and call linenr */
-  Symbol *dfn, *cfn; /* def and call filename */
-  struct IType *nxt; /* linked list */
+  models::Symbol *nm;        /* name of the type */
+  Lextok *cn;                /* contents */
+  Lextok *params;            /* formal pars if any */
+  Lextok *rval;              /* variable to assign return value, if any */
+  char **anms;               /* literal text for actual pars */
+  char *prec;                /* precondition for c_code or c_expr */
+  int uiid;                  /* unique inline id */
+  int is_expr;               /* c_expr in an ltl formula */
+  int dln, cln;              /* def and call linenr */
+  models::Symbol *dfn, *cfn; /* def and call filename */
+  struct IType *nxt;         /* linked list */
 };
 
 struct C_Added {
-  Symbol *s;
-  Symbol *t;
-  Symbol *ival;
-  Symbol *fnm;
+  models::Symbol *s;
+  models::Symbol *t;
+  models::Symbol *ival;
+  models::Symbol *fnm;
   int lno;
   struct C_Added *nxt;
 };
 
 extern RunList *X_lst;
 extern ProcList *ready;
-extern Symbol *Fname, *oFname;
-extern Symbol *context, *owner;
+extern models::Symbol *Fname, *oFname;
+extern models::Symbol *context, *owner;
 extern YYSTYPE yylval;
 extern int need_arguments, hastrack, separate;
 extern int implied_semis;
@@ -79,15 +73,16 @@ static int isdigit_(int c) { return isdigit(c); /* could be macro */ }
 
 static IType *seqnames;
 
-static void def_inline(Symbol *s, int ln, char *ptr, char *prc, Lextok *nms) {
+static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
+                       Lextok *nms) {
   IType *tmp;
   int cnt = 0;
   char *nw = (char *)emalloc(strlen(ptr) + 1);
   strcpy(nw, ptr);
 
   for (tmp = seqnames; tmp; cnt++, tmp = tmp->nxt)
-    if (!strcmp(s->name, tmp->nm->name)) {
-      log::non_fatal("procedure name %s redefined", tmp->nm->name);
+    if (s->name != tmp->nm->name) {
+      loger::non_fatal("procedure name %s redefined", tmp->nm->name);
       tmp->cn = (Lextok *)nw;
       tmp->params = nms;
       tmp->dln = ln;
@@ -124,7 +119,7 @@ void gencodetable(FILE *fd) {
   if (lexer_.GetHasCode())
     for (tmp = seqnames; tmp; tmp = tmp->nxt)
       if (tmp->nm->type == CODE_FRAG || tmp->nm->type == CODE_DECL) {
-        fprintf(fd, "\t{ \"%s\", ", tmp->nm->name);
+        fprintf(fd, "\t{ \"%s\", ", tmp->nm->name.c_str());
         q = (char *)tmp->cn;
 
         while (*q == '\n' || *q == '\r' || *q == '\\')
@@ -161,16 +156,6 @@ void gencodetable(FILE *fd) {
   fprintf(fd, "};\n");
 }
 
-static int iseqname(char *t) {
-  IType *tmp;
-
-  for (tmp = seqnames; tmp; tmp = tmp->nxt) {
-    if (!strcmp(t, tmp->nm->name))
-      return 1;
-  }
-  return 0;
-}
-
 bool IsEqname(const std::string &value) {
   IType *tmp;
 
@@ -189,7 +174,7 @@ Lextok *return_statement(Lextok *n) {
     g->sym = lookup("rv_");
     return nn(h, ASGN, h, n);
   } else {
-    log::fatal("return statement outside inline");
+    loger::fatal("return statement outside inline");
   }
   return ZN;
 }
@@ -198,7 +183,7 @@ int is_inline(void) {
   if (Inlining < 0)
     return 0; /* i.e., not an inline */
   if (Inline_stub[Inlining] == NULL)
-    log::fatal("unexpected, inline_stub not set");
+    loger::fatal("unexpected, inline_stub not set");
   return Inline_stub[Inlining]->uiid;
 }
 
@@ -209,12 +194,13 @@ IType *find_inline(char *s) {
     if (!strcmp(s, tmp->nm->name))
       break;
   if (!tmp)
-    log::fatal("cannot happen, missing inline def %s", s);
+    loger::fatal("cannot happen, missing inline def %s", s);
 
   return tmp;
 }
 
-void c_state(Symbol *s, Symbol *t, Symbol *ival) /* name, scope, ival */
+void c_state(models::Symbol *s, models::Symbol *t,
+             models::Symbol *ival) /* name, scope, ival */
 {
   C_Added *r;
 
@@ -236,7 +222,8 @@ void c_state(Symbol *s, Symbol *t, Symbol *ival) /* name, scope, ival */
   c_added = r;
 }
 
-void c_track(Symbol *s, Symbol *t, Symbol *stackonly) /* name, size */
+void c_track(models::Symbol *s, models::Symbol *t,
+             models::Symbol *stackonly) /* name, size */
 {
   C_Added *r;
 
@@ -255,7 +242,7 @@ void c_track(Symbol *s, Symbol *t, Symbol *stackonly) /* name, size */
     else if (strcmp(stackonly->name, "\"UnMatched\"") != 0 &&
              strcmp(stackonly->name, "\"unMatched\"") != 0 &&
              strcmp(stackonly->name, "\"StackOnly\"") != 0)
-      log::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
+      loger::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
     else
       has_stack = 1; /* unmatched stack */
   }
@@ -266,7 +253,7 @@ char *skip_white(char *p) {
     while (*p == ' ' || *p == '\t')
       p++;
   } else {
-    log::fatal("bad format - 1");
+    loger::fatal("bad format - 1");
   }
   return p;
 }
@@ -276,7 +263,7 @@ char *skip_nonwhite(char *p) {
     while (*p != ' ' && *p != '\t')
       p++;
   } else {
-    log::fatal("bad format - 2");
+    loger::fatal("bad format - 2");
   }
   return p;
 }
@@ -286,7 +273,7 @@ static char *jump_etc(C_Added *r) {
   char *p = op;
   char *q = (char *)0;
   int oln = lineno;
-  Symbol *ofnm = Fname;
+  models::Symbol *ofnm = Fname;
 
   /* try to get the type separated from the name */
   lineno = r->lno;
@@ -316,7 +303,7 @@ static char *jump_etc(C_Added *r) {
     if (q) {
       p = q; /* unsigned with implied 'int' */
     } else {
-      log::fatal("c_state format (%s)", op);
+      loger::fatal("c_state format (%s)", op);
     }
   }
 
@@ -324,7 +311,7 @@ static char *jump_etc(C_Added *r) {
       (!r->ival || !r->ival->name ||
        !strchr(r->ival->name, '{'))) /* was !strchr(p, '{')) */
   {
-    log::non_fatal("array initialization error, c_state (%s)", p);
+    loger::non_fatal("array initialization error, c_state (%s)", p);
     p = (char *)0;
   }
 
@@ -570,7 +557,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
       continue;
 
     if (strchr(r->s->name, '&'))
-      log::fatal("dereferencing state object: %s", r->s->name);
+      loger::fatal("dereferencing state object: %s", r->s->name);
 
     fprintf(fd, "extern %s %s;\n", r->t->name, r->s->name);
   }
@@ -738,7 +725,7 @@ static void check_inline(IType *tmp) {
     if (strstr((char *)tmp->cn, buf)) {
       printf("spin: in proctype %s, ref to object in proctype %s\n",
              X_lst->n->name, p->n->name);
-      log::fatal("invalid variable ref in '%s'", tmp->nm->name);
+      loger::fatal("invalid variable ref in '%s'", tmp->nm->name);
     }
   }
 }
@@ -815,12 +802,12 @@ void mark_last(void) {
   }
 }
 
-void plunk_inline(FILE *fd, char *s, int how,
+void plunk_inline(FILE *fd, const std::string &s, int how,
                   int gencode) /* c_code with precondition */
 {
   IType *tmp;
 
-  tmp = find_inline(s);
+  tmp = find_inline(s.c_str());
   check_inline(tmp);
 
   fprintf(fd, "{ ");
@@ -876,7 +863,7 @@ void no_side_effects(char *s) {
   bad:
     lineno = tmp->dln;
     Fname = tmp->dfn;
-    log::non_fatal("c_expr %s has side-effects", s);
+    loger::non_fatal("c_expr %s has side-effects", s);
     return;
   }
   while ((t = strchr(t, '=')) != NULL) {
@@ -892,7 +879,7 @@ void no_side_effects(char *s) {
   }
 }
 
-void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
+void pickup_inline(models::Symbol *t, Lextok *apars, Lextok *rval) {
   IType *tmp;
   Lextok *p, *q;
   int j;
@@ -900,7 +887,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   tmp = find_inline(t->name);
 
   if (++Inlining >= MAXINL)
-    log::fatal("inlines nested too deeply");
+    loger::fatal("inlines nested too deeply");
   tmp->cln = lineno; /* remember calling point */
   tmp->cfn = Fname;  /* and filename */
   tmp->rval = rval;
@@ -908,7 +895,7 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   for (p = apars, q = tmp->params, j = 0; p && q; p = p->rgt, q = q->rgt)
     j++; /* count them */
   if (p || q)
-    log::fatal("wrong nr of params on call of '%s'", t->name);
+    loger::fatal("wrong nr of params on call of '%s'", t->name);
 
   tmp->anms = (char **)emalloc(j * sizeof(char *));
   for (p = apars, j = 0; p; p = p->rgt, j++) {
@@ -922,14 +909,14 @@ void pickup_inline(Symbol *t, Lextok *apars, Lextok *rval) {
   Inline_stub[Inlining] = tmp;
   for (j = 0; j < Inlining; j++) {
     if (Inline_stub[j] == Inline_stub[Inlining]) {
-      log::fatal("cyclic inline attempt on: %s", t->name);
+      loger::fatal("cyclic inline attempt on: %s", t->name);
     }
   }
   last_token = SEMI; /* avoid insertion of extra semi */
 }
 
 void precondition(char *q) {
-  #if 0
+#if 0
   int c, nest = 1;
 
   for (;;) {
@@ -950,13 +937,13 @@ void precondition(char *q) {
       break;
     }
   }
-  log::fatal("cannot happen"); /* unreachable */
-  #endif
+  loger::fatal("cannot happen"); /* unreachable */
+#endif
 }
 
-Symbol *prep_inline(Symbol *s, Lextok *nms) {
+models::Symbol *prep_inline(models::Symbol *s, Lextok *nms) {
   return nullptr;
-  #if 0
+#if 0
 
   int c, nest = 1, dln, firstchar, cnr;
   char *p;
@@ -968,14 +955,14 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
     if (t->lft) {
       if (t->lft->ntyp != NAME) {
         char *s_s_name = "--";
-        log::fatal("bad param to inline %s", s ? s->name : s_s_name);
+        loger::fatal("bad param to inline %s", s ? s->name : s_s_name);
       }
       t->lft->sym->hidden |= 32;
     }
 
   if (!s) /* C_Code fragment */
   {
-    s = (Symbol *)emalloc(sizeof(Symbol));
+    s = (models::Symbol *)emalloc(sizeof(models::Symbol));
     s->name = (char *)emalloc(strlen("c_code") + 26);
     sprintf(s->name, "c_code%d", c_code++);
     s->context = context;
@@ -1007,7 +994,7 @@ Symbol *prep_inline(Symbol *s, Lextok *nms) {
     default:
       printf("spin: saw char '%c'\n", c);
     bad:
-      log::fatal("bad inline: %s", s->name);
+      loger::fatal("bad inline: %s", s->name);
     }
     break;
   }
@@ -1029,7 +1016,7 @@ more:
   c = Getchar();
   *p++ = (char)c;
   if (p - Buf1 >= SOMETHINGBIG)
-    log::fatal("inline text too long");
+    loger::fatal("inline text too long");
   switch (c) {
   case '\n':
     lineno++;
@@ -1076,7 +1063,7 @@ more:
         *p++ = (char)Getchar();
       }
       if (p - Buf1 >= SOMETHINGBIG) {
-        log::fatal("inline text too long");
+        loger::fatal("inline text too long");
       }
     } while (c != '"'); /* end of string */
     /* *p = '\0'; */
@@ -1097,5 +1084,5 @@ more:
     break;
   }
   goto more;
-  #endif
+#endif
 }
