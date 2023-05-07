@@ -1767,7 +1767,7 @@ static const char *pan_par[] = {
     "	if (!h)",
     "	{	/* once created, the contents are never modified */",
     "		h = (EV_Hold *) sh_malloc((ulong)sizeof(EV_Hold));",
-    "		h->owner = who_am_i;",
+    "		h->owner_name = who_am_i;",
     "		h->sz = n;",
     "		h->nrpr = now._nr_pr;",
     "		h->nrqs = now._nr_qs;",

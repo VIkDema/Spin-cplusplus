@@ -17,25 +17,25 @@
 #include <stdio.h>
 #include <string.h>
 
-struct models::Symbol {
+struct Symbol {
   char *name;
-  struct models::Symbol *next; /* linked list, symbol table */
+  struct Symbol *next; /* linked list, symbol table */
 };
 
 struct Node {
   short ntyp; /* node type */
-  struct models::Symbol *sym;
+  struct Symbol *sym;
   struct Node *lft; /* tree */
   struct Node *rgt; /* tree */
   struct Node *nxt; /* if linked list */
 };
 
 struct Graph {
-  models::Symbol *name;
-  models::Symbol *incoming;
-  models::Symbol *outgoing;
-  models::Symbol *oldstring;
-  models::Symbol *nxtstring;
+  Symbol *name;
+  Symbol *incoming;
+  Symbol *outgoing;
+  Symbol *oldstring;
+  Symbol *nxtstring;
   Node *New;
   Node *Old;
   Node *Other;
@@ -83,9 +83,9 @@ Node *push_negation(Node *);
 Node *right_linked(Node *);
 Node *tl_nn(int, Node *, Node *);
 
-models::Symbol *tl_lookup(char *);
-models::Symbol *getsym(models::Symbol *);
-models::Symbol *DoDump(Node *);
+Symbol *tl_lookup(char *);
+Symbol *getsym(Symbol *);
+Symbol *DoDump(Node *);
 
 extern char *emalloc(size_t); /* in main.c */
 
@@ -119,7 +119,7 @@ void tl_yyerror(char *);
 void trans(Node *);
 
 #define ZN (Node *)0
-#define ZS (models::Symbol *)0
+#define ZS (Symbol *)0
 #define Nhash 255 /* must match size in spin.h */
 #define True tl_nn(TRUE, ZN, ZN)
 #define False tl_nn(FALSE, ZN, ZN)

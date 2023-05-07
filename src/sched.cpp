@@ -1,11 +1,9 @@
 /***** spin: sched.c *****/
 
- 
-
 #include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
-#include "lexer/lexer.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -37,7 +35,7 @@ static void setlocals(RunList *);
 static void setparams(RunList *, ProcList *, Lextok *);
 static void talk(RunList *);
 
-extern char *which_mtype(const char *);
+extern std::string which_mtype(const std::string &);
 
 void runnable(ProcList *p, int weight, int noparams) {
   RunList *r = (RunList *)emalloc(sizeof(RunList));
@@ -58,7 +56,7 @@ void runnable(ProcList *p, int weight, int noparams) {
     printf("\n");
   }
   if (!p->s) {
-    char *p_n_name = "--";
+    std::string p_n_name = "--";
     loger::fatal("parsing error, no sequence %s", p->n ? p->n->name : p_n_name);
   }
 
@@ -81,8 +79,8 @@ void runnable(ProcList *p, int weight, int noparams) {
   run_lst = r;
 }
 
-ProcList *mk_rdy(models::Symbol *n, Lextok *p, Sequence *s, int det, Lextok *prov,
-                 enum btypes b)
+ProcList *mk_rdy(models::Symbol *n, Lextok *p, Sequence *s, int det,
+                 Lextok *prov, enum btypes b)
 /* n=name, p=formals, s=body det=deterministic prov=provided */
 {
   ProcList *r = (ProcList *)emalloc(sizeof(ProcList));
@@ -118,7 +116,7 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
 {
   ProcList *p = NULL;
   Lextok *fp, *fpt, *at;
-  char *s, *t;
+  std::string s, t;
 
   if (pnm && pnm->sym) {
     for (p = ready; p; p = p->nxt) {
@@ -129,9 +127,10 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
   }
 
   if (!p) {
-    char *pnm_sym_name_default = "?";
+    std::string pnm_sym_name_default = "?";
     loger::fatal("cannot find proctype '%s'",
-               (pnm && pnm->sym) ? pnm->sym->name : pnm_sym_name_default);
+                 (pnm && pnm->sym) ? pnm->sym->name
+                                   : pnm_sym_name_default.c_str());
   }
 
   for (fp = p->p, at = args; fp; fp = fp->rgt)
@@ -153,10 +152,11 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
         loger::fatal("wrong arg type '%s'", at->lft->sym->name);
       }
       s = which_mtype(at->lft->sym->name);
-      if (s && strcmp(s, t) != 0) {
+      if (s != "" && s != t) {
         printf(
             "spin: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
-            pnm->fn->name, pnm->ln, at->lft->sym->name, s, t);
+            pnm->fn->name.c_str(), pnm->ln, at->lft->sym->name.c_str(),
+            s.c_str(), t.c_str());
         loger::fatal("wrong arg type '%s'", at->lft->sym->name);
       }
     }
@@ -177,19 +177,19 @@ int find_maxel(models::Symbol *s) {
 static void formdump(void) {
   ProcList *p;
   Lextok *f, *t;
-  int cnt;
+  int count;
 
   for (p = ready; p; p = p->nxt) {
     if (!p->p)
       continue;
-    cnt = -1;
+    count = -1;
     for (f = p->p; f; f = f->rgt)     /* types */
       for (t = f->lft; t; t = t->rgt) /* formals */
       {
         if (t->ntyp != ',')
-          t->sym->id = cnt--; /* overload id */
+          t->sym->id = count--; /* overload id */
         else
-          t->lft->sym->id = cnt--;
+          t->lft->sym->id = count--;
       }
   }
 }
@@ -202,10 +202,12 @@ void announce(char *w) {
     extern int firstrow;
     firstrow = 1;
     if (columns == 2) {
-      sprintf(GBuf, "%d:%s", run_lst->pid - Have_claim, run_lst->n->name);
+      sprintf(GBuf, "%d:%s", run_lst->pid - Have_claim,
+              run_lst->n->name.c_str());
       pstext(run_lst->pid - Have_claim, GBuf);
     } else {
-      printf("proc %d = %s\n", run_lst->pid - Have_claim, run_lst->n->name);
+      printf("proc %d = %s\n", run_lst->pid - Have_claim,
+             run_lst->n->name.c_str());
     }
     return;
   }
@@ -218,7 +220,8 @@ void announce(char *w) {
     printf("  0:	proc  - (%s) ", w);
   else
     whoruns(1);
-  printf("creates proc %2d (%s)", run_lst->pid - Have_claim, run_lst->n->name);
+  printf("creates proc %2d (%s)", run_lst->pid - Have_claim,
+         run_lst->n->name.c_str());
   if (run_lst->priority > 1)
     printf(" priority %d", run_lst->priority);
   printf("\n");
@@ -231,13 +234,13 @@ void announce(char *w) {
 int enable(Lextok *m) {
   ProcList *p;
   models::Symbol *s = m->sym; /* proctype name */
-  Lextok *n = m->lft; /* actual parameters */
+  Lextok *n = m->lft;         /* actual parameters */
 
   if (m->val < 1) {
     m->val = 1; /* minimum priority */
   }
   for (p = ready; p; p = p->nxt) {
-    if (strcmp(s->name, p->n->name) == 0) {
+    if (s->name == p->n->name) {
       if (nproc - nstop >= MAXP) {
         printf("spin: too many processes (%d max)\n", MAXP);
         break;
@@ -256,11 +259,11 @@ int enable(Lextok *m) {
 void check_param_count(int i, Lextok *m) {
   ProcList *p;
   models::Symbol *s = m->sym; /* proctype name */
-  Lextok *f, *t;      /* formal pars */
-  int cnt = 0;
+  Lextok *f, *t;              /* formal pars */
+  int count = 0;
 
   for (p = ready; p; p = p->nxt) {
-    if (strcmp(s->name, p->n->name) == 0) {
+    if (s->name == p->n->name) {
       if (m->lft) /* actual param list */
       {
         lineno = m->lft->ln;
@@ -269,10 +272,10 @@ void check_param_count(int i, Lextok *m) {
       for (f = p->p; f; f = f->rgt)     /* one type at a time */
         for (t = f->lft; t; t = t->rgt) /* count formal params */
         {
-          cnt++;
+          count++;
         }
-      if (i != cnt) {
-        printf("spin: saw %d parameters, expected %d\n", i, cnt);
+      if (i != count) {
+        printf("spin: saw %d parameters, expected %d\n", i, count);
         loger::non_fatal("wrong number of parameters");
       }
       break;
@@ -293,7 +296,7 @@ void start_claim(int n) {
   printf("spin: couldn't find claim %d (ignored)\n", n);
   if (verbose_flags.NeedToPrintVerbose()) {
     for (p = ready; p; p = p->nxt) {
-      printf("\t%d = %s\n", p->tn, p->n->name);
+      printf("\t%d = %s\n", p->tn, p->n->name.c_str());
     }
   }
 
@@ -304,11 +307,11 @@ found:
   if (columns == 2) {
     extern char GBuf[];
     depth = 0;
-    sprintf(GBuf, "%d:%s", 0, p->n->name);
+    sprintf(GBuf, "%d:%s", 0, p->n->name.c_str());
     pstext(0, GBuf);
     for (r = run_lst; r; r = r->nxt) {
       if (r->b != N_CLAIM) {
-        sprintf(GBuf, "%d:%s", r->pid + 1, r->n->name);
+        sprintf(GBuf, "%d:%s", r->pid + 1, r->n->name.c_str());
         pstext(r->pid + 1, GBuf);
       }
     }
@@ -332,18 +335,19 @@ done:
   }
 }
 
-int f_pid(char *n) {
+int f_pid(const std::string &n) {
   RunList *r;
   int rval = -1;
 
-  for (r = run_lst; r; r = r->nxt)
-    if (strcmp(n, r->n->name) == 0) {
+  for (r = run_lst; r; r = r->nxt) {
+    if (n == r->n->name) {
       if (rval >= 0) {
-        printf("spin: remote ref to proctype %s, ", n);
+        printf("spin: remote ref to proctype %s, ", n.c_str());
         printf("has more than one match: %d and %d\n", rval, r->pid);
       } else
         rval = r->pid;
     }
+  }
   return rval;
 }
 
@@ -626,16 +630,17 @@ void multi_claims(void) {
     printf("  the model contains %d never claims:", nclaims);
     for (p = ready; p; p = p->nxt) {
       if (p->b == N_CLAIM) {
-        printf("%s%s", q ? ", " : " ", p->n->name);
+        printf("%s%s", q ? ", " : " ", p->n->name.c_str());
         q = p;
       }
     }
     printf("\n");
     printf("  only one claim is used in a verification run\n");
     printf("  choose which one with ./pan -a -N name (defaults to -N %s)\n",
-           q ? q->n->name : "--");
-    printf("  or use e.g.: spin -search -ltl %s %s\n", q ? q->n->name : "--",
-           Fname ? Fname->name : "filename");
+           q ? q->n->name.c_str() : "--");
+    printf("  or use e.g.: spin -search -ltl %s %s\n",
+           q ? q->n->name.c_str() : "--",
+           Fname ? Fname->name.c_str() : "filename");
   }
 }
 
@@ -715,7 +720,8 @@ void sched(void) {
           ((verbose_flags.NeedToPrintVerbose()) ||
            (verbose_flags.NeedToPrintAllProcessActions()))) {
         if (X_lst == oX)
-          if (!(e->status & D_ATOM) || verbose_flags.NeedToPrintVerbose()) /* no talking in d_steps */
+          if (!(e->status & D_ATOM) ||
+              verbose_flags.NeedToPrintVerbose()) /* no talking in d_steps */
           {
             if (!LastStep)
               LastStep = X_lst->pc;
@@ -877,40 +883,36 @@ static void addsymbol(RunList *r, models::Symbol *s) {
   int i;
 
   for (t = r->symtab; t; t = t->next)
-    if (strcmp(t->name, s->name) == 0 &&
-        (old_scope_rules ||
-         strcmp((const char *)t->bscp, (const char *)s->bscp) == 0))
+    if (t->name == s->name &&
+        (old_scope_rules || t->block_scope == s->block_scope))
       return; /* it's already there */
 
   t = (models::Symbol *)emalloc(sizeof(models::Symbol));
   t->name = s->name;
   t->type = s->type;
-  t->hidden = s->hidden;
+  t->hidden_flags = s->hidden_flags;
   t->is_array = s->is_array;
   t->nbits = s->nbits;
   t->value_type = s->value_type;
   t->init_value = s->init_value;
-  t->setat = depth;
+  t->last_depth = depth;
   t->context = r->n;
 
-  t->bscp = (unsigned char *)emalloc(strlen((const char *)s->bscp) + 1);
-  strcpy((char *)t->bscp, (const char *)s->bscp);
+  t->block_scope = s->block_scope;
 
-  if (s->type != STRUCT) {
-    if (s->val) /* if already initialized, copy info */
+  if (s->type != models::SymbolType::kStruct) {
+    if (!s->value.empty()) /* if already initialized, copy info */
     {
-      t->val = (int *)emalloc(s->value_type * sizeof(int));
-      for (i = 0; i < s->value_type; i++)
-        t->val[i] = s->val[i];
+      t->value = s->value;
     } else {
       (void)checkvar(t, 0); /* initialize it */
     }
   } else {
     if (s->Sval)
       loger::fatal("saw preinitialized struct %s", s->name);
-    t->Slst = s->Slst;
-    t->Snm = s->Snm;
-    t->owner = s->owner;
+    t->struct_template = s->struct_template;
+    t->struct_name = s->struct_name;
+    t->owner_name = s->owner_name;
     /*	t->context = r->n; */
   }
   t->next = r->symtab; /* add it */
@@ -925,11 +927,15 @@ static void setlocals(RunList *r) {
   X_lst = r;
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
-    if (sp && sp->context && strcmp(sp->context->name, r->n->name) == 0 &&
-        sp->id >= 0 &&
-        (sp->type == UNSIGNED || sp->type == BIT || sp->type == MTYPE ||
-         sp->type == BYTE || sp->type == CHAN || sp->type == SHORT ||
-         sp->type == INT || sp->type == STRUCT)) {
+    if (sp && sp->context && sp->context->name == r->n->name && sp->id >= 0 &&
+        (sp->type == models::SymbolType::kUnsigned ||
+         sp->type == models::SymbolType::kBit ||
+         sp->type == models::SymbolType::kMtype ||
+         sp->type == models::SymbolType::kByte ||
+         sp->type == models::SymbolType::kChan ||
+         sp->type == models::SymbolType::kShort ||
+         sp->type == models::SymbolType::kInt ||
+         sp->type == models::SymbolType::kStruct)) {
       if (!findloc(sp))
         loger::non_fatal("setlocals: cannot happen '%s'", sp->name);
     }
@@ -953,11 +959,11 @@ static void oneparam(RunList *r, Lextok *t, Lextok *a, ProcList *p) {
   ft = Sym_typ(t);
 
   if (at != ft && (at == CHAN || ft == CHAN)) {
-    char buf[256], tag1[64], tag2[64];
-    (void)sputtype(tag1, ft);
-    (void)sputtype(tag2, at);
-    sprintf(buf, "type-clash in params of %s(..), (%s<-> %s)", p->n->name, tag1,
-            tag2);
+    std::string buf, tag1, tag2;
+    sputtype(tag1, ft);
+    sputtype(tag2, at);
+    buf = "type-clash in params of " + p->n->name + "(..), (" + tag1 + " <-> " +
+          tag2 + ")";
     loger::non_fatal("%s", buf);
   }
   t->ntyp = NAME;
@@ -987,13 +993,13 @@ static void setparams(RunList *r, ProcList *p, Lextok *q) {
 models::Symbol *findloc(models::Symbol *s) {
   models::Symbol *r;
 
-  if (!X_lst) { /* loger::fatal("error, cannot eval '%s' (no proc)", s->name); */
+  if (!X_lst) { /* loger::fatal("error, cannot eval '%s' (no proc)", s->name);
+                 */
     return ZS;
   }
   for (r = X_lst->symtab; r; r = r->next) {
-    if (strcmp(r->name, s->name) == 0 &&
-        (old_scope_rules ||
-         strcmp((const char *)r->bscp, (const char *)s->bscp) == 0)) {
+    if (r->name == s->name &&
+        (old_scope_rules || r->block_scope == s->block_scope)) {
       break;
     }
   }
@@ -1009,7 +1015,8 @@ int in_bound(models::Symbol *r, int n) {
     return 0;
 
   if (n >= r->value_type || n < 0) {
-    printf("spin: indexing %s[%d] - size is %d\n", r->name, n, r->value_type);
+    printf("spin: indexing %s[%d] - size is %d\n", r->name.c_str(), n,
+           r->value_type);
     loger::non_fatal("indexing array \'%s\'", r->name);
     return 0;
   }
@@ -1024,7 +1031,7 @@ int getlocal(Lextok *sn) {
   if (r && r->type == STRUCT)
     return Rval_struct(sn, r, 1); /* 1 = check init */
   if (in_bound(r, n))
-    return cast_val(r->type, r->val[n], r->nbits);
+    return cast_val(r->type, r->value[n], r->nbits.value());
   return 0;
 }
 
@@ -1033,11 +1040,11 @@ int setlocal(Lextok *p, int m) {
   int n = eval(p->lft);
 
   if (in_bound(r, n)) {
-    if (r->type == STRUCT)
+    if (r->type == models::SymbolType::kStruct)
       (void)Lval_struct(p, r, 1, m); /* 1 = check init */
     else {
-      r->val[n] = cast_val(r->type, m, r->nbits);
-      r->setat = depth;
+      r->value[n] = cast_val(r->type, m, r->nbits.value());
+      r->last_depth = depth;
     }
   }
 
@@ -1056,15 +1063,16 @@ void whoruns(int lnr) {
   else
     printf("%2d", X_lst->pid - Have_claim);
   if (old_priority_rules) {
-    printf(" (%s) ", X_lst->n->name);
+    printf(" (%s) ", X_lst->n->name.c_str());
   } else {
-    printf(" (%s:%d) ", X_lst->n->name, X_lst->priority);
+    printf(" (%s:%d) ", X_lst->n->name.c_str(), X_lst->priority);
   }
 }
 
 static void talk(RunList *r) {
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
-  if (verbose_flags.NeedToPrintVerbose() || verbose_flags.NeedToPrintAllProcessActions()) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+  if (verbose_flags.NeedToPrintVerbose() ||
+      verbose_flags.NeedToPrintAllProcessActions()) {
     p_talk(r->pc, 1);
     printf("\n");
     if (verbose_flags.NeedToPrintGlobalVariables())
@@ -1073,46 +1081,34 @@ static void talk(RunList *r) {
       dumplocal(r, 1);
   }
 }
-
 void p_talk(Element *e, int lnr) {
   static int lastnever = -1;
-  static char nbuf[128];
+  static std::string nbuf;
   int newnever = -1;
 
-  if (e && e->n)
+  if (e && e->n) {
     newnever = e->n->ln;
+  }
 
   if (Have_claim && X_lst && X_lst->pid == 0 && lastnever != newnever && e) {
-    if (xspin) {
-      printf("MSC: ~G line %d\n", newnever);
-#if 0
-			printf("%3d:	proc  - (NEVER) line   %d \"never\" ",
-				depth, newnever);
-			printf("(state 0)\t[printf('MSC: never\\\\n')]\n");
-		} else
-		{	printf("%3d:	proc  - (NEVER) line   %d \"never\"\n",
-				depth, newnever);
-#endif
-    }
     lastnever = newnever;
   }
 
   whoruns(lnr);
   if (e) {
     if (e->n) {
-      char *ptr = e->n->fn->name;
-      char *qtr = nbuf;
-      while (*ptr != '\0') {
-        if (*ptr != '"') {
-          *qtr++ = *ptr;
+      std::string ptr = e->n->fn->name;
+      std::string qtr;
+      for (char c : ptr) {
+        if (c != '"') {
+          qtr += c;
         }
-        ptr++;
       }
-      *qtr = '\0';
+      nbuf = qtr;
     } else {
-      strcpy(nbuf, "-");
+      nbuf = "-";
     }
-    printf("%s:%d (state %d)", nbuf, e->n ? e->n->ln : -1, e->seqno);
+    printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->ln : -1, e->seqno);
     if (!xspin && ((e->status & ENDSTATE) || has_lab(e, 2))) /* 2=end */
     {
       printf(" <valid end state>");
@@ -1164,12 +1160,12 @@ int remotevar(Lextok *n) {
   i = nproc - nstop + Skip_claim; /* 6.0: added Skip_claim */
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {
-      if (strcmp(Y->n->name, n->lft->sym->name) != 0) {
-        printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name,
+      if (Y->n->name != n->lft->sym->name) {
+        printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name.c_str(),
                prno - added);
-        loger::non_fatal("refers to wrong proctype '%s'", Y->n->name);
+        loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
-      if (strcmp(n->sym->name, "_p") == 0) {
+      if (n->sym->name == "_p") {
         if (Y->pc) {
           return Y->pc->seqno;
         }
@@ -1201,13 +1197,13 @@ int remotevar(Lextok *n) {
       X_lst = oX;
       return i;
     }
-  printf("remote ref: %s[%d] ", n->lft->sym->name, prno - added);
+  printf("remote ref: %s[%d] ", n->lft->sym->name.c_str(), prno - added);
   loger::non_fatal("%s not found", n->sym->name);
   printf("have only:\n");
   i = nproc - nstop - 1;
   for (Y = run_lst; Y; Y = Y->nxt, i--)
-    if (!strcmp(Y->n->name, n->lft->sym->name))
-      printf("\t%d\t%s\n", i, Y->n->name);
-
+    if (Y->n->name == n->lft->sym->name) {
+      printf("\t%d\t%s\n", i, Y->n->name.c_str());
+    }
   return 0;
 }

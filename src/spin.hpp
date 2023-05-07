@@ -51,7 +51,7 @@ struct Ordered { /* links all names in Symbol table */
 };
 
 struct Mtypes_t {
-  char *nm;             /* name of mtype, or "_unnamed_" */
+  std::string nm;       /* name of mtype, or "_unnamed_" */
   Lextok *mt;           /* the linked list of names */
   struct Mtypes_t *nxt; /* linked list of mtypes */
 };
@@ -290,8 +290,6 @@ int interprint(FILE *, Lextok *);
 int printm(FILE *, Lextok *);
 int is_inline(void);
 int ismtype(char *);
-int isproctype(char *);
-int isutype(char *);
 
 int Lval_struct(Lextok *, models::Symbol *, int, int);
 int main(int, char **);
@@ -310,7 +308,7 @@ int remotevar(Lextok *);
 int Rval_struct(Lextok *, models::Symbol *, int);
 int setlocal(Lextok *, int);
 int setval(Lextok *, int);
-int sputtype(char *, int);
+int sputtype(std::string &, int);
 int Sym_typ(Lextok *);
 int tl_main(int, char *[]);
 int Width_set(int *, int, Lextok *);
@@ -322,13 +320,13 @@ void alldone(int);
 void announce(char *);
 void c_state(models::Symbol *, models::Symbol *, models::Symbol *);
 void c_add_def(FILE *);
-void c_add_loc(FILE *, char *);
-void c_add_locinit(FILE *, int, char *);
+void c_add_loc(FILE *, const std::string &);
+void c_add_locinit(FILE *, int, const std::string &);
 void c_chandump(FILE *);
 void c_preview(void);
-void c_struct(FILE *, char *, models::Symbol *);
+void c_struct(FILE *, const std::string &, models::Symbol *);
 void c_track(models::Symbol *, models::Symbol *, models::Symbol *);
-void c_var(FILE *, char *, models::Symbol *);
+void c_var(FILE *, const std::string &, models::Symbol *);
 void c_wrapper(FILE *);
 void chanaccess(void);
 void check_param_count(int, Lextok *);
@@ -339,9 +337,10 @@ void disambiguate(void);
 void doq(models::Symbol *, int, RunList *);
 void dotag(FILE *, char *);
 void do_locinits(FILE *);
-void do_var(FILE *, int, char *, models::Symbol *, char *, char *, char *);
-void dump_struct(models::Symbol *, char *, RunList *);
-void dumpclaims(FILE *, int, char *);
+void do_var(FILE *, int, const std::string &, models::Symbol *,
+            const std::string &, const std::string &, const std::string &);
+void dump_struct(models::Symbol *, const std::string &, RunList *);
+void dumpclaims(FILE *, int, const std::string &);
 void dumpglobals(void);
 void dumplabels(void);
 void dumplocal(RunList *, int);
@@ -368,8 +367,8 @@ void p_talk(Element *, int);
 void pickup_inline(models::Symbol *, Lextok *, Lextok *);
 void plunk_c_decls(FILE *);
 void plunk_c_fcts(FILE *);
-void plunk_expr(FILE *, char *);
-void plunk_inline(FILE *, char *, int, int);
+void plunk_expr(FILE *, const std::string &);
+void plunk_inline(FILE *, const std::string &, int, int);
 void prehint(models::Symbol *);
 void preruse(FILE *, Lextok *);
 void prune_opts(Lextok *);
@@ -402,7 +401,7 @@ void trackvar(Lextok *, Lextok *);
 void trackrun(Lextok *);
 void trapwonly(Lextok * /* , char * */); /* spin.y and main.c */
 void typ2c(models::Symbol *);
-void typ_ck(int, int,const std::string &);
+void typ_ck(int, int, const std::string &);
 void undostmnt(Lextok *, int);
 void unrem_Seq(void);
 void unskip(int);

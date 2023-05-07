@@ -187,12 +187,13 @@ int is_inline(void) {
   return Inline_stub[Inlining]->uiid;
 }
 
-IType *find_inline(char *s) {
+IType *find_inline(const std::string &s) {
   IType *tmp;
 
   for (tmp = seqnames; tmp; tmp = tmp->nxt)
-    if (!strcmp(s, tmp->nm->name))
+    if (s == tmp->nm->name) {
       break;
+    }
   if (!tmp)
     loger::fatal("cannot happen, missing inline def %s", s);
 
@@ -212,7 +213,7 @@ void c_state(models::Symbol *s, models::Symbol *t,
   r->fnm = Fname;
   r->nxt = c_added;
 
-  if (strncmp(r->s->name, "\"unsigned unsigned", 18) == 0) {
+  if (strncmp(r->s->name.c_str(), "\"unsigned unsigned", 18) == 0) {
     int i;
     for (i = 10; i < 18; i++) {
       r->s->name[i] = ' ';
@@ -237,82 +238,83 @@ void c_track(models::Symbol *s, models::Symbol *t,
   c_tracked = r;
 
   if (stackonly != ZS) {
-    if (strcmp(stackonly->name, "\"Matched\"") == 0)
+    if (stackonly->name == "\"Matched\"")
       r->ival = ZS; /* the default */
-    else if (strcmp(stackonly->name, "\"UnMatched\"") != 0 &&
-             strcmp(stackonly->name, "\"unMatched\"") != 0 &&
-             strcmp(stackonly->name, "\"StackOnly\"") != 0)
+    else if (stackonly->name != "\"UnMatched\"" &&
+             stackonly->name != "\"unMatched\"" &&
+             stackonly->name != "\"StackOnly\"")
       loger::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
     else
       has_stack = 1; /* unmatched stack */
   }
 }
 
-char *skip_white(char *p) {
-  if (p != NULL) {
-    while (*p == ' ' || *p == '\t')
-      p++;
-  } else {
+std::string skip_white(const std::string &p) {
+  std::string::size_type i = 0;
+  while (i < p.length() && (p[i] == ' ' || p[i] == '\t')) {
+    i++;
+  }
+  if (i == p.length()) {
     loger::fatal("bad format - 1");
   }
-  return p;
+  return p.substr(i);
 }
 
-char *skip_nonwhite(char *p) {
-  if (p != NULL) {
-    while (*p != ' ' && *p != '\t')
-      p++;
-  } else {
+std::string skip_nonwhite(const std::string &p) {
+  std::string::size_type i = 0;
+  while (i < p.length() && (p[i] != ' ' && p[i] != '\t')) {
+    i++;
+  }
+  if (i == p.length()) {
     loger::fatal("bad format - 2");
   }
-  return p;
+  return p.substr(i);
 }
 
-static char *jump_etc(C_Added *r) {
-  char *op = r->s->name;
-  char *p = op;
-  char *q = (char *)0;
+std::string jump_etc(C_Added *r) {
+  std::string op = r->s->name;
+  std::string p = op;
+  std::string q;
+
   int oln = lineno;
   models::Symbol *ofnm = Fname;
 
-  /* try to get the type separated from the name */
+  // Попытка разделить тип от имени
   lineno = r->lno;
   Fname = r->fnm;
 
-  p = skip_white(p); /* initial white space */
+  p = skip_white(p);
 
-  if (strncmp(p, "enum", strlen("enum")) ==
-      0) /* special case: a two-part typename */
-  {
-    p += strlen("enum") + 1;
+  if (p.compare(0, 4, "enum") == 0) {
+    p = p.substr(4);
     p = skip_white(p);
   }
-  if (strncmp(p, "unsigned", strlen("unsigned")) ==
-      0) /* possibly a two-part typename */
-  {
-    p += strlen("unsigned") + 1;
-    q = p = skip_white(p);
+  if (p.compare(0, 8, "unsigned") == 0) {
+    p = p.substr(8);
+    q = skip_white(p);
   }
-  p = skip_nonwhite(p); /* type name */
-  p = skip_white(p);    /* white space */
-  while (*p == '*')
-    p++;             /* decorations */
-  p = skip_white(p); /* white space */
+  p = skip_nonwhite(p);
+  p = skip_white(p);
 
-  if (*p == '\0') {
-    if (q) {
-      p = q; /* unsigned with implied 'int' */
+  while (!p.empty() && p.front() == '*') {
+    p = p.substr(1);
+  }
+
+  p = skip_white(p);
+
+  if (p.empty()) {
+    if (!q.empty()) {
+      p = q;
     } else {
-      loger::fatal("c_state format (%s)", op);
+      loger::fatal("c_state format (%s)", op.c_str());
     }
   }
 
-  if (strchr(p, '[') &&
-      (!r->ival || !r->ival->name ||
-       !strchr(r->ival->name, '{'))) /* was !strchr(p, '{')) */
-  {
-    loger::non_fatal("array initialization error, c_state (%s)", p);
-    p = (char *)0;
+  if (p.find('[') != std::string::npos &&
+      (!r->ival || r->ival->name.empty() ||
+       r->ival->name.find('{') == std::string::npos)) {
+    loger::non_fatal("array initialization error, c_state (%s)", p.c_str());
+    p.clear();
   }
 
   lineno = oln;
@@ -320,67 +322,75 @@ static char *jump_etc(C_Added *r) {
 
   return p;
 }
-
 void c_add_globinit(FILE *fd) {
   C_Added *r;
-  char *p, *q;
+  std::string p;
 
   fprintf(fd, "void\nglobinit(void)\n{\n");
   for (r = c_added; r; r = r->nxt) {
     if (r->ival == ZS)
       continue;
 
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) == 0) {
-      for (q = r->ival->name; *q; q++) {
-        if (*q == '\"')
-          *q = ' ';
-        if (*q == '\\')
-          *q++ = ' '; /* skip over the next */
+    if (r->t->name.compare(0, strlen(" Global "), " Global ") == 0) {
+      std::string::iterator it = r->ival->name.begin();
+      while (it != r->ival->name.end()) {
+        if (*it == '\"')
+          *it = ' ';
+        if (*it == '\\') {
+          *it = ' ';
+          ++it; /* skip over the next */
+        } else {
+          ++it;
+        }
       }
       p = jump_etc(r); /* e.g., "int **q" */
-      if (p)
-        fprintf(fd, "	now.%s = %s;\n", p, r->ival->name);
+      if (!p.empty())
+        fprintf(fd, "  now.%s = %s;\n", p.c_str(), r->ival->name.c_str());
 
-    } else if (strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) == 0) {
-      for (q = r->ival->name; *q; q++) {
-        if (*q == '\"')
-          *q = ' ';
-        if (*q == '\\')
-          *q++ = ' '; /* skip over the next */
+    } else if (r->t->name.compare(0, strlen(" Hidden "), " Hidden ") == 0) {
+      std::string::iterator it = r->ival->name.begin();
+      while (it != r->ival->name.end()) {
+        if (*it == '\"')
+          *it = ' ';
+        if (*it == '\\') {
+          *it = ' ';
+          ++it; /* skip over the next */
+        } else {
+          ++it;
+        }
       }
       p = jump_etc(r); /* e.g., "int **q" */
-      if (p)
-        fprintf(fd, "	%s = %s;\n", p, r->ival->name); /* no now. prefix */
+      if (!p.empty())
+        fprintf(fd, "  %s = %s;\n", p.c_str(),
+                r->ival->name.c_str()); /* no now. prefix */
     }
   }
   fprintf(fd, "}\n");
 }
 
-void c_add_locinit(FILE *fd, int tpnr, char *pnm) {
+void c_add_locinit(FILE *fd, int tpnr, const std::string &pnm) {
   C_Added *r;
-  char *p, *q, *s;
+  std::string p, q, s;
   int frst = 1;
 
   fprintf(fd, "void\nlocinit%d(int h)\n{\n", tpnr);
   for (r = c_added; r; r = r->nxt)
-    if (r->ival != ZS && strncmp(r->t->name, " Local", strlen(" Local")) == 0) {
-      for (q = r->ival->name; *q; q++)
-        if (*q == '\"')
-          *q = ' ';
+    if (r->ival != ZS &&
+        r->t->name.compare(0, strlen(" Local"), " Local") == 0) {
+      q = r->ival->name;
+      for (char &c : q)
+        if (c == '"')
+          c = ' ';
       p = jump_etc(r); /* e.g., "int **q" */
+      q = r->t->name.substr(strlen(" Local"));
+      size_t q_len = q.length();
+      size_t last_non_space_index = q_len - 1;
+      while (last_non_space_index > 0 && (q[last_non_space_index] == ' ' ||
+                                          q[last_non_space_index] == '\t'))
+        --last_non_space_index;
+      q = q.substr(0, last_non_space_index + 1);
 
-      q = r->t->name + strlen(" Local");
-      while (*q == ' ' || *q == '\t')
-        q++; /* process name */
-
-      s = (char *)emalloc(strlen(q) + 1);
-      strcpy(s, q);
-
-      q = &s[strlen(s) - 1];
-      while (*q == ' ' || *q == '\t')
-        *q-- = '\0';
-
-      if (strcmp(pnm, s) != 0)
+      if (strcmp(pnm.c_str(), q.c_str()) != 0)
         continue;
 
       if (frst) {
@@ -388,11 +398,11 @@ void c_add_locinit(FILE *fd, int tpnr, char *pnm) {
         frst = 0;
       }
 
-      if (p) {
-        fprintf(fd, "\t\t((P%d *)_this)->%s = %s;\n", tpnr, p, r->ival->name);
+      if (!p.empty()) {
+        fprintf(fd, "\t\t((P%d *)_this)->%s = %s;\n", tpnr, p.c_str(),
+                r->ival->name.c_str());
       }
     }
-  fprintf(fd, "}\n");
 }
 
 /* tracking:
@@ -411,9 +421,9 @@ void c_preview(void) {
     hastrack = 1;
   else
     for (r = c_added; r; r = r->nxt)
-      if (strncmp(r->t->name, " Global ", strlen(" Global ")) != 0 &&
-          strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) != 0 &&
-          strncmp(r->t->name, " Local", strlen(" Local")) != 0) {
+      if (r->t->name.substr(0, 8) != " Global " &&
+          r->t->name.substr(0, 8) != " Hidden " &&
+          r->t->name.substr(0, 6) != " Local") {
         hastrack = 1; /* c_state variant now obsolete */
         break;
       }
@@ -428,13 +438,13 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
     return 0;
 
   for (r = c_added; r; r = r->nxt) /* pickup global decls */
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) == 0)
-      fprintf(fd, "	%s;\n", r->s->name);
+    if (r->t->name.substr(0, 8) == " Global ")
+      fprintf(fd, "	%s;\n", r->s->name.c_str());
 
   for (r = c_added; r; r = r->nxt)
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) != 0 &&
-        strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) != 0 &&
-        strncmp(r->t->name, " Local", strlen(" Local")) != 0) {
+    if (r->t->name.substr(0, 8) != " Global " &&
+        r->t->name.substr(0, 8) != " Hidden " &&
+        r->t->name.substr(0, 6) != " Local") {
       cnt++; /* obsolete use */
     }
 
@@ -447,10 +457,10 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
   cnt = 0;
   fprintf(fd, "	uchar c_state[");
   for (r = c_added; r; r = r->nxt)
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) != 0 &&
-        strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) != 0 &&
-        strncmp(r->t->name, " Local", strlen(" Local")) != 0) {
-      fprintf(fd, "%ssizeof(%s)", (cnt == 0) ? "" : "+", r->t->name);
+    if (r->t->name.substr(0, 8) != " Global " &&
+        r->t->name.substr(0, 8) != " Hidden " &&
+        r->t->name.substr(0, 6) != " Local") {
+      fprintf(fd, "%ssizeof(%s)", (cnt == 0) ? "" : "+", r->t->name.c_str());
       cnt++;
     }
 
@@ -458,7 +468,7 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
     if (r->ival != ZS)
       continue;
 
-    fprintf(fd, "%s%s", (cnt == 0) ? "" : "+", r->t->name);
+    fprintf(fd, "%s%s", (cnt == 0) ? "" : "+", r->t->name.c_str());
     cnt++;
   }
 
@@ -474,7 +484,7 @@ void c_stack_size(FILE *fd) {
 
   for (r = c_tracked; r; r = r->nxt)
     if (r->ival != ZS) {
-      fprintf(fd, "%s%s", (cnt == 0) ? "" : "+", r->t->name);
+      fprintf(fd, "%s%s", (cnt == 0) ? "" : "+", r->t->name.c_str());
       cnt++;
     }
   if (cnt == 0) {
@@ -503,70 +513,69 @@ void c_add_stack(FILE *fd) {
 void c_add_hidden(FILE *fd) {
   C_Added *r;
 
-  for (r = c_added; r; r = r->nxt) /* pickup hidden decls */
-    if (strncmp(r->t->name, "\"Hidden\"", strlen("\"Hidden\"")) == 0) {
-      r->s->name[strlen(r->s->name) - 1] = ' ';
-      fprintf(fd, "%s;	/* Hidden */\n", &r->s->name[1]);
-      r->s->name[strlen(r->s->name) - 1] = '"';
+  for (r = c_added; r; r = r->nxt) /* pickup hidden_flags decls */
+    if (r->t->name.compare(0, 6, "Hidden") == 0) {
+      r->s->name.back() = ' ';
+      fprintf(fd, "%s;	/* Hidden */\n", r->s->name.substr(1).c_str());
+      r->s->name.back() = '"';
     }
   /* called before c_add_def - quotes are still there */
 }
 
-void c_add_loc(FILE *fd, char *s) /* state vector entries for proctype s */
-{
+void c_add_loc(FILE *fd, const std::string &s) {
   C_Added *r;
   static char buf[1024];
-  char *p;
+  const char *p;
 
   if (!c_added)
     return;
 
-  strcpy(buf, s);
+  strcpy(buf, s.c_str());
   strcat(buf, " ");
-  for (r = c_added; r; r = r->nxt) /* pickup local decls */
-  {
-    if (strncmp(r->t->name, " Local", strlen(" Local")) == 0) {
-      p = r->t->name + strlen(" Local");
+  for (r = c_added; r; r = r->nxt) {
+    if (strncmp(r->t->name.c_str(), " Local", strlen(" Local")) == 0) {
+      p = r->t->name.c_str() + strlen(" Local");
       fprintf(fd, "/* XXX p=<%s>, s=<%s>, buf=<%s> r->s->name=<%s>XXX */\n", p,
-              s, buf, r->s->name);
+              s.c_str(), buf, r->s->name.c_str());
       while (*p == ' ' || *p == '\t') {
         p++;
       }
       if (strcmp(p, buf) == 0 ||
           (strncmp(p, "init", 4) == 0 && strncmp(buf, ":init:", 6) == 0)) {
-        fprintf(fd, "	%s;\n", r->s->name);
+        fprintf(fd, "    %s;\n", r->s->name.c_str());
       }
     }
   }
 }
+
 void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
 {
   C_Added *r;
 
   fprintf(fd, "#if defined(C_States) && (HAS_TRACK==1)\n");
   for (r = c_added; r; r = r->nxt) {
-    r->s->name[strlen(r->s->name) - 1] = ' ';
-    r->s->name[0] = ' '; /* remove the "s */
+    r->s->name.back() = ' ';
+    r->s->name.front() = ' ';
 
-    r->t->name[strlen(r->t->name) - 1] = ' ';
-    r->t->name[0] = ' ';
+    r->t->name.back() = ' ';
+    r->t->name.front() = ' ';
 
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) == 0 ||
-        strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) == 0 ||
-        strncmp(r->t->name, " Local", strlen(" Local")) == 0)
+    if (r->t->name.substr(0, 8) == " Global " &&
+        r->t->name.substr(0, 8) == " Hidden " &&
+        r->t->name.substr(0, 6) == " Local")
       continue;
 
-    if (strchr(r->s->name, '&'))
+    if (r->s->name.find('&') != std::string::npos)
       loger::fatal("dereferencing state object: %s", r->s->name);
 
-    fprintf(fd, "extern %s %s;\n", r->t->name, r->s->name);
+    fprintf(fd, "extern %s %s;\n", r->t->name.c_str(), r->s->name.c_str());
   }
   for (r = c_tracked; r; r = r->nxt) {
-    r->s->name[strlen(r->s->name) - 1] = ' ';
-    r->s->name[0] = ' '; /* remove " */
+    r->s->name.back() = ' ';
+    r->s->name.front() = ' ';
 
-    r->t->name[strlen(r->t->name) - 1] = ' ';
-    r->t->name[0] = ' ';
+    r->t->name.back() = ' ';
+    r->t->name.front() = ' ';
   }
 
   if (separate == 2) {
@@ -584,11 +593,12 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
       if (r->ival == ZS)
         continue;
 
-      fprintf(fd, "\tif(%s)\n", r->s->name);
-      fprintf(fd, "\t\tmemcpy(p_t_r, %s, %s);\n", r->s->name, r->t->name);
+      fprintf(fd, "\tif(%s)\n", r->s->name.c_str());
+      fprintf(fd, "\t\tmemcpy(p_t_r, %s, %s);\n", r->s->name.c_str(),
+              r->t->name.c_str());
       fprintf(fd, "\telse\n");
-      fprintf(fd, "\t\tmemset(p_t_r, 0, %s);\n", r->t->name);
-      fprintf(fd, "\tp_t_r += %s;\n", r->t->name);
+      fprintf(fd, "\t\tmemset(p_t_r, 0, %s);\n", r->t->name.c_str());
+      fprintf(fd, "\tp_t_r += %s;\n", r->t->name.c_str());
     }
     fprintf(fd, "}\n\n");
   }
@@ -598,24 +608,26 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "	printf(\"c_update %%p\\n\", p_t_r);\n");
   fprintf(fd, "#endif\n");
   for (r = c_added; r; r = r->nxt) {
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) == 0 ||
-        strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) == 0 ||
-        strncmp(r->t->name, " Local", strlen(" Local")) == 0)
+    if (r->t->name.substr(0, 8) == " Global " &&
+        r->t->name.substr(0, 8) == " Hidden " &&
+        r->t->name.substr(0, 6) == " Local")
       continue;
 
-    fprintf(fd, "\tmemcpy(p_t_r, &%s, sizeof(%s));\n", r->s->name, r->t->name);
-    fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name);
+    fprintf(fd, "\tmemcpy(p_t_r, &%s, sizeof(%s));\n", r->s->name.c_str(),
+            r->t->name.c_str());
+    fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name.c_str());
   }
 
   for (r = c_tracked; r; r = r->nxt) {
     if (r->ival)
       continue;
 
-    fprintf(fd, "\tif(%s)\n", r->s->name);
-    fprintf(fd, "\t\tmemcpy(p_t_r, %s, %s);\n", r->s->name, r->t->name);
+    fprintf(fd, "\tif(%s)\n", r->s->name.c_str());
+    fprintf(fd, "\t\tmemcpy(p_t_r, %s, %s);\n", r->s->name.c_str(),
+            r->t->name.c_str());
     fprintf(fd, "\telse\n");
-    fprintf(fd, "\t\tmemset(p_t_r, 0, %s);\n", r->t->name);
-    fprintf(fd, "\tp_t_r += %s;\n", r->t->name);
+    fprintf(fd, "\t\tmemset(p_t_r, 0, %s);\n", r->t->name.c_str());
+    fprintf(fd, "\tp_t_r += %s;\n", r->t->name.c_str());
   }
 
   fprintf(fd, "}\n");
@@ -629,9 +641,10 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
       if (r->ival == ZS)
         continue;
 
-      fprintf(fd, "\tif(%s)\n", r->s->name);
-      fprintf(fd, "\t\tmemcpy(%s, p_t_r, %s);\n", r->s->name, r->t->name);
-      fprintf(fd, "\tp_t_r += %s;\n", r->t->name);
+      fprintf(fd, "\tif(%s)\n", r->s->name.c_str());
+      fprintf(fd, "\t\tmemcpy(%s, p_t_r, %s);\n", r->s->name.c_str(),
+              r->t->name.c_str());
+      fprintf(fd, "\tp_t_r += %s;\n", r->t->name.c_str());
     }
     fprintf(fd, "}\n");
   }
@@ -641,21 +654,23 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "	printf(\"c_revert %%p\\n\", p_t_r);\n");
   fprintf(fd, "#endif\n");
   for (r = c_added; r; r = r->nxt) {
-    if (strncmp(r->t->name, " Global ", strlen(" Global ")) == 0 ||
-        strncmp(r->t->name, " Hidden ", strlen(" Hidden ")) == 0 ||
-        strncmp(r->t->name, " Local", strlen(" Local")) == 0)
+    if (r->t->name.substr(0, 8) == " Global " &&
+        r->t->name.substr(0, 8) == " Hidden " &&
+        r->t->name.substr(0, 6) == " Local")
       continue;
 
-    fprintf(fd, "\tmemcpy(&%s, p_t_r, sizeof(%s));\n", r->s->name, r->t->name);
-    fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name);
+    fprintf(fd, "\tmemcpy(&%s, p_t_r, sizeof(%s));\n", r->s->name.c_str(),
+            r->t->name.c_str());
+    fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name.c_str());
   }
   for (r = c_tracked; r; r = r->nxt) {
     if (r->ival != ZS)
       continue;
 
-    fprintf(fd, "\tif(%s)\n", r->s->name);
-    fprintf(fd, "\t\tmemcpy(%s, p_t_r, %s);\n", r->s->name, r->t->name);
-    fprintf(fd, "\tp_t_r += %s;\n", r->t->name);
+    fprintf(fd, "\tif(%s)\n", r->s->name.c_str());
+    fprintf(fd, "\t\tmemcpy(%s, p_t_r, %s);\n", r->s->name.c_str(),
+            r->t->name.c_str());
+    fprintf(fd, "\tp_t_r += %s;\n", r->t->name.c_str());
   }
 
   fprintf(fd, "}\n");
@@ -670,7 +685,7 @@ void plunk_reverse(FILE *fd, IType *p, int matchthis) {
   plunk_reverse(fd, p->nxt, matchthis);
 
   if (!p->nm->context && p->nm->type == matchthis && p->is_expr == 0) {
-    fprintf(fd, "\n/* start of %s */\n", p->nm->name);
+    fprintf(fd, "\n/* start of %s */\n", p->nm->name.c_str());
     z = (char *)p->cn;
     while (*z == '\n' || *z == '\r' || *z == '\\') {
       z++;
@@ -684,7 +699,7 @@ void plunk_reverse(FILE *fd, IType *p, int matchthis) {
     }
 
     fprintf(fd, "%s\n", z);
-    fprintf(fd, "\n/* end of %s */\n", p->nm->name);
+    fprintf(fd, "\n/* end of %s */\n", p->nm->name.c_str());
   }
 }
 
@@ -719,12 +734,13 @@ static void check_inline(IType *tmp) {
     return;
 
   for (p = ready; p; p = p->nxt) {
-    if (strcmp(p->n->name, X_lst->n->name) == 0)
+    if (p->n->name == X_lst->n->name) {
       continue;
-    sprintf(buf, "P%s->", p->n->name);
+    }
+    sprintf(buf, "P%s->", p->n->name.c_str());
     if (strstr((char *)tmp->cn, buf)) {
       printf("spin: in proctype %s, ref to object in proctype %s\n",
-             X_lst->n->name, p->n->name);
+             X_lst->n->name.c_str(), p->n->name.c_str());
       loger::fatal("invalid variable ref in '%s'", tmp->nm->name);
     }
   }
@@ -733,7 +749,7 @@ static void check_inline(IType *tmp) {
 extern short terse;
 extern short nocast;
 
-void plunk_expr(FILE *fd, char *s) {
+void plunk_expr(FILE *fd, const std::string &s) {
   IType *tmp;
   char *q;
 
@@ -842,7 +858,7 @@ void no_side_effects(char *s) {
   char *t;
   char *z;
 
-  /* could still defeat this check via hidden
+  /* could still defeat this check via hidden_flags
    * side effects in function calls,
    * but this will catch at least some cases
    */
@@ -957,7 +973,7 @@ models::Symbol *prep_inline(models::Symbol *s, Lextok *nms) {
         char *s_s_name = "--";
         loger::fatal("bad param to inline %s", s ? s->name : s_s_name);
       }
-      t->lft->sym->hidden |= 32;
+      t->lft->sym->hidden_flags |= 32;
     }
 
   if (!s) /* C_Code fragment */

@@ -448,7 +448,7 @@ ivar    : vardcl           	{ $$ = $1;
 				  $$ = $1;
 				  $1->sym->init_value = $4;
 				  has_ini = 1;
-				  $1->sym->hidden |= (4|8);	/* conservative */
+				  $1->sym->hidden_flags |= (4|8);	/* conservative */
 				  if (!initialization_ok)
 				  {	Lextok *zx = nn(ZN, NAME, ZN, ZN);
 					zx->sym = $1->sym;
@@ -551,7 +551,7 @@ pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
 
 cmpnd	: pfld			{ Embedded++;
 				  if ($1->sym->type == STRUCT)
-					owner = $1->sym->Snm;
+					owner = $1->sym->struct_name;
 				}
 	  sfld			{ $$ = $1; $$->rgt = $3;
 				  if ($3 && $1->sym->type != STRUCT)

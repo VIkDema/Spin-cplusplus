@@ -89,7 +89,7 @@ int Lexer::CheckName(const std::string &value) {
     yylval->ismtyp = 1;
     yylval->sym = (models::Symbol *)emalloc(sizeof(models::Symbol));
     yylval->sym->name = (char *)emalloc(value.length() + 1);
-    strcpy(yylval->sym->name, value.c_str());
+    yylval->sym->name = value;
     return CONST;
   }
 
@@ -119,12 +119,12 @@ int Lexer::CheckName(const std::string &value) {
           continue;
         }
         std::cout << fmt::format("spin: {}:{} replacement value: {}",
-                                 oFname->name ? oFname->name : "--",
+                                 !oFname->name.empty() ? oFname->name : "--",
                                  stream_.GetLineNumber(), tt->lft->sym->name)
                   << std::endl;
 
         loger::fatal("formal par of %s contains replacement value",
-                   inline_stub[stream_.GetInlining()].nm->name);
+                     inline_stub[stream_.GetInlining()].nm->name);
         yylval->ntyp = tt->lft->ntyp;
         yylval->sym = lookup(tt->lft->sym->name);
         return NAME;
@@ -138,7 +138,7 @@ int Lexer::CheckName(const std::string &value) {
           if ((ptr > optr && *(ptr - 1) == '.') ||
               *(ptr + value.size()) == '.') {
             loger::fatal("formal par of %s used in structure name",
-                       inline_stub[stream_.GetInlining()].nm->name);
+                         inline_stub[stream_.GetInlining()].nm->name);
           }
           ptr++;
         }

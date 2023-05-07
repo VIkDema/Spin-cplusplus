@@ -18,14 +18,14 @@ extern void put_uform(void);
 FILE *tl_out; /* if standalone: = stdout; */
 
 struct Transition {
-  models::Symbol *name;
+  Symbol *name;
   Node *cond;
   int redundant, merged, marked;
   struct Transition *nxt;
 };
 
 struct State {
-  models::Symbol *name;
+  Symbol *name;
   Transition *trans;
   Graph *colors;
   unsigned char redundant;
@@ -128,7 +128,7 @@ static void Dfs(State *b) {
 void retarget(char *from, char *to) {
   State *b;
   Transition *t;
-  models::Symbol *To = tl_lookup(to);
+  Symbol *To = tl_lookup(to);
 
   if (tl_verbose)
     printf("replace %s with %s\n", from, to);
@@ -204,7 +204,7 @@ static Node *combination(Node *s, Node *t) {
 
 Node *unclutter(Node *n, char *snm) {
   Node *t, *s, *v, *u;
-  models::Symbol *w;
+  Symbol *w;
 
   /* check only simple cases like !q && q */
   for (t = n; t; t = t->rgt) {

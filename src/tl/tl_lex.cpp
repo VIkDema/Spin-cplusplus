@@ -13,7 +13,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 
-static models::Symbol *symtab[Nhash + 1];
+static Symbol *symtab[Nhash + 1];
 static int tl_lex(void);
 extern int tl_peek(int);
 
@@ -257,15 +257,15 @@ static int tl_lex(void) {
   Token(c);
 }
 
-models::Symbol *tl_lookup(char *s) {
-  models::Symbol *sp;
+Symbol *tl_lookup(char *s) {
+  Symbol *sp;
   unsigned int h = hash(s);
 
   for (sp = symtab[h]; sp; sp = sp->next)
     if (strcmp(sp->name, s) == 0)
       return sp;
 
-  sp = (models::Symbol *)tl_emalloc(sizeof(models::Symbol));
+  sp = (Symbol *)tl_emalloc(sizeof(Symbol));
   sp->name = (char *)tl_emalloc((int)strlen(s) + 1);
   strcpy(sp->name, s);
   sp->next = symtab[h];
@@ -274,8 +274,8 @@ models::Symbol *tl_lookup(char *s) {
   return sp;
 }
 
-models::Symbol *getsym(models::Symbol *s) {
-  models::Symbol *n = (models::Symbol *)tl_emalloc(sizeof(models::Symbol));
+Symbol *getsym(Symbol *s) {
+  Symbol *n = (Symbol *)tl_emalloc(sizeof(Symbol));
 
   n->name = s->name;
   return n;

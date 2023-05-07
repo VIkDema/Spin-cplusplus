@@ -712,7 +712,7 @@ static const char *Code0[] = {
     "	}",
     "#endif",
     "/* optional provisioning statements, e.g. to */",
-    "/* set hidden variables, used as constants */",
+    "/* set hidden_flags variables, used as constants */",
     "#ifdef PROV",
     "#include PROV",
     "#endif",

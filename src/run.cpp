@@ -1,7 +1,5 @@
 /***** spin: run.c *****/
 
- 
-
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
 #include "utils/seed/seed.hpp"
@@ -23,7 +21,7 @@ static int eval_sync(Element *);
 static int pc_enabled(Lextok *n);
 static int get_priority(Lextok *n);
 static void set_priority(Lextok *n, Lextok *m);
-extern void sr_buf(int, int, const char *);
+extern void sr_buf(int, int, const std::string &);
 
 long Rand(void) { /* CACM 31(10), Oct 1988 */
   auto &seed = utils::seed::Seed::getInstance();
@@ -534,7 +532,7 @@ int eval(Lextok *now) {
 
 int printm(FILE *fd, Lextok *n) {
   extern char GBuf[];
-  char *s = 0;
+  std::string s;
   int j;
 
   GBuf[0] = '\0';
@@ -550,7 +548,7 @@ int printm(FILE *fd, Lextok *n) {
       {
         j = eval(n->lft);
       }
-      sr_buf(j, 1, s);
+      sr_buf(j, 1, s.c_str());
       dotag(fd, GBuf);
     }
   return 1;
@@ -558,16 +556,18 @@ int printm(FILE *fd, Lextok *n) {
 
 int interprint(FILE *fd, Lextok *n) {
   Lextok *tmp = n->lft;
-  char c, *s = n->sym->name, *t = 0;
+  std::string s = n->sym->name;
+  std::string t;
   int i, j;
   char lbuf[512];     /* matches value in sr_buf() */
   extern char GBuf[]; /* global, size 4096 */
   char tBuf[4096];    /* match size of global GBuf[] */
+  char c;
 
   GBuf[0] = '\0';
   if (!no_print)
     if (!s_trail || depth >= jumpsteps) {
-      for (i = 0; i < (int)strlen(s); i++)
+      for (i = 0; i < s.length(); i++)
         switch (s[i]) {
         case '\"':
           break; /* ignore */
@@ -589,7 +589,7 @@ int interprint(FILE *fd, Lextok *n) {
             break;
           }
           if (!tmp) {
-            loger::non_fatal("too few print args %s", s);
+            loger::non_fatal("too few print args %s", s.c_str());
             break;
           }
           j = eval(tmp->lft);
@@ -612,7 +612,7 @@ int interprint(FILE *fd, Lextok *n) {
             strcpy(tBuf, GBuf); /* event name */
             GBuf[0] = '\0';
 
-            sr_buf(j, 1, t);
+            sr_buf(j, 1, t.c_str());
 
             strcpy(lbuf, GBuf);
             strcpy(GBuf, tBuf);
@@ -837,14 +837,14 @@ void set_priority(Lextok *n, Lextok *p) {
       Priority_Sum += Y->priority;
       if (1) {
         printf("%3d: setting priority of proc %d (%s) to %d\n", depth, pid,
-               Y->n->name, Y->priority);
+               Y->n->name.c_str(), Y->priority);
       }
     }
   }
   if (verbose_flags.NeedToPrintVerbose()) {
     printf("\tPid\tName\tPriority\n");
     for (Y = run_lst; Y; Y = Y->nxt) {
-      printf("\t%d\t%s\t%d\n", Y->pid, Y->n->name, Y->priority);
+      printf("\t%d\t%s\t%d\n", Y->pid, Y->n->name.c_str(), Y->priority);
     }
   }
 }

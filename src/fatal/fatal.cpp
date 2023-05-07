@@ -203,7 +203,7 @@ std::string explainToString(int n) {
     ss << kOperator << ">";
     break;
   case HIDDEN:
-    ss << kKeyword << "hidden";
+    ss << kKeyword << "hidden_flags";
     break;
   case IF:
     ss << kKeyword << "if";

@@ -32,9 +32,9 @@ static int a_snd(Queue *, Lextok *);
 static int sa_snd(Queue *, Lextok *);
 static int s_snd(Queue *, Lextok *);
 extern Lextok **find_mtype_list(const std::string &);
-extern char *which_mtype(const char *);
-extern void sr_buf(int, int, const char *);
-extern void sr_mesg(FILE *, int, int, const char *);
+extern std::string which_mtype(const std::string &);
+extern void sr_buf(int, int, const std::string &);
+extern void sr_mesg(FILE *, int, int, const std::string &);
 extern void putarrow(int, int);
 static void sr_talk(Lextok *, int, char *, char *, int, Queue *);
 
@@ -251,17 +251,18 @@ void typ_ck(int ft, int at, const std::string &s) {
 
   if (verbose_flags.NeedToPrintVerbose() && ft != at &&
       (ft == CHAN || at == CHAN) && (at != PREDEF || s != "recv")) {
-    char buf[256], tag1[64], tag2[64];
-    (void)sputtype(tag1, ft);
-    (void)sputtype(tag2, at);
-    sprintf(buf, "type-clash in %s, (%s<-> %s)", s.c_str(), tag1, tag2);
-    loger::non_fatal("%s", buf);
+    std::string buf, tag1, tag2;
+    sputtype(tag1, ft);
+    sputtype(tag2, at);
+    buf = "type-clash in " + s + ", (" + tag1 + "<-> " + tag2 + ")";
+    loger::non_fatal("%s", buf.c_str());
   }
 }
 
-static void mtype_ck(char *p, Lextok *arg) {
-  char *t, *s = p;
-  if (!p) {
+static void mtype_ck(const std::string &p, Lextok *arg) {
+  std::string t;
+  std::string s = p;
+  if (p.empty()) {
     s = "_unnamed_";
   }
   if (!arg || !arg->sym) {
@@ -277,18 +278,18 @@ static void mtype_ck(char *p, Lextok *arg) {
     }
     break;
   case CONST:
-    t = which_mtype(arg->sym->name.data());
+    t = which_mtype(arg->sym->name);
     break;
   default:
     t = "expression";
     break;
   }
 
-  if (strcmp(s, t) != 0) {
+  if (s != t) {
     printf("spin: %s:%d, Error: '%s' is type '%s', but ",
            arg->fn ? arg->fn->name.c_str() : "", arg->ln,
-           arg->sym->name.c_str(), t);
-    printf("should be type '%s'\n", s);
+           arg->sym->name.c_str(), t.c_str());
+    printf("should be type '%s'\n", s.c_str());
     loger::non_fatal("incorrect type of '%s'", arg->sym->name.c_str());
   }
 }
@@ -694,14 +695,14 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   fflush(stdout);
 }
 
-void sr_buf(int v, int j, const char *s) {
+void sr_buf(int v, int j, const std::string &s) {
   int cnt = 1;
   Lextok *n;
   char lbuf[512];
   Lextok *Mtype = ZN;
 
   if (j) {
-    Mtype = *find_mtype_list(s ? s : "_unnamed_");
+    Mtype = *find_mtype_list(!s.empty() ? s : "_unnamed_");
   }
   for (n = Mtype; n && j; n = n->rgt, cnt++) {
     if (cnt == v) {
@@ -718,7 +719,7 @@ void sr_buf(int v, int j, const char *s) {
   strcat(GBuf, lbuf);
 }
 
-void sr_mesg(FILE *fd, int v, int j, const char *s) {
+void sr_mesg(FILE *fd, int v, int j, const std::string &s) {
   GBuf[0] = '\0';
 
   sr_buf(v, j, s);
@@ -726,18 +727,13 @@ void sr_mesg(FILE *fd, int v, int j, const char *s) {
 }
 
 void doq(models::Symbol *s, int n, RunList *r) {
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
   Queue *q;
   int j, k;
 
-  if (!s->val) /* uninitialized queue */
+  if (!s->value.empty()) /* uninitialized queue */
     return;
   for (q = qtab; q; q = q->nxt)
-    if (q->qid == s->val[n]) {
-      if (xspin > 0 && verbose_flags.NeedToPrintAllProcessActions() &&
-          q->setat < depth) {
-        continue;
-      }
+    if (q->qid == s->value[n]) {
       if (q->nslots == 0) {
         continue; /* rv q always empty */
       }
@@ -792,14 +788,14 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
 
   if (!d && n && n->ismtyp) /* rhs is an mtype value (a constant) */
   {
-    std::string *lhs = "_unnamed_", *rhs = "_unnamed_";
+    std::string lhs = "_unnamed_", rhs = "_unnamed_";
 
     if (p->sym) {
       std::string unnamed = "_unnamed";
       lhs = p->sym->mtype_name ? p->sym->mtype_name->name : unnamed;
     }
     if (n->sym) {
-      rhs = which_mtype(n->sym->name.c_str()); /* only for constants */
+      rhs = which_mtype(n->sym->name); /* only for constants */
     }
 
     if (p->sym && !p->sym->mtype_name && n->sym) {
@@ -808,8 +804,8 @@ void nochan_manip(Lextok *p, Lextok *n, int d) /* p=lhs n=rhs */
     } else if (lhs != rhs) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
-              p->fn->name, p->ln, p->sym ? p->sym->name : "?", lhs,
-              n->sym ? n->sym->name : "?", rhs);
+              p->fn->name.c_str(), p->ln, p->sym ? p->sym->name.c_str() : "?",
+              lhs.c_str(), n->sym ? n->sym->name.c_str() : "?", rhs.c_str());
       loger::non_fatal("type error");
     }
   }
@@ -843,28 +839,28 @@ struct BaseName {
 
 static BaseName *bsn;
 
-void newbasename(char *s) {
+void newbasename(const std::string &s) {
   BaseName *b;
 
   /*	printf("+++++++++%s\n", s);	*/
   for (b = bsn; b; b = b->nxt)
-    if (strcmp(b->str, s) == 0) {
+    if (strcmp(b->str, s.c_str()) == 0) {
       b->cnt++;
       return;
     }
   b = (BaseName *)emalloc(sizeof(BaseName));
-  b->str = emalloc(strlen(s) + 1);
+  b->str = emalloc(s.length() + 1);
   b->cnt = 1;
-  strcpy(b->str, s);
+  strcpy(b->str, s.c_str());
   b->nxt = bsn;
   bsn = b;
 }
 
-void delbasename(char *s) {
+void delbasename(const std::string &s) {
   BaseName *b, *prv = (BaseName *)0;
 
   for (b = bsn; b; prv = b, b = b->nxt) {
-    if (strcmp(b->str, s) == 0) {
+    if (strcmp(b->str, s.c_str()) == 0) {
       b->cnt--;
       if (b->cnt == 0) {
         if (prv) {
@@ -879,22 +875,22 @@ void delbasename(char *s) {
   }
 }
 
-void checkindex(char *s, char *t) {
+void checkindex(std::string &s, std::string &t) {
   BaseName *b;
 
   /*	printf("xxx Check %s (%s)\n", s, t);	*/
   for (b = bsn; b; b = b->nxt) {
     /*		printf("	%s\n", b->str);	*/
-    if (strcmp(b->str, s) == 0) {
-      loger::non_fatal("do not index an array with itself (%s)", t);
+    if (strcmp(b->str, s.c_str()) == 0) {
+      loger::non_fatal("do not index an array with itself (%s)", t.c_str());
       break;
     }
   }
 }
 
-void scan_tree(Lextok *t, char *mn, char *mx) {
-  char sv[512];
-  char tmp[32];
+void scan_tree(Lextok *t, std::string &mn, std::string &mx) {
+  std::string sv;
+  std::string tmp;
   int oln = lineno;
 
   if (!t)
@@ -903,24 +899,23 @@ void scan_tree(Lextok *t, char *mn, char *mx) {
   lineno = t->ln;
 
   if (t->ntyp == NAME) {
-    if (strlen(t->sym->name) + strlen(mn) > 256) // conservative
+    if (t->sym->name.length() + mn.length() > 256) // conservative
     {
       loger::fatal("name too long", t->sym->name);
     }
-
-    strcat(mn, t->sym->name);
-    strcat(mx, t->sym->name);
+    mn += t->sym->name;
+    mx += t->sym->name;
     if (t->lft) /* array index */
     {
-      strcat(mn, "[]");
+      mn += "[]";
       newbasename(mn);
-      strcpy(sv, mn); /* save */
-      strcpy(mn, ""); /* clear */
-      strcat(mx, "[");
+      sv += mn;
+      mn += "";
+      mx += "[";
       scan_tree(t->lft, mn, mx); /* index */
-      strcat(mx, "]");
+      mx += "]";
       checkindex(mn, mx); /* match against basenames */
-      strcpy(mn, sv);     /* restore */
+      mn = sv;            /*restore*/
       delbasename(mn);
     }
     if (t->rgt) /* structure element */
@@ -928,16 +923,16 @@ void scan_tree(Lextok *t, char *mn, char *mx) {
       scan_tree(t->rgt, mn, mx);
     }
   } else if (t->ntyp == CONST) {
-    strcat(mn, "1"); /* really: t->val */
-    sprintf(tmp, "%d", t->val);
-    strcat(mx, tmp);
+    mn += "1";
+    tmp += t->val;
+    mx += tmp;
   } else if (t->ntyp == '.') {
-    strcat(mn, ".");
-    strcat(mx, ".");
+    mn += ".";
+    mx += ".";
     scan_tree(t->lft, mn, mx);
   } else {
-    strcat(mn, "??");
-    strcat(mx, "??");
+    mn += "??";
+    mx += "??";
   }
   lineno = oln;
 }
@@ -945,13 +940,10 @@ void scan_tree(Lextok *t, char *mn, char *mx) {
 void no_nested_array_refs(
     Lextok *n) /* a [ a[1] ] with a[1] = 1, causes trouble in pan.b */
 {
-  char mn[512];
-  char mx[512];
+  std::string mn;
+  std::string mx;
 
-  /*	printf("==================================ZAP\n");	*/
   bsn = (BaseName *)0; /* start new list */
-  strcpy(mn, "");
-  strcpy(mx, "");
 
   scan_tree(n, mn, mx);
   /*	printf("==> %s\n", mn);	*/

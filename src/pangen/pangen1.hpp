@@ -5919,7 +5919,7 @@ static const char *Code2d[] = {
                q */
     "	#endif",
     "	#ifdef HAS_HIDDEN",
-    "	#error cannot use hidden variables when compiling multi-core",
+    "	#error cannot use hidden_flags variables when compiling multi-core",
     "	#endif",
     "#endif",
     "#if defined(T_RAND) && defined(ELSE_IN_GUARD)",

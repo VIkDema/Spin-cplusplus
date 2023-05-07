@@ -1,8 +1,8 @@
+#include "lexer/lexer.hpp"
 #include "models/symbol.hpp"
 #include "utils/format/preprocessed_file_viewer.hpp"
 #include "utils/format/pretty_print_viewer.hpp"
 #include "utils/seed/seed.hpp"
-#include "lexer/lexer.hpp"
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
@@ -924,435 +924,17 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 }
 #endif
 
-int main(int argc, char *argv[]) {
-  //перенес
-  auto &seed = utils::seed::Seed::getInstance();
-  seed.GenerateSeed();
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
-
-  int usedopts = 0;
-
-  yyin = stdin;
-  yyout = stdout;
-  tl_out = stdout;
-  
-  strcpy(CurScope, "_");
-
-  assert(strlen(CPP) < sizeof(PreProc));
-  strcpy(PreProc, CPP);
-  //перенес end
-
-  /* unused flags: y, z, G, L, Q, R, W */
-  while (argc > 1 && argv[1][0] == '-') {
-    switch (argv[1][1]) {
-    case 'A':
-      export_ast = 1;
-      break;
-    case 'a':
-      analyze = 1;
-      break;
-    case 'B':
-      no_wrapup = 1;
-      break;
-    case 'b':
-      no_print = 1;
-      break;
-    case 'C':
-      Caccess = 1;
-      break;
-    case 'c':
-      columns = 1;
-      break;
-    case 'D':
-      PreArg[++PreCnt] = (char *)&argv[1][0];
-      break; /* define */
-    case 'd':
-      dumptab = 1;
-      break;
-    case 'E':
-      PreArg[++PreCnt] = (char *)&argv[1][2];
-      break;
-    case 'e':
-      product++;
-      break; /* see also 'L' */
-    case 'F':
-      ltl_file = (char **)(argv + 2);
-      argc--;
-      argv++;
-      break;
-    case 'f':
-      add_ltl = (char **)argv;
-      argc--;
-      argv++;
-      break;
-    case 'g':
-      verbose_flags.SetNeedToPrintGlobalVariables();
-      break;
-    case 'h':
-      seed.SetNeedToPrintSeed(true);
-      break;
-    case 'i':
-      interactive = 1;
-      break;
-    case 'I':
-      inlineonly = 1;
-      break;
-    case 'J':
-      like_java = 1;
-      break;
-    case 'j':
-      jumpsteps = atoi(&argv[1][2]);
-      break;
-    case 'k':
-      s_trail = 1;
-      trailfilename = (char **)(argv + 2);
-      argc--;
-      argv++;
-      break;
-    case 'L':
-      Strict++;
-      break; /* modified -e */
-    case 'l':
-      verbose_flags.SetNeedToPrintLocalVariables();
-      break;
-    case 'M':
-      columns = 2;
-      break;
-    case 'm':
-      m_loss = 1;
-      break;
-    case 'N':
-      nvr_file = (char **)(argv + 2);
-      argc--;
-      argv++;
-      break;
-    case 'n':
-      seed.SetSeed(atoi(&argv[1][2]));
-      tl_terse = 1;
-      break;
-    case 'O':
-      old_scope_rules = 1;
-      break;
-    case 'o':
-      usedopts += optimizations(argv[1][2]);
-      break;
-    case 'P':
-      assert(strlen((const char *)&argv[1][2]) < sizeof(PreProc));
-      strcpy(PreProc, (const char *)&argv[1][2]);
-      break;
-    case 'p':
-      if (argv[1][2] == 'p') {
-        format::PrettyPrintViewer pp;
-        pp.view();
-        alldone(0);
-      }
-      verbose_flags.SetNeedToPrintAllProcessActions();
-      break;
-    case 'q':
-      if (isdigit((int)argv[1][2]))
-        qhide(atoi(&argv[1][2]));
-      break;
-    case 'r':
-      if (strcmp(&argv[1][1], "run") == 0) {
-      samecase:
-        if (buzzed != 0) {
-          loger::fatal("cannot combine -x with -run -replay or -search");
-        }
-        buzzed = 2;
-        analyze = 1;
-        argc--;
-        argv++;
-        /* process all remaining arguments, except -w/-W, as relating to pan: */
-        while (argc > 1 && argv[1][0] == '-') {
-          switch (argv[1][1]) {
-          case 'D': /* eg -DNP */
-                    /*	  case 'E': conflicts with runtime arg */
-          case 'O': /* eg -O2 */
-          case 'U': /* to undefine a macro */
-            add_comptime(argv[1]);
-            break;
-          case 'W':
-            norecompile = 1;
-            break;
-          case 'l':
-            if (strcmp(&argv[1][1], "ltl") == 0) {
-              add_runtime("-N");
-              argc--;
-              argv++;
-              add_runtime(argv[1]); /* prop name */
-              break;
-            }
-            if (strcmp(&argv[1][1], "link") == 0) {
-              argc--;
-              argv++;
-              add_comptime(argv[1]);
-              break;
-            }
-            /* else fall through */
-          default:
-            add_runtime(argv[1]); /* -bfs etc. */
-            break;
-          }
-          argc--;
-          argv++;
-        }
-        argc++;
-        argv--;
-      } else if (strcmp(&argv[1][1], "replay") == 0) {
-        replay = 1;
-        add_runtime("-r");
-        goto samecase;
-      } else {
-        verbose_flags.SetNeedToPrintReceives();
-      }
-      break;
-    case 'S':
-      separate = atoi(&argv[1][2]); /* S1 or S2 */
-      /* generate code for separate compilation */
-      analyze = 1;
-      break;
-    case 's':
-      if (strcmp(&argv[1][1], "simulate") == 0) {
-        break; /* ignore */
-      }
-      if (strcmp(&argv[1][1], "search") == 0) {
-        goto samecase;
-      }
-      verbose_flags.SetNeedToPrintSends();
-      break;
-    case 'T':
-      notabs = 1;
-      break;
-    case 't':
-      s_trail = 1;
-      if (isdigit((int)argv[1][2])) {
-        ntrail = atoi(&argv[1][2]);
-      }
-      break;
-    case 'U':
-      PreArg[++PreCnt] = (char *)&argv[1][0];
-      break; /* undefine */
-    case 'u':
-      cutoff = atoi(&argv[1][2]);
-      break;
-    case 'v':
-      verbose_flags.SetNeedToPrintVerbose();
-      break;
-    case 'V':
-      printf("%s\n", SpinVersion);
-      alldone(0);
-      break;
-    case 'w':
-      verbose_flags.SetNeedToPrintVeryVerbose();
-      break;
-    case 'W':
-      norecompile = 1;
-      break;  /* 6.4.7: for swarm/biterate */
-    case 'x': /* internal - reserved use */
-      if (buzzed != 0) {
-        loger::fatal("cannot combine -x with -run -search or -replay");
-      }
-      buzzed = 1; /* implies also -a -o3 */
-      pan_runtime = "-d";
-      analyze = 1;
-      usedopts += optimizations('3');
-      break;
-    case 'X':
-      xspin = notabs = 1;
-#ifndef PC
-      signal(SIGPIPE, alldone); /* not posix... */
-#endif
-      break;
-    case 'Y':
-      limited_vis = 1;
-      break; /* used by xspin */
-    case 'Z':
-      preprocessonly = 1;
-      break; /* used by xspin */
-
-    default:
-      usage();
-      break;
-    }
-    argc--;
-    argv++;
-  }
-
-  if (columns == 2 && !cutoff) {
-    cutoff = 1024;
-  }
-
-  if (usedopts && !analyze){
-    printf("spin: warning -o[1..5] option ignored in simulations\n");
-}
-  if (ltl_file) {
-    add_ltl = ltl_file - 2;
-    add_ltl[1][1] = 'f';
-    if (!(tl_out = fopen(*ltl_file, "r"))) {
-      printf("spin: cannot open %s\n", *ltl_file);
-      alldone(1);
-    }
-    size_t linebuffsize = 0;
-    ssize_t length = getline(&formula, &linebuffsize, tl_out);
-    if (!formula || !length) {
-      printf("spin: cannot read %s\n", *ltl_file);
-    }
-    fclose(tl_out);
-    tl_out = stdout;
-    *ltl_file = formula;
-  }
-
-  if (argc > 1) {
-    FILE *fd = stdout;
-    char cmd[512], out2[512];
-
-    /* must remain in current dir */
-    strcpy(out1, "pan.pre");
-
-    if (add_ltl || nvr_file) {
-      assert(strlen(argv[1]) + 6 < sizeof(out2));
-      sprintf(out2, "%s.nvr", argv[1]);
-      if ((fd = fopen(out2, MFLAGS)) == NULL) {
-        printf("spin: cannot create tmp file %s\n", out2);
-        alldone(1);
-      }
-      fprintf(fd, "#include \"%s\"\n", argv[1]);
-    }
-
-    if (add_ltl) {
-      tl_out = fd;
-      nr_errs = tl_main(2, add_ltl);
-      fclose(fd);
-      preprocess(out2, out1, 1);
-    } else if (nvr_file) {
-      fprintf(fd, "#include \"%s\"\n", *nvr_file);
-      fclose(fd);
-      preprocess(out2, out1, 1);
-    } else {
-      preprocess(argv[1], out1, 0);
-    }
-
-    if (preprocessonly) {
-      alldone(0);
-    }
-
-    if (!(yyin = fopen(out1, "r"))) {
-      printf("spin: cannot open %s\n", out1);
-      alldone(1);
-    }
-
-    assert(strlen(argv[1]) + 1 < sizeof(cmd));
-
-    if (strncmp(argv[1], "progress", (size_t)8) == 0 ||
-        strncmp(argv[1], "accept", (size_t)6) == 0) {
-      sprintf(cmd, "_%s", argv[1]);
-    } else {
-      strcpy(cmd, argv[1]);
-    }
-    oFname = Fname = lookup(cmd);
-    if (oFname->name[0] == '\"') {
-      int i = (int)strlen(oFname->name);
-      oFname->name[i - 1] = '\0';
-      oFname = lookup(&oFname->name[1]);
-    }
-  } else {
-    oFname = Fname = lookup("<stdin>");
-    if (add_ltl) {
-      if (argc > 0)
-        exit(tl_main(2, add_ltl));
-      printf("spin: missing argument to -f\n");
-      alldone(1);
-    }
-    printf("%s\n", SpinVersion);
-    fprintf(stderr, "spin: error, no filename specified\n");
-    fflush(stdout);
-    alldone(1);
-  }
-  
-  if (columns == 2) {
-    if (xspin || verbose_flags.Active()) {
-      printf("spin: -c precludes all flags except -t\n");
-      alldone(1);
-    }
-    putprelude();
-  }
-  if (columns && !verbose_flags.NeedToPrintReceives() && !verbose_flags.NeedToPrintSends()) {
-    verbose_flags.SetNeedToPrintSends();
-    verbose_flags.SetNeedToPrintReceives();
-  }
-  if (columns == 2 && limited_vis) {
-    verbose_flags.SetNeedToPrintGlobalVariables();
-    verbose_flags.SetNeedToPrintAllProcessActions();
-  }
-
-  models::Symbol *s;
-  s = lookup("_");
-  s->type = PREDEF; /* write-only global var */
-  s = lookup("_p");
-  s->type = PREDEF;
-  s = lookup("_pid");
-  s->type = PREDEF;
-  s = lookup("_last");
-  s->type = PREDEF;
-  s = lookup("_nr_pr");
-  s->type = PREDEF; /* new 3.3.10 */
-  s = lookup("_priority");
-  s->type = PREDEF; /* new 6.2.0 */
-
-  yyparse();
-  fclose(yyin);
-
-  if (ltl_claims) {
-    models::Symbol *r;
-    fclose(fd_ltl);
-    if (!(yyin = fopen(ltl_claims, "r"))) {
-      loger::fatal("cannot open %s", ltl_claims);
-    }
-    r = oFname;
-    oFname = Fname = lookup(ltl_claims);
-    lineno = 0;
-    yyparse();
-    fclose(yyin);
-    oFname = Fname = r;
-    if (0) {
-      (void)unlink(ltl_claims);
-    }
-  }
-
-  loose_ends();
-
-  if (inlineonly) {
-    format::PreprocessedFileViewer viewer;
-    viewer.view();
-    return 0;
-  }
-
-  chanaccess();
-  if (!Caccess) {
-    if (has_provided && merger) {
-      merger = 0; /* cannot use statement merging in this case */
-    }
-    if (!s_trail && (dataflow || merger) && (!replay || lexer_.GetHasCode())) {
-      ana_src(dataflow, merger);
-    }
-    //Запуск симуляции
-    sched();
-    alldone(nr_errs);
-  }
-
-  return 0;
-}
-
 void ltl_list(char *nm, char *fm) {
   if (s_trail || analyze ||
       dumptab) /* when generating pan.c or replaying a trace */
   {
     if (!ltl_claims) {
       ltl_claims = "_spin_nvr.tmp";
-      if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
-        loger::fatal("cannot open tmp file %s", ltl_claims);
-      }
-      tl_out = fd_ltl;
+      /* if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
+         loger::fatal("cannot open tmp file %s", ltl_claims);
+       }
+       tl_out = fd_ltl;
+     */
     }
     add_ltl = (char **)emalloc(5 * sizeof(char *));
     add_ltl[1] = "-c";
@@ -1363,7 +945,7 @@ void ltl_list(char *nm, char *fm) {
     strcat(add_ltl[4], fm);
     strcat(add_ltl[4], ")");
     /* add_ltl[4] = fm; */
-    nr_errs += tl_main(4, add_ltl);
+    // TODO:    nr_errs += tl_main(4, add_ltl);
 
     fflush(tl_out);
     /* should read this file after the main file is read */
@@ -1401,7 +983,7 @@ void trapwonly(Lextok *n /* , char *unused */) {
 
   if (realread && (i == MTYPE || i == BIT || i == BYTE || i == SHORT ||
                    i == INT || i == UNSIGNED)) {
-    n->sym->hidden |= 128; /* var is read at least once */
+    n->sym->hidden_flags |= 128; /* var is read at least once */
   }
 }
 
@@ -1485,7 +1067,8 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
         n->sym->xu |= XX;
         if (separate == 2) {
           printf("spin: warning, make sure that the S1 model\n");
-          printf("      also polls channel '%s' in its claim\n", n->sym->name);
+          printf("      also polls channel '%s' in its claim\n",
+                 n->sym->name.c_str());
         }
       }
       forbidden = 0;
@@ -1498,7 +1081,8 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
       break;
     }
     if (forbidden) {
-      std::cout << "spin: never, saw " << loger::explainToString(t) << std::endl;
+      std::cout << "spin: never, saw " << loger::explainToString(t)
+                << std::endl;
       loger::fatal("incompatible with separate compilation");
     }
   } else if ((t == ENABLED || t == PC_VAL) && !(warn_nn & t)) {
@@ -1519,7 +1103,7 @@ Lextok *rem_lab(models::Symbol *a, Lextok *b,
 
   has_remote++;
   c->type = models::kLabel; /* refered to in global context here */
-  fix_dest(c, a);  /* in case target of rem_lab is jump */
+  fix_dest(c, a);           /* in case target of rem_lab is jump */
   tmp1 = nn(ZN, '?', b, ZN);
   tmp1->sym = a;
   tmp1 = nn(ZN, 'p', tmp1, ZN);

@@ -22,8 +22,8 @@ static SRC *frst = (SRC *)0;
 static SRC *skip = (SRC *)0;
 extern lexer::Lexer lexer_;
 
-extern void sr_mesg(FILE *, int, int, const char *);
-extern Lextok **find_mtype_list(const std::string&);
+extern void sr_mesg(FILE *, int, int, const std::string&);
+extern Lextok **find_mtype_list(const std::string &);
 
 static void putnr(int n) {
   if (col++ == 8) {
@@ -278,7 +278,7 @@ static int symbolic(FILE *fd, Lextok *tv) {
     Mtype = *find_mtype_list(s);
     for (n = Mtype; n; n = n->rgt, cnt++) {
       if (cnt == tv->val) {
-        fprintf(fd, "%s", n->lft->sym->name);
+        fprintf(fd, "%s", n->lft->sym->name.c_str());
         return 1;
       }
     }
@@ -289,7 +289,7 @@ static int symbolic(FILE *fd, Lextok *tv) {
 
 static void comwork(FILE *fd, Lextok *now, int m) {
   Lextok *v;
-  char *s = 0;
+  std::string s;
   int i, j;
 
   if (!now) {
@@ -303,7 +303,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     if (now->ismtyp && now->sym && now->sym->mtype_name) {
       s = now->sym->mtype_name->name;
     }
-    sr_mesg(fd, now->val, now->ismtyp, s);
+    sr_mesg(fd, now->val, now->ismtyp, s.c_str());
     break;
 
   case '!':
@@ -362,14 +362,14 @@ static void comwork(FILE *fd, Lextok *now, int m) {
       Lextok *p = now->lft->lft;
 
       fprintf(fd, "(");
-      fprintf(fd, "%s", p->sym->name);
+      fprintf(fd, "%s", p->sym->name.c_str());
       if (p->lft) {
         fprintf(fd, "[");
         putstmnt(fd, p->lft, 0); /* pid */
         fprintf(fd, "]");
       }
       fprintf(fd, "@");
-      fprintf(fd, "%s", now->rgt->sym->name);
+      fprintf(fd, "%s", now->rgt->sym->name.c_str());
       fprintf(fd, ")");
       break;
     }
@@ -390,7 +390,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case RUN:
-    fprintf(fd, "run %s(", now->sym->name);
+    fprintf(fd, "run %s(", now->sym->name.c_str());
     for (v = now->lft; v; v = v->rgt)
       if (v == now->lft) {
         comwork(fd, v->lft, m);
@@ -525,8 +525,10 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case PRINT: {
-    char c, buf[1024];
-    strncpy(buf, now->sym->name, 510);
+    char c;
+    std::string buf;
+    buf = now->sym->name.substr(0, 510);
+
     for (i = j = 0; i < 510; i++, j++) {
       c = now->sym->name[i];
       buf[j] = c;
@@ -541,7 +543,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
       fprintf(fd, "printf");
     else
       fprintf(fd, "annotate");
-    fprintf(fd, "(%s", buf);
+    fprintf(fd, "(%s", buf.c_str());
   }
     for (v = now->lft; v; v = v->rgt) {
       Cat2(",", v->lft);
@@ -551,7 +553,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
   case PRINTM:
     fprintf(fd, "printm(");
     {
-      char *s = 0;
+      std::string s;
       if (now->lft->sym && now->lft->sym->mtype_name) {
         s = now->lft->sym->mtype_name->name;
       }
@@ -562,11 +564,11 @@ static void comwork(FILE *fd, Lextok *now, int m) {
         comwork(fd, now->lft, m);
       }
 
-      if (s) {
+      if (!s.empty()) {
         if (in_settr) {
-          fprintf(fd, ", '%s')", s);
+          fprintf(fd, ", '%s')", s.c_str());
         } else {
-          fprintf(fd, ", \"%s\")", s);
+          fprintf(fd, ", \"%s\")", s.c_str());
         }
       } else {
         fprintf(fd, ", 0)");
@@ -579,24 +581,24 @@ static void comwork(FILE *fd, Lextok *now, int m) {
 
   case 'p':
     if (lexer_.IsLtlMode()) {
-      fprintf(fd, "%s", now->lft->sym->name); /* proctype */
+      fprintf(fd, "%s", now->lft->sym->name.c_str()); /* proctype */
       if (now->lft->lft) {
         fprintf(fd, "[");
         putstmnt(fd, now->lft->lft, 0); /* pid */
         fprintf(fd, "]");
       }
-      fprintf(fd, ":");                  /* remote varref */
-      fprintf(fd, "%s", now->sym->name); /* varname */
+      fprintf(fd, ":");                          /* remote varref */
+      fprintf(fd, "%s", now->sym->name.c_str()); /* varname */
       break;
     }
     putremote(fd, now, m);
     break;
   case 'q':
-    fprintf(fd, "%s", now->sym->name);
+    fprintf(fd, "%s", now->sym->name.c_str());
     break;
   case C_EXPR:
   case C_CODE:
-    fprintf(fd, "{%s}", now->sym->name);
+    fprintf(fd, "{%s}", now->sym->name.c_str());
     break;
   case ASSERT:
     Cat3("assert(", now->lft, ")");
@@ -605,7 +607,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     fprintf(fd, ".(goto)");
     break;
   case GOTO:
-    fprintf(fd, "goto %s", now->sym->name);
+    fprintf(fd, "goto %s", now->sym->name.c_str());
     break;
   case BREAK:
     fprintf(fd, "break");

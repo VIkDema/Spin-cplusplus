@@ -117,7 +117,7 @@ static void addcan(int tok, Node *n) {
   Node *m, *prev = ZN;
   Node **ptr;
   Node *N;
-  models::Symbol *s, *t;
+  Symbol *s, *t;
   int cmp;
 
   if (!n)

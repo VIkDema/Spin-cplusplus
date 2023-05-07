@@ -17,8 +17,8 @@ extern RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
 extern models::Symbol *Fname;
 
-extern void sr_buf(int, int, const char *);
-extern void sr_mesg(FILE *, int, int, const char *);
+extern void sr_buf(int, int, const std::string &);
+extern void sr_mesg(FILE *, int, int, const std::string &);
 
 static int getglobal(Lextok *);
 static int setglobal(Lextok *, int);
@@ -204,23 +204,23 @@ static int setglobal(Lextok *v, int m) {
     int n = eval(v->lft);
     if (checkvar(v->sym, n)) {
       int oval = v->sym->value[n];
-      int nval = cast_val(v->sym->type, m, v->sym->nbits);
+      int nval = cast_val((int)v->sym->type, m, v->sym->nbits.value());
       v->sym->value[n] = nval;
       if (oval != nval) {
-        v->sym->setat = depth;
+        v->sym->last_depth = depth;
       }
     }
   }
   return 1;
 }
 
-void dumpclaims(FILE *fd, int pid, char *s) {
+void dumpclaims(FILE *fd, int pid, const std::string &s) {
   Lextok *m;
   int cnt = 0;
   int oPid = Pid_nr;
 
   for (m = Xu_List; m; m = m->rgt)
-    if (strcmp(m->sym->name, s) == 0) {
+    if (m->sym->name == s) {
       cnt = 1;
       break;
     }
@@ -230,7 +230,7 @@ void dumpclaims(FILE *fd, int pid, char *s) {
   Pid_nr = pid;
   fprintf(fd, "#ifndef XUSAFE\n");
   for (m = Xu_List; m; m = m->rgt) {
-    if (strcmp(m->sym->name, s) != 0)
+    if (m->sym->name != s)
       continue;
     no_arrays = 1;
     putname(fd, "\t\tsetq_claim(", m->lft, 0, "");
@@ -239,7 +239,7 @@ void dumpclaims(FILE *fd, int pid, char *s) {
     terse = 1;
     putname(fd, "\"", m->lft, 0, "\", h, ");
     terse = 0;
-    fprintf(fd, "\"%s\");\n", s);
+    fprintf(fd, "\"%s\");\n", s.c_str());
   }
   fprintf(fd, "#endif\n");
   Pid_nr = oPid;
@@ -256,7 +256,7 @@ void dumpglobals(void) {
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
-    if (!sp->type || sp->context || sp->owner || sp->type == PROCTYPE ||
+    if (!sp->type || sp->context || sp->owner_name || sp->type == PROCTYPE ||
         sp->type == PREDEF || sp->type == CODE_FRAG || sp->type == CODE_DECL ||
         (sp->type == MTYPE && ismtype(sp->name)))
       continue;
@@ -264,7 +264,7 @@ void dumpglobals(void) {
     if (sp->type == STRUCT) {
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() &&
-          (sp->setat < depth && jumpsteps != depth)) {
+          (sp->last_depth < depth && jumpsteps != depth)) {
         continue;
       }
       dump_struct(sp, sp->name, 0);
@@ -272,14 +272,14 @@ void dumpglobals(void) {
     }
     for (j = 0; j < sp->value_type; j++) {
       int prefetch;
-      char *s = 0;
+      std::string s;
       if (sp->type == CHAN) {
         doq(sp, j, 0);
         continue;
       }
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() &&
-          (sp->setat < depth && jumpsteps != depth)) {
+          (sp->last_depth < depth && jumpsteps != depth)) {
         continue;
       }
 
@@ -287,7 +287,7 @@ void dumpglobals(void) {
       dummy->lft->val = j;
       /* in case of cast_val warnings, do this first: */
       prefetch = getglobal(dummy);
-      printf("\t\t%s", sp->name);
+      printf("\t\t%s", sp->name.c_str());
       if (sp->value_type > 1 || sp->is_array)
         printf("[%d]", j);
       printf(" = ");
@@ -296,14 +296,14 @@ void dumpglobals(void) {
       }
       sr_mesg(stdout, prefetch, sp->type == MTYPE, s);
       printf("\n");
-      if (limited_vis && (sp->hidden & 2)) {
+      if (limited_vis && (sp->hidden_flags & 2)) {
         int colpos;
         GBuf[0] = '\0';
         if (!xspin) {
           if (columns == 2)
-            sprintf(GBuf, "~G%s = ", sp->name);
+            sprintf(GBuf, "~G%s = ", sp->name.c_str());
           else
-            sprintf(GBuf, "%s = ", sp->name);
+            sprintf(GBuf, "%s = ", sp->name.c_str());
         }
         sr_buf(prefetch, sp->type == MTYPE, s);
         if (sp->color_number == 0) {
@@ -319,10 +319,10 @@ void dumpglobals(void) {
           printf("\t\t%s\n", GBuf);
           continue;
         }
-        printf("MSC: ~G %s %s\n", sp->name, GBuf);
+        printf("MSC: ~G %s %s\n", sp->name.c_str(), GBuf);
         printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
         printf("(state 0)\t[printf('MSC: globvar\\\\n')]\n");
-        printf("\t\t%s", sp->name);
+        printf("\t\t%s", sp->name.c_str());
         if (sp->value_type > 1 || sp->is_array)
           printf("[%d]", j);
         printf(" = %s\n", GBuf);
@@ -352,7 +352,7 @@ void dumplocal(RunList *r, int final) {
       continue;
     }
     for (i = 0; i < z->value_type; i++) {
-      char *t = 0;
+      std::string t;
       if (z->type == CHAN) {
         doq(z, i, r);
         continue;
@@ -360,14 +360,14 @@ void dumplocal(RunList *r, int final) {
 
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() && !final &&
-          (z->setat < depth && jumpsteps != depth)) {
+          (z->last_depth < depth && jumpsteps != depth)) {
         continue;
       }
 
       dummy->sym = z;
       dummy->lft->val = i;
 
-      printf("\t\t%s(%d):%s", r->n->name, r->pid - Have_claim, z->name);
+      printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid - Have_claim, z->name.c_str());
       if (z->value_type > 1 || z->is_array)
         printf("[%d]", i);
       printf(" = ");
@@ -377,14 +377,14 @@ void dumplocal(RunList *r, int final) {
       }
       sr_mesg(stdout, getval(dummy), z->type == MTYPE, t);
       printf("\n");
-      if (limited_vis && (z->hidden & 2)) {
+      if (limited_vis && (z->hidden_flags & 2)) {
         int colpos;
         GBuf[0] = '\0';
         if (!xspin) {
           if (columns == 2)
-            sprintf(GBuf, "~G%s(%d):%s = ", r->n->name, r->pid, z->name);
+            sprintf(GBuf, "~G%s(%d):%s = ", r->n->name.c_str(), r->pid, z->name.c_str());
           else
-            sprintf(GBuf, "%s(%d):%s = ", r->n->name, r->pid, z->name);
+            sprintf(GBuf, "%s(%d):%s = ", r->n->name.c_str(), r->pid, z->name.c_str());
         }
         sr_buf(getval(dummy), z->type == MTYPE, t);
         if (z->color_number == 0) {
@@ -400,11 +400,11 @@ void dumplocal(RunList *r, int final) {
           printf("\t\t%s\n", GBuf);
           continue;
         }
-        printf("MSC: ~G %s(%d):%s %s\n", r->n->name, r->pid, z->name, GBuf);
+        printf("MSC: ~G %s(%d):%s %s\n", r->n->name.c_str(), r->pid, z->name.c_str(), GBuf);
 
         printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
         printf("(state 0)\t[printf('MSC: locvar\\\\n')]\n");
-        printf("\t\t%s(%d):%s", r->n->name, r->pid, z->name);
+        printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid, z->name.c_str());
         if (z->value_type > 1 || z->is_array)
           printf("[%d]", i);
         printf(" = %s\n", GBuf);

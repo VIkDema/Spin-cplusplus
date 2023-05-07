@@ -13,33 +13,28 @@ namespace models {
 enum SymbolType {
   kUnsigned = 5,
   kBit = 1,
-  kBite = 8,
+  kByte = 8,
   kShort = 16,
   kInt = 32,
   kChan = 64,
   kStruct = 128,
   kPredef = 3, /* predefined name: _p, _last */
   kLabel = 278,
-  kName = 315
-};
-
-enum class SymbolFlag : unsigned char {
-  kHide = 0x1,
-  kShow = 0x2,
-  kBitEquiv = 0x4,
-  kByteEquiv = 0x8,
-  kFormalPar = 0x10,
-  kInlinePar = 0x20,
-  kTreatLocal = 0x40,
-  kReadAtLeastOnce = 0x80
+  kName = 315,
+  kMtype = 275
 };
 
 struct Symbol {
   std::string name;
   short id; /* unique number for the name OLD id */
 
-  SymbolType type;         /* bit,short,.., chan,struct  */
-  SymbolFlag hidden_flags; /* bit-flags */
+  SymbolType type;            /* bit,short,.., chan,struct  */
+  unsigned char hidden_flags; /* bit-flags:
+                                   1=hide, 2=show,
+                                   4=bit-equiv,   8=byte-equiv,
+                                  16=formal par, 32=inline par,
+                                  64=treat as if local; 128=read at least once
+                                 */
 
   unsigned char color_number; /* for use ide */
   bool is_array;              /* set if decl specifies array bound */
@@ -47,7 +42,7 @@ struct Symbol {
   std::string block_scope;
 
   int sc; /* scope seq no -- set only for proctypes unused */
-  std::optional<std::byte> nbits; /* optional width specifier */
+  std::optional<int> nbits; /* optional width specifier */
   int value_type;                 /* 1 if scalar, >1 if array   OLD: nel*/
   int last_depth;                 /* last depth value changed   */
 

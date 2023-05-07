@@ -1,11 +1,9 @@
 /***** spin: pangen7.c *****/
 
- 
-
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
-#include "y.tab.h"
 #include "../utils/verbose/verbose.hpp"
+#include "y.tab.h"
 #include <assert.h>
 #include <stdlib.h>
 #ifndef PC
@@ -97,7 +95,7 @@ static int in_stack(SQueue *s, SQueue *in) {
 }
 
 static void to_render(SQueue *s) {
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
   SQueue *a, *q,
       *last; /* find in sd/sq and move to render, if not already there */
   int n;
@@ -149,15 +147,15 @@ more:
 }
 
 static void wrap_text(char *pre, Lextok *t, char *post) {
-  std::cout <<pre;
+  std::cout << pre;
   comment(stdout, t, 0);
-  std::cout <<post;
+  std::cout << post;
 }
 
 static State_Stack *push_dsts(int *n) {
   State_Stack *s;
   int i;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (s = dsts; s; s = s->nxt) {
     if (same_state(s->n, n)) {
@@ -313,8 +311,7 @@ static int claim_has_accept(ProcList *p) {
   Label *l;
 
   for (l = labtab; l; l = l->nxt) {
-    if (strcmp(l->c->name, p->n->name) == 0 &&
-        strncmp(l->s->name, "accept", 6) == 0) {
+    if (l->c->name == p->n->name && l->s->name.substr(0, 6) == "accept") {
       return 1;
     }
   }
@@ -323,7 +320,7 @@ static int claim_has_accept(ProcList *p) {
 
 static void prune_accept(void) {
   int n;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (n = 0; n < nclaims; n++) {
     if ((reached[n][Selfs[n]->seqno] & 2) == 0) {
@@ -371,7 +368,7 @@ static void check_special(int *nrs) {
   Label *l;
   int i, j, nmatches;
   int any_accepts = 0;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (i = 0; i < nclaims; i++) {
     any_accepts += Nacc[i];
@@ -399,26 +396,27 @@ static void check_special(int *nrs) {
       }
       for (l = labtab; l; l = l->nxt) /* check its labels */
       {
-        if (strcmp(l->c->name, p->n->name) == 0 /* right claim */
-            && l->e->seqno == nrs[i]            /* right state */
-            && strncmp(l->s->name, spl[j].s, spl[j].n) == 0) {
+        if (l->c->name == p->n->name /* right claim */
+            && l->e->seqno == nrs[i] /* right state */
+            && l->s->name.substr(0, spl[j].n) == std::string(spl[j].s)) {
           if (j == 1) /* accept state */
           {
-            char buf[32];
+            std::string buf;
           is_accepting:
-            if (strchr(p->n->name, ':')) {
-              sprintf(buf, "N%d", i);
+            if (strchr(p->n->name.c_str(), ':')) {
+              buf = "N" + std::to_string(i);
             } else {
-              assert(strlen(p->n->name) < sizeof(buf));
-              strcpy(buf, p->n->name);
+              assert(p->n->name.length() < 32);
+              buf = p->n->name;
             }
+
             if (unfolding == 0 && i == 0) {
               if (!not_printing)
                 printf("%s_%s_%d:\n", /* true accept */
-                       spl[j].s, buf, slcnt++);
+                       spl[j].s, buf.c_str(), slcnt++);
             } else if (verbose_flags.NeedToPrintVerbose()) {
               if (!not_printing)
-                printf("%s_%s%d:\n", buf, spl[j].s, slcnt++);
+                printf("%s_%s%d:\n", buf.c_str(), spl[j].s, slcnt++);
             }
             if (i == unfolding) {
               is_accept++; /* move to next unfolding */
@@ -440,7 +438,7 @@ static void check_special(int *nrs) {
 }
 
 static int render_state(SQueue *q) {
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!q || !q->state.succ) {
     if (verbose_flags.NeedToPrintVeryVerbose()) {
@@ -470,7 +468,7 @@ static int render_state(SQueue *q) {
 
 static void explore_product(void) {
   SQueue *q;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* all states are in the sd queue */
 
@@ -503,7 +501,7 @@ static void explore_product(void) {
 static void print_product(void) {
   SQueue *q;
   int cnt;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (unfolding == 0) {
     printf("never Product {\n"); /* name expected by iSpin */
@@ -600,7 +598,7 @@ void sync_product(void) {
   ProcList *p;
   Element *e;
   int n, i;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (nclaims <= 1)
     return;
@@ -678,7 +676,7 @@ static void create_transition(OneState *s, SQueue *it) {
   int *T = it->state.combo;
   Succ_List *sl;
   Lextok *t;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (verbose_flags.NeedToPrintVeryVerbose()) {
     print_state_nm("", F, " ");
@@ -780,7 +778,7 @@ static void all_successors(int n, OneState *cur) {
 static void gen_product(void) {
   OneState *cur_st;
   SQueue *q;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   find_state(Ist); /* create initial state */
 
@@ -870,7 +868,7 @@ static void set_el(int n, Element *e) {
 static void get_seq(int n, Sequence *s) {
   SeqList *h;
   Element *e;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   e = huntele(s->frst, s->frst->status, -1);
   for (; e; e = e->nxt) {

@@ -355,8 +355,7 @@ int proper_enabler(Lextok *n) {
   case 'R':
   case NAME:
     has_provided = 1;
-    if (strcmp(n->sym->name, "_pid") == 0 ||
-        strcmp(n->sym->name, "_priority") == 0)
+    if (n->sym->name == "_pid" || n->sym->name == "_priority")
       return 1;
     return (!(n->sym->context));
 

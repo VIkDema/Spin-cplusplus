@@ -17,6 +17,7 @@ set(SPIN_SOURCES
     src/sym.cpp
     src/vars.cpp
     src/main.cpp
+    src/old_main.cpp
     src/msc_tcl.cpp
     src/mesg.cpp
     src/flow.cpp
@@ -56,7 +57,6 @@ set(SPIN_SOURCES
     src/lexer/deferred.cpp
     src/lexer/scope.hpp
     src/lexer/scope.cpp
-    src/new_main.cpp
     src/main/arguments_parser.hpp
     src/main/arguments_parser.cpp
     src/main/help.cpp

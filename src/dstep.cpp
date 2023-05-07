@@ -2,10 +2,13 @@
 #include "spin.hpp"
 #include "y.tab.h"
 #include <assert.h>
+#include <iomanip>
+#include <sstream>
 
 #define MAXDSTEP 2048 /* was 512 */
 
-char *NextLab[64]; /* must match value in pangen2.c:41 */
+std::string NextLab[64]; /* must match value in pangen2.c:41 */
+
 int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
@@ -204,7 +207,7 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
 int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
             int seqno) {
   int isg = 0;
-  static char buf[64];
+  static std::string buf;
 
   NextLab[0] = "continue";
   filterbad(s->frst);
@@ -220,8 +223,8 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     break;
   case IF:
     fprintf(fd, "if (!(");
-    if (!CollectGuards(fd, s->frst, 0)) /* what about boq? */
-      fprintf(fd, "1");
+    if (!CollectGuards(fd, s->frst, 0))
+      /* what about boq ? */ fprintf(fd, "1");
     fprintf(fd, "))\n\t\t\tcontinue;");
     isg = 1;
     break;
@@ -234,7 +237,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
       isg = 1;
     }
     break;
-  case 'R': /* <- can't really happen (it's part of a 'c') */
+  case 'R': /* <- can't really happen (it's part of a 'c')*/
     fprintf(fd, "if (!(");
     TestOnly = 1;
     putstmnt(fd, s->frst->n, s->frst->seqno);
@@ -251,7 +254,8 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   case 's':
     fprintf(fd, "if (");
 #if 1
-    /* 4.2.1 */ if (!pid_is_claim(Pid_nr))
+    /* 4.2.1 */
+    if (!pid_is_claim(Pid_nr))
       fprintf(fd, "(boq != -1) || ");
 #endif
     fprintf(fd, "!(");
@@ -277,7 +281,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     {
       extern FILE *fd_th;
       fprintf(fd_th, "#ifndef ELSE_IN_GUARD\n");
-      fprintf(fd_th, "	#define ELSE_IN_GUARD\n");
+      fprintf(fd_th, " #define ELSE_IN_GUARD\n");
       fprintf(fd_th, "#endif\n");
     }
     break;
@@ -285,24 +289,24 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     fprintf(fd, "IfNotBlocked");
     break;
   default:
-    fprintf(fd, "/* default %d */\n\t\t", s->frst->n->ntyp);
+    fprintf(fd, "/ default %d */\n\t\t", s->frst->n->ntyp);
   }
 
   /* 6.2.5 : before TstOnly */
   fprintf(fd, "\n\n\t\treached[%d][%d] = 1;\n\t\t", Pid_nr, seqno);
-  fprintf(fd, "reached[%d][t->st] = 1;\n\t\t", Pid_nr); /* next state */
+  fprintf(fd, "reached[%d][t->st] = 1;\n\t\t", Pid_nr); /* next state*/
   fprintf(fd, "reached[%d][tt] = 1;\n", Pid_nr);        /* current state */
 
   /* 6.2.5 : before sv_save() */
-  if (s->frst->n->ntyp != NON_ATOMIC)
+  if (s->frst->n->ntyp != NON_ATOMIC) {
     fprintf(fd,
             "\n\t\tif (TstOnly) return 1;\n"); /* if called from enabled() */
-
-  if (justguards)
+  }
+  if (justguards) {
     return 0;
-
+  }
   fprintf(fd, "\n\t\tsv_save();\n\t\t");
-  sprintf(buf, "Uerror(\"block in d_step seq, line %d\")", ln);
+  buf = "Uerror(\"block in d_step seq, line " + std::to_string(ln) + "\")";
   NextLab[0] = buf;
   putCode(fd, s->frst, s->extent, nxt, isg);
 
@@ -330,7 +334,7 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
   Element *e, *N;
   SeqList *h;
   int i;
-  char NextOpt[64];
+  std::string NextOpt;
   static int bno = 0;
 
   for (e = f; e; e = e->nxt) {
@@ -411,7 +415,10 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
       }
     } else {
       for (h = e->sub, i = 1; h; h = h->nxt, i++) {
-        sprintf(NextOpt, "goto S_%.3d_%d", e->Seqno, i);
+        std::ostringstream oss;
+        oss << "goto S_" << std::setfill('0') << std::setw(3) << e->Seqno << "_"
+            << i;
+        NextOpt = oss.str();
         NextLab[++Level] = NextOpt;
         N = (e->n && e->n->ntyp == DO) ? e : e->nxt;
         putCode(fd, h->this_sequence->frst, h->this_sequence->extent, N, 1);

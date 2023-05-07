@@ -3,6 +3,7 @@
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include <filesystem>
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -28,26 +29,24 @@ static void whichproc(int p) {
 
   for (oX = run_lst; oX; oX = oX->nxt)
     if (oX->pid == p) {
-      printf("(%s) ", oX->n->name);
+      printf("(%s) ", oX->n->name.c_str());
       break;
     }
 }
 
-static int newer(char *f1, char *f2) {
-#if defined(WIN32) || defined(WIN64)
-  struct _stat x, y;
-#else
-  struct stat x, y;
-#endif
+bool newer(const std::string &f1, const std::string &f2) {
+  std::filesystem::path path1(f1);
+  std::filesystem::path path2(f2);
 
-  if (stat(f1, (struct stat *)&x) < 0)
-    return 0;
-  if (stat(f2, (struct stat *)&y) < 0)
-    return 1;
-  if (x.st_mtime < y.st_mtime)
-    return 0;
+  if (!std::filesystem::exists(path1))
+    return false;
+  if (!std::filesystem::exists(path2))
+    return true;
+  if (std::filesystem::last_write_time(path1) <
+      std::filesystem::last_write_time(path2))
+    return false;
 
-  return 1;
+  return true;
 }
 
 void hookup(void) {
@@ -109,7 +108,6 @@ int find_max(Sequence *s) {
 void match_trail(void) {
   int i, a, nst;
   Element *dothis;
-  char snap[512], *q;
 
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -132,45 +130,54 @@ void match_trail(void) {
    *	leader.trail
    *	leader.tra
    */
+  std::string snap;
+  std::string q;
 
   if (trailfilename) {
-    if (strlen(*trailfilename) < sizeof(snap)) {
-      strcpy(snap, (const char *)*trailfilename);
+    if (strlen(*trailfilename) < snap.capacity()) {
+      snap = *trailfilename;
     } else {
       loger::fatal("filename %s too long", *trailfilename);
     }
   } else {
     if (ntrail)
-      sprintf(snap, "%s%d.trail", oFname->name.c_str(), ntrail);
+      snap = oFname->name + std::to_string(ntrail) + ".trail";
     else
-      sprintf(snap, "%s.trail", oFname->name.c_str());
+      snap = oFname->name + ".trail";
   }
 
-  if ((fd = fopen(snap, "r")) == NULL) {
-    snap[strlen(snap) - 2] = '\0'; /* .tra */
-    if ((fd = fopen(snap, "r")) == NULL) {
-      if ((q = strchr(oFname->name, '.')) != NULL) {
-        *q = '\0';
+  FILE *fd;
+  if ((fd = fopen(snap.c_str(), "r")) == NULL) {
+    snap.resize(snap.size() - 2); /* .tra */
+    if ((fd = fopen(snap.c_str(), "r")) == NULL) {
+      size_t dotPos = oFname->name.find('.');
+      if (dotPos != std::string::npos) {
+        q = oFname->name.substr(dotPos);
+        oFname->name[dotPos] = '\0';
         if (ntrail)
-          sprintf(snap, "%s%d.trail", oFname->name, ntrail);
+          snap = oFname->name + std::to_string(ntrail) + ".trail";
         else
-          sprintf(snap, "%s.trail", oFname->name);
-        *q = '.';
+          snap = oFname->name + ".trail";
+        oFname->name[dotPos] = '.';
 
-        if ((fd = fopen(snap, "r")) != NULL)
+        if ((fd = fopen(snap.c_str(), "r")) != NULL)
           goto okay;
 
-        snap[strlen(snap) - 2] = '\0'; /* last try */
-        if ((fd = fopen(snap, "r")) != NULL)
+        snap.resize(snap.size() - 2); /* last try */
+        if ((fd = fopen(snap.c_str(), "r")) != NULL)
           goto okay;
       }
       printf("spin: cannot find trail file\n");
       alldone(1);
     }
   }
+
+  // Rest of the code...
+
 okay:
   if (xspin == 0 && newer(oFname->name, snap)) {
-    printf("spin: warning, \"%s\" is newer than %s\n", oFname->name, snap);
+    printf("spin: warning, \"%s\" is newer than %s\n", oFname->name.c_str(),
+           snap.c_str());
   }
   Tval = 1;
 
@@ -274,7 +281,7 @@ okay:
                nproc, nstop, Skip_claim, Have_claim);
         printf("active processes:\n");
         for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
-          printf("\tpid %d\tproctype %s\n", X_lst->pid, X_lst->n->name);
+          printf("\tpid %d\tproctype %s\n", X_lst->pid, X_lst->n->name.c_str());
         }
         printf("\n");
         continue;
@@ -290,8 +297,8 @@ okay:
         printf("%3d: error: invalid statement", depth);
         if (verbose_flags.NeedToPrintVerbose()) {
           printf(": pid %d:%d (%s:%d:%d) stmnt %d (valid range %d .. %d)", prno,
-                 X_lst->pid, X_lst->n->name, X_lst->tn, X_lst->b, nst, min_seq,
-                 max_seq);
+                 X_lst->pid, X_lst->n->name.c_str(), X_lst->tn, X_lst->b, nst,
+                 min_seq, max_seq);
         }
         printf("\n");
         continue;

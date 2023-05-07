@@ -1,7 +1,5 @@
 /***** spin: pangen1.c *****/
 
- 
-
 #include "pangen1.hpp"
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
@@ -15,6 +13,7 @@
 #else
 #include <stdint.h>
 #endif
+#include <fmt/core.h>
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
 extern Label *labtab;
@@ -42,11 +41,13 @@ static int doglobal(char *, int);
 static void dohidden(void);
 static void do_init(FILE *, models::Symbol *);
 static void end_labs(models::Symbol *, int);
-static void put_ptype(const std::string& , int , int , int , enum btypes);
+static void put_ptype(const std::string &, int, int, int, enum btypes);
 static void tc_predef_np(void);
 static void put_pinit(ProcList *);
 static void multi_init(void);
-void walk_struct(FILE *, int, char *, models::Symbol *, char *, char *, char *);
+
+void walk_struct(FILE *, int, const std::string &, models::Symbol *,
+                 const std::string &, const std::string &, const std::string &);
 
 static void reverse_names(ProcList *p) {
   if (!p)
@@ -457,8 +458,8 @@ static void end_labs(models::Symbol *s, int i) {
 
   for (l = labtab; l; l = l->nxt)
     for (j = 0; ln[j].n; j++) {
-      if (strncmp(l->s->name, ln[j].s, ln[j].n) == 0 &&
-          strcmp(l->c->name, s->name) == 0) {
+      if (strncmp(l->s->name.c_str(), ln[j].s, ln[j].n) == 0 &&
+          l->c->name == s->name) {
         fprintf(fd_tc, "\t%s[%d][%d] = 1;\n", ln[j].t, i, l->e->seqno);
         acceptors += ln[j].m;
         progressors += ln[j].p;
@@ -472,13 +473,13 @@ static void end_labs(models::Symbol *s, int i) {
           lineno = l->e->n->ln;
           Fname = l->e->n->fn;
           printf("spin: %3d:%s, warning, %s - is invisible\n", lineno,
-                 Fname ? Fname->name : "-", foo);
+                 Fname ? Fname->name.c_str() : "-", foo);
         }
       }
     }
   /* visible states -- through remote refs: */
   for (l = labtab; l; l = l->nxt)
-    if (l->visible && strcmp(l->s->context->name, s->name) == 0)
+    if (l->visible && l->s->context->name == s->name)
       fprintf(fd_tc, "\tvisstate[%d][%d] = 1;\n", i, l->e->seqno);
 
   lineno = oln;
@@ -503,76 +504,79 @@ void prehint(models::Symbol *s) {
 
   n = (s->context != ZS) ? s->context->init_value : s->init_value;
   if (n)
-    printf("line %s:%d, ", n->fn->name, n->ln);
+    printf("line %s:%d, ", n->fn->name.c_str(), n->ln);
 }
 
-void checktype(models::Symbol *sp, char *s) {
-  char buf[128];
+void checktype(models::Symbol *sp, const std::string &s) {
+  std::string buf;
   int i;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
-  if (!s || (sp->type != BYTE && sp->type != SHORT && sp->type != INT))
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+  if (!s.empty() || (sp->type != BYTE && sp->type != SHORT && sp->type != INT))
     return;
 
-  if (sp->hidden & 16) /* formal parameter */
+  if (sp->hidden_flags & 16) /* formal parameter */
   {
     ProcList *p;
     Lextok *f, *t;
     int posnr = 0;
     for (p = ready; p; p = p->nxt)
-      if (p->n->name && strcmp(s, p->n->name) == 0)
+      if (!p->n->name.empty() && s == p->n->name) {
         break;
+      }
     if (p)
       for (f = p->p; f; f = f->rgt) /* list of types */
         for (t = f->lft; t; t = t->rgt, posnr++)
-          if (t->sym && strcmp(t->sym->name, sp->name) == 0) {
+          if (t->sym && t->sym->name == sp->name) {
             checkrun(sp, posnr);
             return;
           }
 
-  } else if (!(sp->hidden & 4)) {
+  } else if (!(sp->hidden_flags & 4)) {
     if (!verbose_flags.NeedToPrintVerbose())
       return;
-    sputtype(buf, sp->type);
-    i = (int)strlen(buf);
+    i = (int)buf.length();
     while (i > 0 && buf[--i] == ' ')
       buf[i] = '\0';
     prehint(sp);
     if (sp->context)
-      printf("proctype %s:", s);
+      printf("proctype %s:", s.c_str());
     else
       printf("global");
-    printf(" '%s %s' could be declared 'bit %s'\n", buf, sp->name, sp->name);
-  } else if (sp->type != BYTE && !(sp->hidden & 8)) {
-    if (!verbose_flags.NeedToPrintVerbose())
+    printf(" '%s %s' could be declared 'bit %s'\n", buf.c_str(),
+           sp->name.c_str(), sp->name.c_str());
+  } else if (sp->type != BYTE && !(sp->hidden_flags & 8)) {
+    if (!verbose_flags.NeedToPrintVerbose()) {
       return;
+    }
     sputtype(buf, sp->type);
-    i = (int)strlen(buf);
+    i = (int)buf.length();
     while (buf[--i] == ' ')
       buf[i] = '\0';
     prehint(sp);
     if (sp->context)
-      printf("proctype %s:", s);
+      printf("proctype %s:", s.c_str());
     else
       printf("global");
-    printf(" '%s %s' could be declared 'byte %s'\n", buf, sp->name, sp->name);
+    printf(" '%s %s' could be declared 'byte %s'\n", buf.c_str(),
+           sp->name.c_str(), sp->name.c_str());
   }
 }
 
-static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
-                   enum btypes b) {
+static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
+                   const std::string &s, enum btypes b) {
   int h, j, k = 0;
   extern int nr_errs;
   Ordered *walk;
   models::Symbol *sp;
   char buf[128], buf2[128], buf3[128];
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (dowhat == INIV) { /* initialize in order of declaration */
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
-      if (sp->context && !sp->owner && strcmp(s, sp->context->name) == 0) {
+      if (sp->context && !sp->owner_name && s == sp->context->name) {
         checktype(sp, s); /* fall through */
-        if (!(sp->hidden & 16)) {
+        if (!(sp->hidden_flags & 16)) {
           sprintf(buf, "((P%d *)pptr(h))->", p);
           do_var(ofd, dowhat, buf, sp, "", " = ", ";\n");
         }
@@ -584,15 +588,15 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
       for (h = 0; h <= 1; h++)
         for (walk = all_names; walk; walk = walk->next) {
           sp = walk->entry;
-          if (sp->context && !sp->owner && sp->type == Types[j] &&
+          if (sp->context && !sp->owner_name && sp->type == Types[j] &&
               ((h == 0 && (sp->value_type == 1 && sp->is_array == 0)) ||
                (h == 1 && (sp->value_type > 1 || sp->is_array == 1))) &&
-              strcmp(s, sp->context->name) == 0) {
+              s == sp->context->name) {
             switch (dowhat) {
             case LOGV:
               if (sp->type == CHAN && !verbose_flags.Active())
                 break;
-              sprintf(buf, "%s%s:", pre, s);
+              sprintf(buf, "%s%s:", pre, s.c_str());
               {
                 sprintf(buf2, "\", ((P%d *)pptr(h))->", p);
                 sprintf(buf3, ");\n");
@@ -606,7 +610,8 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p, char *s,
               break;
             }
             if (b == N_CLAIM) {
-              printf("error: %s defines local %s\n", s, sp->name);
+              printf("error: %s defines local %s\n", s.c_str(),
+                     sp->name.c_str());
               nr_errs++;
             }
           }
@@ -665,15 +670,15 @@ void c_chandump(FILE *fd) {
   fprintf(fd, "	printf(\"\\n\");\n}\n");
 }
 
-void c_var(FILE *fd, char *pref, models::Symbol *sp) {
-  char *ptr, buf[256];
+void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
+  std::string buf;
   int i;
 
   if (!sp) {
     loger::fatal("cannot happen - c_var");
   }
 
-  ptr = sp->name;
+  auto ptr = sp->name.begin();
   if (!old_scope_rules) {
     while (*ptr == '_' || isdigit((int)*ptr)) {
       ptr++;
@@ -683,8 +688,8 @@ void c_var(FILE *fd, char *pref, models::Symbol *sp) {
   switch (sp->type) {
   case STRUCT:
     /* c_struct(fd, pref, sp); */
-    fprintf(fd, "\t\tprintf(\"\t(struct %s)\\n\");\n", sp->name);
-    sprintf(buf, "%s%s.", pref, sp->name);
+    fprintf(fd, "\t\tprintf(\"\t(struct %s)\\n\");\n", sp->name.c_str());
+    buf = fmt::format("{}{}.", pref, sp->name);
     c_struct(fd, buf, sp);
     break;
   case MTYPE:
@@ -696,11 +701,12 @@ void c_var(FILE *fd, char *pref, models::Symbol *sp) {
     sputtype(buf, sp->type);
     if (sp->value_type == 1 && sp->is_array == 0) {
       if (sp->type == MTYPE && ismtype(sp->name)) {
-        fprintf(fd, "\tprintf(\"\t%s %s:\t%d\\n\");\n", buf, ptr,
-                ismtype(sp->name));
+        fprintf(fd, "\tprintf(\"\t%s %s:\t%d\\n\");\n", buf.c_str(),
+                std::string(ptr, sp->name.end()).c_str(), ismtype(sp->name));
       } else {
-        fprintf(fd, "\tprintf(\"\t%s %s:\t%%d\\n\", %s%s);\n", buf, ptr, pref,
-                sp->name);
+        fprintf(fd, "\tprintf(\"\t%s %s:\t%%d\\n\", %s%s);\n", buf.c_str(),
+                std::string(ptr, sp->name.end()).c_str(), pref.c_str(),
+                sp->name.c_str());
       }
     } else {
       fprintf(fd, "\t{\tint l_in;\n");
@@ -708,23 +714,27 @@ void c_var(FILE *fd, char *pref, models::Symbol *sp) {
       fprintf(fd, "\t\t{\n");
       fprintf(fd,
               "\t\t\tprintf(\"\t%s %s[%%d]:\t%%d\\n\", l_in, %s%s[l_in]);\n",
-              buf, ptr, pref, sp->name);
+              buf.c_str(), std::string(ptr, sp->name.end()).c_str(),
+              pref.c_str(), sp->name.c_str());
       fprintf(fd, "\t\t}\n");
       fprintf(fd, "\t}\n");
     }
     break;
   case CHAN:
     if (sp->value_type == 1 && sp->is_array == 0) {
-      fprintf(fd, "\tprintf(\"\tchan %s (=%%d):\tlen %%d:\\t\", ", ptr);
-      fprintf(fd, "%s%s, q_len(%s%s));\n", pref, sp->name, pref, sp->name);
-      fprintf(fd, "\tc_chandump(%s%s);\n", pref, sp->name);
+      fprintf(fd, "\tprintf(\"\tchan %s (=%%d):\tlen %%d:\\t\", ",
+              std::string(ptr, sp->name.end()).c_str());
+      fprintf(fd, "%s%s, q_len(%s%s));\n", pref.c_str(), sp->name.c_str(),
+              pref.c_str(), sp->name.c_str());
+      fprintf(fd, "\tc_chandump(%s%s);\n", pref.c_str(), sp->name.c_str());
     } else
       for (i = 0; i < sp->value_type; i++) {
-        fprintf(fd, "\tprintf(\"\tchan %s[%d] (=%%d):\tlen %%d:\\t\", ", ptr,
+        fprintf(fd, "\tprintf(\"\tchan %s[%d] (=%%d):\tlen %%d:\\t\", ",
+                std::string(ptr, sp->name.end()).c_str(), i);
+        fprintf(fd, "%s%s[%d], q_len(%s%s[%d]));\n", pref.c_str(),
+                sp->name.c_str(), i, pref.c_str(), sp->name.c_str(), i);
+        fprintf(fd, "\tc_chandump(%s%s[%d]);\n", pref.c_str(), sp->name.c_str(),
                 i);
-        fprintf(fd, "%s%s[%d], q_len(%s%s[%d]));\n", pref, sp->name, i, pref,
-                sp->name, i);
-        fprintf(fd, "\tc_chandump(%s%s[%d]);\n", pref, sp->name, i);
       }
     break;
   }
@@ -737,9 +747,9 @@ int c_splurge_any(ProcList *p) {
   if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
-      if (!sp->context || sp->type == 0 ||
-          strcmp(sp->context->name, p->n->name) != 0 || sp->owner ||
-          (sp->hidden & 1) || (sp->type == MTYPE && ismtype(sp->name)))
+      if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
+          sp->owner_name || (sp->hidden_flags & 1) ||
+          (sp->type == MTYPE && ismtype(sp->name)))
         continue;
 
       return 1;
@@ -755,9 +765,9 @@ void c_splurge(FILE *fd, ProcList *p) {
   if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
-      if (!sp->context || sp->type == 0 ||
-          strcmp(sp->context->name, p->n->name) != 0 || sp->owner ||
-          (sp->hidden & 1) || (sp->type == MTYPE && ismtype(sp->name)))
+      if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
+          sp->owner_name || (sp->hidden_flags & 1) ||
+          (sp->type == MTYPE && ismtype(sp->name)))
         continue;
 
       sprintf(pref, "((P%d *)pptr(pid))->", p->tn);
@@ -779,7 +789,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
   fprintf(fd, "	printf(\"global vars:\\n\");\n");
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
-    if (sp->context || sp->owner || (sp->hidden & 1))
+    if (sp->context || sp->owner_name || (sp->hidden_flags & 1))
       continue;
     c_var(fd, "now.", sp);
   }
@@ -791,7 +801,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
     fprintf(fd, "	case %d:\n", p->tn);
     if (c_splurge_any(p)) {
       fprintf(fd, "	\tprintf(\"local vars proc %%d (%s):\\n\", pid);\n",
-              p->n->name);
+              p->n->name.c_str());
       c_splurge(fd, p);
     } else {
       fprintf(fd, "	\t/* none */\n");
@@ -803,10 +813,11 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
   fprintf(fd, "void\nprintm(int x, char *s)\n{\n");
   fprintf(fd, "	if (!s) { s = \"_unnamed_\"; }\n");
   for (lst = Mtypes; lst; lst = lst->nxt) {
-    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n", lst->nm);
+    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n", lst->nm.c_str());
     fprintf(fd, "	switch (x) {\n");
     for (n = lst->mt, j = 1; n && j; n = n->rgt, j++)
-      fprintf(fd, "\tcase %d: Printf(\"%s\"); return;\n", j, n->lft->sym->name);
+      fprintf(fd, "\tcase %d: Printf(\"%s\"); return;\n", j,
+              n->lft->sym->name.c_str());
     fprintf(fd, "	default: Printf(\"%%d\", x); return;\n");
     fprintf(fd, "	}\n");
   }
@@ -817,7 +828,7 @@ static int doglobal(char *pre, int dowhat) {
   Ordered *walk;
   models::Symbol *sp;
   int j, cnt = 0;
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (j = 0; j < 8; j++)
     for (walk = all_names; walk; walk = walk->next) {
@@ -828,7 +839,7 @@ static int doglobal(char *pre, int dowhat) {
           case LOGV:
             if (sp->type == CHAN && !verbose_flags.Active())
               break;
-            if (sp->hidden & 1)
+            if (sp->hidden_flags & 1)
               break;
             do_var(fd_tc, dowhat, "", sp, pre, "\", now.", ");\n");
             break;
@@ -837,7 +848,7 @@ static int doglobal(char *pre, int dowhat) {
             cnt++; /* fall through */
           case PUTV:
             char *putv_char = "now.";
-            if (sp->hidden & 1) {
+            if (sp->hidden_flags & 1) {
               putv_char = "";
             }
             do_var(fd_tc, dowhat, putv_char, sp, "", " = ", ";\n");
@@ -856,21 +867,22 @@ static void dohidden(void) {
   for (j = 0; j < 8; j++)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
-      if ((sp->hidden & 1) && sp->type == Types[j]) {
+      if ((sp->hidden_flags & 1) && sp->type == Types[j]) {
         if (sp->context || sp->owner_name)
           loger::fatal("cannot hide non-globals (%s)", sp->name);
         if (sp->type == CHAN)
           loger::fatal("cannot hide channels (%s)", sp->name);
-        fprintf(fd_th, "/* hidden variable: */");
+        fprintf(fd_th, "/* hidden_flags variable: */");
         typ2c(sp);
       }
     }
 }
 
-void do_var(FILE *ofd, int dowhat, char *s, models::Symbol *sp, char *pre, char *sep,
-            char *ter) {
+void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
+            const std::string &pre, const std::string &sep,
+            const std::string &ter) {
   int i;
-  char *ptr = const_cast<char *>(sp ? sp->name : "");
+  char *ptr = const_cast<char *>(sp ? sp->name.c_str() : "");
 
   if (!sp) {
     loger::fatal("cannot happen - do_var");
@@ -878,7 +890,7 @@ void do_var(FILE *ofd, int dowhat, char *s, models::Symbol *sp, char *pre, char 
 
   switch (dowhat) {
   case PUTV:
-    if (sp->hidden & 1)
+    if (sp->hidden_flags & 1)
       break;
 
     typ2c(sp);
@@ -900,22 +912,24 @@ void do_var(FILE *ofd, int dowhat, char *s, models::Symbol *sp, char *pre, char 
       break;
     if (sp->value_type == 1 && sp->is_array == 0) {
       if (dowhat == LOGV) {
-        fprintf(ofd, "\t\t%s%s%s%s", pre, s, ptr, sep);
-        fprintf(ofd, "%s%s", s, sp->name);
+        fprintf(ofd, "\t\t%s%s%s%s", pre.c_str(), s.c_str(), ptr, sep.c_str());
+        fprintf(ofd, "%s%s", s.c_str(), sp->name.c_str());
       } else {
-        fprintf(ofd, "\t\t%s%s%s%s", pre, s, sp->name, sep);
+        fprintf(ofd, "\t\t%s%s%s%s", pre.c_str(), s.c_str(), sp->name.c_str(),
+                sep.c_str());
         do_init(ofd, sp);
       }
-      fprintf(ofd, "%s", ter);
+      fprintf(ofd, "%s", ter.c_str());
     } else {
       if (sp->init_value && sp->init_value->ntyp == CHAN) {
         for (i = 0; i < sp->value_type; i++) {
-          fprintf(ofd, "\t\t%s%s%s[%d]%s", pre, s, sp->name, i, sep);
+          fprintf(ofd, "\t\t%s%s%s[%d]%s", pre.c_str(), s.c_str(),
+                  sp->name.c_str(), i, sep.c_str());
           if (dowhat == LOGV)
-            fprintf(ofd, "%s%s[%d]", s, sp->name, i);
+            fprintf(ofd, "%s%s[%d]", s.c_str(), sp->name.c_str(), i);
           else
             do_init(ofd, sp);
-          fprintf(ofd, "%s", ter);
+          fprintf(ofd, "%s", ter.c_str());
         }
       } else if (sp->init_value) {
         if (dowhat != LOGV && sp->is_array && sp->init_value->ntyp == ',') {
@@ -928,21 +942,24 @@ void do_var(FILE *ofd, int dowhat, char *s, models::Symbol *sp, char *pre, char 
             } else {
               y = z;
             }
-            fprintf(ofd, "\t\t%s%s%s[%d]%s", pre, s, sp->name, i, sep);
+            fprintf(ofd, "\t\t%s%s%s[%d]%s", pre.c_str(), s.c_str(),
+                    sp->name.c_str(), i, sep.c_str());
             putstmnt(ofd, y, 0);
-            fprintf(ofd, "%s", ter);
+            fprintf(ofd, "%s", ter.c_str());
           }
         } else {
           fprintf(ofd, "\t{\tint l_in;\n");
-          fprintf(ofd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n", sp->value_type);
+          fprintf(ofd, "\t\tfor (l_in = 0; l_in < %d; l_in++)\n",
+                  sp->value_type);
           fprintf(ofd, "\t\t{\n");
-          fprintf(ofd, "\t\t\t%s%s%s[l_in]%s", pre, s, sp->name, sep);
+          fprintf(ofd, "\t\t\t%s%s%s[l_in]%s", pre.c_str(), s.c_str(),
+                  sp->name.c_str(), sep.c_str());
           if (dowhat == LOGV) {
-            fprintf(ofd, "%s%s[l_in]", s, sp->name);
+            fprintf(ofd, "%s%s[l_in]", s.c_str(), sp->name.c_str());
           } else {
             putstmnt(ofd, sp->init_value, 0);
           }
-          fprintf(ofd, "%s", ter);
+          fprintf(ofd, "%s", ter.c_str());
           fprintf(ofd, "\t\t}\n");
           fprintf(ofd, "\t}\n");
         }
@@ -966,7 +983,8 @@ static void do_init(FILE *ofd, models::Symbol *sp) {
     putstmnt(ofd, sp->init_value, 0);
   }
 }
-static void put_ptype(const std::string& s, int i, int m0, int m1, enum btypes b) {
+static void put_ptype(const std::string &s, int i, int m0, int m1,
+                      enum btypes b) {
   int k;
 
   if (b == I_PROC) {
@@ -997,8 +1015,9 @@ static void put_ptype(const std::string& s, int i, int m0, int m1, enum btypes b
       fprintf(fd_th, "%d", (nBits + 7) / 8);
       goto done;
     }
-    if ((LstSet->type != BIT && LstSet->type != UNSIGNED) || LstSet->value_type != 1) {
-      fprintf(fd_th, "Offsetof(P%d, %s) - %d*sizeof(", i, LstSet->name,
+    if ((LstSet->type != BIT && LstSet->type != UNSIGNED) ||
+        LstSet->value_type != 1) {
+      fprintf(fd_th, "Offsetof(P%d, %s) - %d*sizeof(", i, LstSet->name.c_str(),
               LstSet->value_type);
     }
     switch (LstSet->type) {
@@ -1028,7 +1047,6 @@ static void put_ptype(const std::string& s, int i, int m0, int m1, enum btypes b
     fprintf(fd_th, ")\n\n");
   }
 }
-
 
 static void tc_predef_np(void) {
   fprintf(fd_th, "#define _NP_	%d\n", nrRdy); /* 1+ highest proctype nr */
@@ -1069,8 +1087,9 @@ static void multi_init(void) {
       init_value = huntele(e, e->status, -1)->seqno;
 
       fprintf(fd_tc, "\t\tspin_c_typ[%d] = %d; /* %s */\n", j, p->tn,
-              p->n->name);
-      fprintf(fd_tc, "\t\t((P%d *)pptr(h))->c_cur[%d] = %d;\n", i, j, init_value);
+              p->n->name.c_str());
+      fprintf(fd_tc, "\t\t((P%d *)pptr(h))->c_cur[%d] = %d;\n", i, j,
+              init_value);
       fprintf(fd_tc, "\t\treached%d[%d]=1;\n", p->tn, init_value);
 
       /* the default initial claim is first one in model */
@@ -1078,12 +1097,12 @@ static void multi_init(void) {
         fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_t = %d;\n", i, p->tn);
         fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, init_value);
         fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_n = %d; /* %s */\n", i, j,
-                p->n->name);
+                p->n->name.c_str());
         fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", p->tn);
         fprintf(fd_tc, "#ifndef BFS\n");
         fprintf(fd_tc, "\t\tif (whichclaim == -1 && claimname == NULL)\n");
         fprintf(fd_tc, "\t\t\tprintf(\"pan: ltl formula %s\\n\");\n",
-                p->n->name);
+                p->n->name.c_str());
         fprintf(fd_tc, "#endif\n");
       }
     }
@@ -1104,7 +1123,7 @@ static void put_pinit(ProcList *P) {
   int init_value, j, k;
 
   if (pid_is_claim(i) && separate == 1) {
-    fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name);
+    fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name.c_str());
     fprintf(fd_tc, "\t\tini_claim(%d, h);\n", i);
     fprintf(fd_tc, "\t\tbreak;\n");
     return;
@@ -1117,7 +1136,7 @@ static void put_pinit(ProcList *P) {
   if (i == eventmapnr)
     fprintf(fd_th, "#define start_event	%d\n", init_value);
 
-  fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name);
+  fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name.c_str());
 
   fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_t = %d;\n", i, i);
   fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_p = %d;\n", i, init_value);
@@ -1133,7 +1152,7 @@ static void put_pinit(ProcList *P) {
   }
 
   if (has_provided) {
-    fprintf(fd_tt, "\tcase %d: /* %s */\n\t\t", i, s->name);
+    fprintf(fd_tt, "\tcase %d: /* %s */\n\t\t", i, s->name.c_str());
     if (P->prov) {
       fprintf(fd_tt, "if (");
       putstmnt(fd_tt, P->prov, 0);
@@ -1151,24 +1170,25 @@ static void put_pinit(ProcList *P) {
       if (t->sym->value_type > 1 || t->sym->is_array) {
         lineno = t->ln;
         Fname = t->fn;
-        loger::fatal("array in parameter list, %s", t->sym->name);
+        loger::fatal("array in parameter list, %s", t->sym->name.c_str());
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->sym->type == STRUCT) {
         if (full_name(fd_tc, t, t->sym, 1)) {
           lineno = t->ln;
           Fname = t->fn;
-          loger::fatal("hidden array in parameter %s", t->sym->name);
+          loger::fatal("hidden_flags array in parameter %s",
+                       t->sym->name.c_str());
         }
       } else
-        fprintf(fd_tc, "%s", t->sym->name);
+        fprintf(fd_tc, "%s", t->sym->name.c_str());
       fprintf(fd_tc, " = par%d;\n", j);
     }
   fprintf(fd_tc, "\t\t/* locals: */\n");
-  k = dolocal(fd_tc, "", INIV, i, s->name, P->b);
+  k = dolocal(fd_tc, "", INIV, i, s->name.c_str(), P->b);
   if (k > 0) {
     fprintf(fd_tc, "#ifdef VAR_RANGES\n");
-    (void)dolocal(fd_tc, "logval(\"", LOGV, i, s->name, P->b);
+    (void)dolocal(fd_tc, "logval(\"", LOGV, i, s->name.c_str(), P->b);
     fprintf(fd_tc, "#endif\n");
   }
 
@@ -1251,59 +1271,61 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
 }
 
 void typ2c(models::Symbol *sp) {
-  auto& verbose_flags = utils::verbose::Flags::getInstance();
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   int wsbits = sizeof(long) * 8; /* wordsize in bits */
   switch (sp->type) {
   case UNSIGNED:
-    if (sp->hidden & 1)
-      fprintf(fd_th, "\tuchar %s;", sp->name);
+    if (sp->hidden_flags & 1)
+      fprintf(fd_th, "\tuchar %s;", sp->name.c_str());
     else
-      fprintf(fd_th, "\tunsigned %s : %d", sp->name, sp->nbits);
+      fprintf(fd_th, "\tunsigned %s : %d", sp->name.c_str(),
+              sp->nbits.value_or(0));
     LstSet = sp;
     if (nBits % wsbits > 0 &&
         wsbits - nBits % wsbits <
             sp->nbits) { /* must padd to a word-boundary */
       nBits += wsbits - nBits % wsbits;
     }
-    nBits += sp->nbits;
+    nBits += sp->nbits.value_or(0);
     break;
   case BIT:
-    if (sp->value_type == 1 && sp->is_array == 0 && !(sp->hidden & 1)) {
-      fprintf(fd_th, "\tunsigned %s : 1", sp->name);
+    if (sp->value_type == 1 && sp->is_array == 0 && !(sp->hidden_flags & 1)) {
+      fprintf(fd_th, "\tunsigned %s : 1", sp->name.c_str());
       LstSet = sp;
       nBits++;
       break;
     } /* else fall through */
-    if (!(sp->hidden & 1) && verbose_flags.NeedToPrintVerbose())
-      printf("spin: warning: bit-array %s[%d] mapped to byte-array\n", sp->name,
-             sp->value_type);
+    if (!(sp->hidden_flags & 1) && verbose_flags.NeedToPrintVerbose())
+      printf("spin: warning: bit-array %s[%d] mapped to byte-array\n",
+             sp->name.c_str(), sp->value_type);
     nBits += 8 * sp->value_type; /* mapped onto array of uchars */
   case MTYPE:
   case BYTE:
   case CHAN: /* good for up to 255 channels */
-    fprintf(fd_th, "\tuchar %s", sp->name);
+    fprintf(fd_th, "\tuchar %s", sp->name.c_str());
     LstSet = sp;
     break;
   case SHORT:
-    fprintf(fd_th, "\tshort %s", sp->name);
+    fprintf(fd_th, "\tshort %s", sp->name.c_str());
     LstSet = sp;
     break;
   case INT:
-    fprintf(fd_th, "\tint %s", sp->name);
+    fprintf(fd_th, "\tint %s", sp->name.c_str());
     LstSet = sp;
     break;
   case STRUCT:
-    if (!sp->Snm)
+    if (!sp->struct_name)
       loger::fatal("undeclared structure element %s", sp->name);
-    fprintf(fd_th, "\tstruct %s %s", sp->Snm->name, sp->name);
+    fprintf(fd_th, "\tstruct %s %s", sp->struct_name->name.c_str(),
+            sp->name.c_str());
     LstSet = ZS;
     break;
   case CODE_FRAG:
   case PREDEF:
     return;
   default:
-    loger::fatal("variable %s undeclared", sp->name);
+    loger::fatal("variable %s undeclared", sp->name.c_str());
   }
 
   if (sp->value_type > 1 || sp->is_array)
@@ -1554,8 +1576,7 @@ void genaddqueue(void) {
   }
   ntimes(fd_tc, 0, 1, Addq5);
   for (q = qtab; q; q = q->nxt)
-    fprintf(fd_tc, "	case %d: j = sizeof(Q%d); break;\n", q->qid,
-            q->qid);
+    fprintf(fd_tc, "	case %d: j = sizeof(Q%d); break;\n", q->qid, q->qid);
   ntimes(fd_tc, 0, 1, R8b);
   ntimes(fd_th, 0, 1, Proto); /* function prototypes */
 

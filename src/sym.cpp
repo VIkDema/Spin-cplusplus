@@ -2,9 +2,11 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include <iostream>
 
 extern models::Symbol *Fname, *owner;
 extern int lineno, depth, verbose, NamesNotAdded, deadvar;
@@ -30,11 +32,11 @@ static int samename(models::Symbol *a, models::Symbol *b) {
   return a->name != b->name;
 }
 
-unsigned int hash(const char *s) {
+unsigned int hash(const std::string &s) {
   unsigned int h = 0;
 
-  while (*s) {
-    h += (unsigned int)*s++;
+  for (char c : s) {
+    h += static_cast<unsigned int>(c);
     h <<= 1;
     if (h & (Nhash + 1))
       h |= 1;
@@ -45,7 +47,7 @@ unsigned int hash(const char *s) {
 void disambiguate(void) {
   Ordered *walk;
   models::Symbol *sp;
-  char *n, *m;
+  std::string n, m;
 
   if (old_scope_rules)
     return;
@@ -54,25 +56,19 @@ void disambiguate(void) {
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
-    if (sp->type != 0 && sp->type != LABEL &&
-        sp->bscp.size() > 1) {
-      if (sp->context) {
-        m = (char *)emalloc(sp->bscp.size() + 1);
-        sprintf(m, "_%d_", sp->context->sc);
-        if (strcmp((const char *)m, (const char *)sp->bscp.c_str()) == 0) {
+    if (sp->type != 0 && sp->type != LABEL && sp->block_scope.size() > 1) {
+      if (sp->context != nullptr) {
+        m = "_" + std::to_string(sp->context->sc) + "_";
+        if (m == sp->block_scope)
           continue;
-          /* 6.2.0: only prepend scope for inner-blocks,
-             not for top-level locals within a proctype
-             this means that you can no longer use the same name
-             for a global and a (top-level) local variable
-           */
-        }
+        /* 6.2.0: only prepend scope for inner-blocks,
+           not for top-level locals within a proctype
+           this means that you can no longer use the same name
+           for a global and a (top-level) local variable
+         */
       }
 
-      n = (char *)emalloc(strlen((const char *)sp->name) +
-                          strlen((const char *)sp->bscp) + 1);
-      sprintf(n, "%s%s", sp->bscp, sp->name);
-      sp->name = n; /* discard the old memory */
+      sp->name = sp->block_scope + sp->name; /* discard the old memory */
     }
   }
 }
@@ -80,27 +76,28 @@ void disambiguate(void) {
 models::Symbol *lookup(const std::string &s) {
   models::Symbol *sp;
   Ordered *no;
-  unsigned int h = hash(s.c_str());
+  unsigned int h = hash(s);
 
   if (old_scope_rules) { /* same scope - global refering to global or local to
                             local */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s.c_str()) == 0 && samename(sp->context, context) &&
-          samename(sp->owner, owner)) {
+      if (sp->name == s && samename(sp->context, context) &&
+          samename(sp->owner_name, owner)) {
         return sp; /* found */
       }
     }
   } else { /* added 6.0.0: more traditional, scope rule */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s.c_str()) == 0 && samename(sp->context, context) &&
-          (strcmp((const char *)sp->bscp, CurScope) == 0 ||
-           strncmp((const char *)sp->bscp, CurScope,
-                   strlen((const char *)sp->bscp)) == 0) &&
-          samename(sp->owner, owner)) {
-        if (!samename(sp->owner, owner)) {
-          printf("spin: different container %s\n", sp->name);
-          printf("    old: %s\n", sp->owner ? sp->owner->name : "--");
-          printf("    new: %s\n", owner ? owner->name : "--");
+      if (sp->name == s && samename(sp->context, context) &&
+          (strcmp((const char *)sp->block_scope.c_str(), CurScope) == 0 ||
+           strncmp((const char *)sp->block_scope.c_str(), CurScope,
+                   sp->block_scope.length() == 0) &&
+               samename(sp->owner_name, owner))) {
+        if (!samename(sp->owner_name, owner)) {
+          printf("spin: different container %s\n", sp->name.c_str());
+          printf("    old: %s\n",
+                 sp->owner_name ? sp->owner_name->name.c_str() : "--");
+          printf("    new: %s\n", owner ? owner->name.c_str() : "--");
           /*    alldone(1);    */
         }
         return sp; /* found */
@@ -110,21 +107,19 @@ models::Symbol *lookup(const std::string &s) {
 
   if (context) /* in proctype, refers to global */
     for (sp = symtab[h]; sp; sp = sp->next) {
-      if (strcmp(sp->name, s.c_str()) == 0 && !sp->context &&
-          samename(sp->owner, owner)) {
+      if (sp->name == s.c_str() && !sp->context &&
+          samename(sp->owner_name, owner)) {
         return sp; /* global */
       }
     }
 
   sp = (models::Symbol *)emalloc(sizeof(models::Symbol));
-  sp->name = (char *)emalloc(s.length() + 1);
-  strcpy(sp->name, s.c_str());
+  sp->name += s;
   sp->value_type = 1;
-  sp->setat = depth;
+  sp->last_depth = depth;
   sp->context = context;
-  sp->owner = owner; /* if fld in struct */
-  sp->bscp = (unsigned char *)emalloc(strlen((const char *)CurScope) + 1);
-  strcpy((char *)sp->bscp, CurScope);
+  sp->owner_name = owner; /* if fld in struct */
+  sp->block_scope = std::string(CurScope);
 
   if (NamesNotAdded == 0) {
     sp->next = symtab[h];
@@ -150,19 +145,19 @@ void trackvar(Lextok *n, Lextok *m) {
   switch (m->ntyp) {
   case NAME:
     if (m->sym->type != BIT) {
-      sp->hidden |= 4;
-      if (m->sym->type != BYTE)
-        sp->hidden |= 8;
+      sp->hidden_flags |= 4;
+      if (m->sym->type != models::SymbolType::kByte)
+        sp->hidden_flags |= 8;
     }
     break;
   case CONST:
     if (m->val != 0 && m->val != 1)
-      sp->hidden |= 4;
+      sp->hidden_flags |= 4;
     if (m->val < 0 || m->val > 256)
-      sp->hidden |= 8; /* ditto byte-equiv */
+      sp->hidden_flags |= 8; /* ditto byte-equiv */
     break;
-  default:                 /* unknown */
-    sp->hidden |= (4 | 8); /* not known bit-equiv */
+  default:                       /* unknown */
+    sp->hidden_flags |= (4 | 8); /* not known bit-equiv */
   }
 }
 
@@ -172,7 +167,7 @@ void checkrun(models::Symbol *parnm, int posno) {
   Lextok *n, *now, *v;
   int i, m;
   int res = 0;
-  char buf[16], buf2[16];
+  std::string buf, buf2;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   for (n = runstmnts; n; n = n->rgt) {
     now = n->lft;
@@ -202,28 +197,30 @@ void checkrun(models::Symbol *parnm, int posno) {
   if (!(res & 4) || !(res & 8)) {
     if (!verbose_flags.NeedToPrintVerbose())
       return;
-    strcpy(buf2, (!(res & 4)) ? "bit" : "byte");
+    buf = !(res & 4) ? "bit" : "byte";
+
     sputtype(buf, parnm->type);
-    i = (int)strlen(buf);
+    i = buf.length();
     while (i > 0 && buf[--i] == ' ')
       buf[i] = '\0';
-    if (i == 0 || strcmp(buf, buf2) == 0)
+    if (i == 0 || buf == buf2)
       return;
     prehint(parnm);
     printf("proctype %s, '%s %s' could be declared",
-           parnm->context ? parnm->context->name : "", buf, parnm->name);
-    printf(" '%s %s'\n", buf2, parnm->name);
+           parnm->context ? parnm->context->name.c_str() : "", buf.c_str(),
+           parnm->name.c_str());
+    printf(" '%s %s'\n", buf2.c_str(), parnm->name.c_str());
   }
 }
 
 void trackchanuse(Lextok *m, Lextok *w, int t) {
   Lextok *n = m;
-  int cnt = 1;
+  int count = 1;
   while (n) {
     if (n->lft && n->lft->sym && n->lft->sym->type == CHAN)
-      setaccess(n->lft->sym, w ? w->sym : ZS, cnt, t);
+      setaccess(n->lft->sym, w ? w->sym : ZS, count, t);
     n = n->rgt;
-    cnt++;
+    count++;
   }
 }
 
@@ -234,13 +231,13 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
   extern int Expand_Ok;
 
   while (n) {
-    if (n->sym->type && !(n->sym->hidden & 32)) {
+    if (n->sym->type && !(n->sym->hidden_flags & 32)) {
       lineno = n->ln;
       Fname = n->fn;
       loger::fatal("redeclaration of '%s'", n->sym->name);
       lineno = oln;
     }
-    n->sym->type = (short)t;
+    n->sym->type = (models::SymbolType)t;
 
     if (mtype_name && t != MTYPE) {
       lineno = n->ln;
@@ -250,11 +247,11 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
     }
 
     if (mtype_name && n->sym->mtype_name &&
-        strcmp(mtype_name->sym->name, n->sym->mtype_name->name) != 0) {
+        mtype_name->sym->name != n->sym->mtype_name->name) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
-              n->fn->name, n->ln, n->sym->name, mtype_name->sym->name,
-              n->sym->mtype_name->name);
+              n->fn->name.c_str(), n->ln, n->sym->name.c_str(),
+              mtype_name->sym->name.c_str(), n->sym->mtype_name->name.c_str());
       loger::non_fatal("type error");
     }
 
@@ -262,33 +259,35 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
         mtype_name ? mtype_name->sym : 0; /* if mtype, else 0 */
 
     if (Expand_Ok) {
-      n->sym->hidden |= (4 | 8 | 16); /* formal par */
+      n->sym->hidden_flags |= (4 | 8 | 16); /* formal par */
       if (t == CHAN)
         setaccess(n->sym, ZS, cnt, 'F');
     }
 
     if (t == UNSIGNED) {
-      if (n->sym->nbits < 0 || n->sym->nbits >= 32)
+      if (!n->sym->nbits.has_value() || n->sym->nbits.value() >= 32)
         loger::fatal("(%s) has invalid width-field", n->sym->name);
-      if (n->sym->nbits == 0) {
+      if (n->sym->nbits.has_value() && n->sym->nbits.value() == 0) {
         n->sym->nbits = 16;
         loger::non_fatal("unsigned without width-field");
       }
-    } else if (n->sym->nbits > 0) {
+    } else if (n->sym->nbits.has_value() && n->sym->nbits.value() > 0) {
       loger::non_fatal("(%s) only an unsigned can have width-field",
                        n->sym->name);
     }
 
     if (vis) {
-      if (strncmp(vis->sym->name, ":hide:", (size_t)6) == 0) {
-        n->sym->hidden |= 1;
+      std::string name = vis->sym->name;
+      if (name.compare(0, 6, ":hide:") == 0) {
+        n->sym->hidden_flags |= 1;
         has_hidden++;
         if (t == BIT)
-          loger::fatal("bit variable (%s) cannot be hidden", n->sym->name);
-      } else if (strncmp(vis->sym->name, ":show:", (size_t)6) == 0) {
-        n->sym->hidden |= 2;
-      } else if (strncmp(vis->sym->name, ":local:", (size_t)7) == 0) {
-        n->sym->hidden |= 64;
+          loger::fatal("bit variable (%s) cannot be hidden_flags",
+                       n->sym->name.c_str());
+      } else if (name.compare(0, 6, ":show:") == 0) {
+        n->sym->hidden_flags |= 2;
+      } else if (name.compare(0, 7, ":local:") == 0) {
+        n->sym->hidden_flags |= 64;
       }
     }
 
@@ -318,10 +317,10 @@ void setptype(Lextok *mtype_name, Lextok *n, int t,
 static void setonexu(models::Symbol *sp, int t) {
   sp->xu |= t;
   if (t == XR || t == XS) {
-    if (sp->xup[t - 1] && strcmp(sp->xup[t - 1]->name, context->name)) {
-      printf("error: x[rs] claims from %s and %s\n", sp->xup[t - 1]->name,
-             context->name);
-      loger::non_fatal("conflicting claims on chan '%s'", sp->name);
+    if (sp->xup[t - 1] && sp->xup[t - 1]->name != context->name) {
+      printf("error: x[rs] claims from %s and %s\n",
+             sp->xup[t - 1]->name.c_str(), context->name.c_str());
+      loger::non_fatal("conflicting claims on chan '%s'", sp->name.c_str());
     }
     sp->xup[t - 1] = context;
   }
@@ -333,7 +332,7 @@ static void setallxu(Lextok *n, int t) {
   for (fp = n; fp; fp = fp->rgt)
     for (tl = fp->lft; tl; tl = tl->rgt) {
       if (tl->sym->type == STRUCT)
-        setallxu(tl->sym->Slst, t);
+        setallxu(tl->sym->struct_template, t);
       else if (tl->sym->type == CHAN)
         setonexu(tl->sym, t);
     }
@@ -349,7 +348,7 @@ void setxus(Lextok *p, int t) {
   if (m_loss && t == XS) {
     printf(
         "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
-        (p->fn != NULL) ? p->fn->name : "stdin", p->ln);
+        (p->fn != NULL) ? p->fn->name.c_str() : "stdin", p->ln);
   }
 
   if (!context) {
@@ -368,7 +367,7 @@ void setxus(Lextok *p, int t) {
 
     n = m->lft;
     if (n->sym->type == STRUCT)
-      setallxu(n->sym->Slst, t);
+      setallxu(n->sym->struct_template, t);
     else if (n->sym->type == CHAN)
       setonexu(n->sym, t);
     else {
@@ -381,19 +380,18 @@ void setxus(Lextok *p, int t) {
   }
 }
 
-Lextok **find_mtype_list(const std::string &) {
+Lextok **find_mtype_list(const std::string &s) {
   Mtypes_t *lst;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
-    if (strcmp(lst->nm, s.c_str()) == 0) {
+    if (lst->nm == s) {
       return &(lst->mt);
     }
   }
 
   /* not found, create it */
   lst = (Mtypes_t *)emalloc(sizeof(Mtypes_t));
-  lst->nm = (char *)emalloc(s.size() + 1);
-  strcpy(lst->nm, s);
+  lst->nm = s;
   lst->nxt = Mtypes;
   Mtypes = lst;
   return &(lst->mt);
@@ -403,7 +401,7 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
   Lextok **mtl; /* mtype list */
   Lextok *n, *Mtype;
   int cnt, oln = lineno;
-  char *s = "_unnamed_";
+  std::string s = "_unnamed_";
 
   if (m) {
     lineno = m->ln;
@@ -433,9 +431,9 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
       loger::fatal("bad mtype definition");
 
     /* label the name */
-    if (n->lft->sym->type != MTYPE) {
-      n->lft->sym->hidden |= 128; /* is used */
-      n->lft->sym->type = MTYPE;
+    if (n->lft->sym->type != models::SymbolType::kMtype) {
+      n->lft->sym->hidden_flags |= 128; /* is used */
+      n->lft->sym->type = models::SymbolType::kMtype;
       n->lft->sym->init_value = nn(ZN, CONST, ZN, ZN);
       n->lft->sym->init_value->val = cnt;
     } else if (n->lft->sym->init_value->val != cnt) {
@@ -450,104 +448,85 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
   }
 }
 
-char *
-which_mtype(const char *str) /* which mtype is str, 0 if not an mtype at all  */
+std::string which_mtype(
+    const std::string &str) /* which mtype is str, 0 if not an mtype at all  */
 {
   Mtypes_t *lst;
   Lextok *n;
 
-  for (lst = Mtypes; lst; lst = lst->nxt)
+  for (lst = Mtypes; lst; lst = lst->nxt) {
     for (n = lst->mt; n; n = n->rgt) {
-      if (strcmp(str, n->lft->sym->name) == 0) {
+      if (str == n->lft->sym->name) {
         return lst->nm;
       }
     }
-
-  return (char *)0;
-}
-
-int ismtype(char *str) /* name to number */
-{
-  Mtypes_t *lst;
-  Lextok *n;
-  int cnt;
-
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    cnt = 1;
-    for (n = lst->mt; n; n = n->rgt) {
-      if (strcmp(str, n->lft->sym->name) == 0) {
-        return cnt;
-      }
-      cnt++;
-    }
   }
 
-  return 0;
+  return (char *)0;
 }
 
 int ismtype(const std::string &str) /* name to number */
 {
   Mtypes_t *lst;
   Lextok *n;
-  int cnt;
+  int count;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
-    cnt = 1;
+    count = 1;
     for (n = lst->mt; n; n = n->rgt) {
       if (str == std::string(n->lft->sym->name)) {
-        return cnt;
+        return count;
       }
-      cnt++;
+      count++;
     }
   }
 
   return 0;
 }
 
-int sputtype(char *foo, int m) {
+int sputtype(std::string &foo, int m) {
   switch (m) {
   case UNSIGNED:
-    strcpy(foo, "unsigned ");
+    foo.append("unsigned ");
     break;
   case BIT:
-    strcpy(foo, "bit   ");
+    foo.append("bit   ");
     break;
   case BYTE:
-    strcpy(foo, "byte  ");
+    foo.append("byte  ");
     break;
   case CHAN:
-    strcpy(foo, "chan  ");
+    foo.append("chan  ");
     break;
   case SHORT:
-    strcpy(foo, "short ");
+    foo.append("short ");
     break;
   case INT:
-    strcpy(foo, "int   ");
+    foo.append("int   ");
     break;
   case MTYPE:
-    strcpy(foo, "mtype ");
+    foo.append("mtype ");
     break;
   case STRUCT:
-    strcpy(foo, "struct");
+    foo.append("struct");
     break;
   case PROCTYPE:
-    strcpy(foo, "proctype");
+    foo.append("proctype");
     break;
   case LABEL:
-    strcpy(foo, "label ");
+    foo.append("label ");
     return 0;
   default:
-    strcpy(foo, "value ");
+    foo.append("value ");
     return 0;
   }
   return 1;
 }
 
 static int puttype(int m) {
-  char buf[128];
-
+  std::string buf;
   if (sputtype(buf, m)) {
-    printf("%s", buf);
+    std::cout << buf;
     return 1;
   }
   return 0;
@@ -560,29 +539,30 @@ void symvar(models::Symbol *sp) {
     return;
 
   printf("\t");
-  if (sp->owner)
-    printf("%s.", sp->owner->name);
-  printf("%s", sp->name);
+  if (sp->owner_name)
+    printf("%s.", sp->owner_name->name.c_str());
+  printf("%s", sp->name.c_str());
   if (sp->value_type > 1 || sp->is_array == 1)
     printf("[%d]", sp->value_type);
 
   if (sp->type == CHAN)
     printf("\t%d", (sp->init_value) ? sp->init_value->val : 0);
-  else if (sp->type == STRUCT && sp->Snm != NULL) /* Frank Weil, 2.9.8 */
-    printf("\t%s", sp->Snm->name);
+  else if (sp->type == STRUCT &&
+           sp->struct_name != nullptr) /* Frank Weil, 2.9.8 */
+    printf("\t%s", sp->struct_name->name.c_str());
   else
     printf("\t%d", eval(sp->init_value));
 
-  if (sp->owner)
+  if (sp->owner_name)
     printf("\t<:struct-field:>");
   else if (!sp->context)
     printf("\t<:global:>");
   else
-    printf("\t<%s>", sp->context->name);
+    printf("\t<%s>", sp->context->name.c_str());
 
   if (sp->id < 0) /* formal parameter */
     printf("\t<parameter %d>", -(sp->id));
-  else if (sp->type == MTYPE)
+  else if (sp->type == models::SymbolType::kMtype)
     printf("\t<constant>");
   else if (sp->is_array)
     printf("\t<array>");
@@ -596,7 +576,7 @@ void symvar(models::Symbol *sp) {
     printf("\t%d\t", i);
     for (m = sp->init_value->rgt; m; m = m->rgt) {
       if (m->ntyp == STRUCT)
-        printf("struct %s", m->sym->name);
+        printf("struct %s", m->sym->name.c_str());
       else
         (void)puttype(m->ntyp);
       if (m->rgt)
@@ -605,7 +585,7 @@ void symvar(models::Symbol *sp) {
   }
 
   if (!old_scope_rules) {
-    printf("\t{scope %s}", sp->bscp);
+    printf("\t{scope %s}", sp->block_scope.c_str());
   }
 
   printf("\n");
@@ -621,10 +601,10 @@ void symdump(void) {
 void chname(models::Symbol *sp) {
   printf("chan ");
   if (sp->context)
-    printf("%s-", sp->context->name);
-  if (sp->owner)
-    printf("%s.", sp->owner->name);
-  printf("%s", sp->name);
+    printf("%s-", sp->context->name.c_str());
+  if (sp->owner_name)
+    printf("%s.", sp->owner_name->name.c_str());
+  printf("%s", sp->name.c_str());
   if (sp->value_type > 1 || sp->is_array == 1)
     printf("[%d]", sp->value_type);
   printf("\t");
@@ -632,7 +612,7 @@ void chname(models::Symbol *sp) {
 
 static struct X_lkp {
   int typ;
-  char *nm;
+  std::string nm;
 } xx[] = {
     {'A', "exported as run parameter"},
     {'F', "imported as proctype parameter"},
@@ -659,7 +639,7 @@ static void chan_check(models::Symbol *sp) {
       b |= 1;
     else if (a->typ == 's')
       b |= 2;
-  if (b == 3 || (sp->hidden & 16)) /* balanced or formal par */
+  if (b == 3 || (sp->hidden_flags & 16)) /* balanced or formal par */
     return;
 report:
   chname(sp);
@@ -674,12 +654,12 @@ report:
       continue;
     }
     d++;
-    printf("\n\t%s by: ", xx[i].nm);
+    printf("\n\t%s by: ", xx[i].nm.c_str());
     for (a = sp->access; a; a = a->lnk)
       if (a->typ == xx[i].typ) {
-        printf("%s", a->who->name);
+        printf("%s", a->who->name.c_str());
         if (a->what)
-          printf(" to %s", a->what->name);
+          printf(" to %s", a->what->name.c_str());
         if (a->cnt)
           printf(" par %d", a->cnt);
         if (--b > 0)
@@ -688,45 +668,45 @@ report:
   }
   printf("%s\n", (!d) ? "\n\tnever used under this name" : "");
 }
-
 void chanaccess(void) {
   Ordered *walk;
-  char buf[128];
+  std::string buf;
   extern int Caccess, separate;
   extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
-    if (!walk->entry->owner)
+    if (!walk->entry->owner_name)
       switch (walk->entry->type) {
-      case CHAN:
+      case models::SymbolType::kChan:
         if (Caccess)
           chan_check(walk->entry);
         break;
-      case MTYPE:
-      case BIT:
-      case BYTE:
-      case SHORT:
-      case INT:
-      case UNSIGNED:
-        if ((walk->entry->hidden & 128)) /* was: 32 */
+      case models::SymbolType::kMtype:
+      case models::SymbolType::kBit:
+      case models::SymbolType::kByte:
+      case models::SymbolType::kShort:
+      case models::SymbolType::kInt:
+      case models::SymbolType::kUnsigned:
+        if ((walk->entry->hidden_flags & 128)) /* was: 32 */
           continue;
 
         if (!separate && !walk->entry->context && !lexer_.GetHasCode() &&
             deadvar)
-          walk->entry->hidden |= 1; /* auto-hide */
+          walk->entry->hidden_flags |= 1; /* auto-hide */
 
         if (!verbose_flags.NeedToPrintVerbose() || lexer_.GetHasCode())
           continue;
 
-        printf("spin: %s:0, warning, ", Fname->name);
+        printf("spin: %s:0, warning, ", Fname->name.c_str());
         sputtype(buf, walk->entry->type);
-        if (walk->entry->context)
-          printf("proctype %s", walk->entry->context->name);
-        else
+        if (walk->entry->context) {
+          printf("proctype %s", walk->entry->context->name.c_str());
+        } else {
           printf("global");
+        }
         printf(", '%s%s' variable is never used (other than in print stmnts)\n",
-               buf, walk->entry->name);
+               buf.c_str(), walk->entry->name.c_str());
       }
   }
 }

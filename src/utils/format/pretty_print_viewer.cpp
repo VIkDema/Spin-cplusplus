@@ -306,7 +306,7 @@ void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
     mtxt << ">";
     break;
   case HIDDEN:
-    mtxt << "hidden";
+    mtxt << "hidden_flags";
     break;
   case IF:
     mtxt << "if";

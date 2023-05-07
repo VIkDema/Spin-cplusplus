@@ -55,7 +55,7 @@ const std::unordered_map<std::string_view, Name> kNames{
     {"full", {FULL}},
     {"get_priority", {GET_P}},
     {"goto", {GOTO}},
-    {"hidden", {HIDDEN, 0, ":hide:"}},
+    {"hidden_flags", {HIDDEN, 0, ":hide:"}},
     {"if", {IF}},
     {"in", {IN}},
     {"init", {INIT, 0, ":init:"}},

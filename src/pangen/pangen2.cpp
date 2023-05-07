@@ -18,13 +18,13 @@
   {                                                                            \
     fprintf(fd, "\n");                                                         \
     if (!merger)                                                               \
-      fprintf(fd, "\t\t/* %s:%d */\n", e->n->fn->name.c_str(), e->n->ln);              \
+      fprintf(fd, "\t\t/* %s:%d */\n", e->n->fn->name.c_str(), e->n->ln);      \
   }
 #define tr_map(m, e)                                                           \
   {                                                                            \
     if (!merger)                                                               \
-      fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m, e->n->fn->name.c_str(),     \
-              e->n->ln);                                                       \
+      fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m,                     \
+              e->n->fn->name.c_str(), e->n->ln);                               \
   }
 
 extern ProcList *ready;
@@ -40,7 +40,7 @@ extern int GenCode, IsGuard, Level, TestOnly;
 extern int globmin, globmax, dont_simplify;
 
 extern short has_stack;
-extern char *NextLab[64]; /* must match value in dstep.c:18 */
+extern std::string NextLab[64]; /* must match value in dstep.c:18 */
 
 int buzzed;
 FILE *fd_tc, *fd_th, *fd_tt, *fd_tb;
@@ -379,7 +379,7 @@ void gensrc(void) {
     fprintf(fd_th, "#define HAS_HIDDEN	%d\n", has_hidden);
     fprintf(fd_th, "#if defined(BFS_PAR) || defined(BFS)\n");
     fprintf(fd_th, "	#error cannot use BFS on models with variables "
-                   "declared hidden\n");
+                   "declared hidden_flags\n");
     fprintf(fd_th, "#endif\n");
   }
   if (lexer_.GetHasLast())
@@ -807,7 +807,7 @@ static void dolen(models::Symbol *s, char *pre, int pid, int ai, int qln) {
   if (ai > 0)
     fprintf(fd_tc, "\n\t\t\t ||    ");
   fprintf(fd_tc, "%s(", pre);
-  if (!(s->hidden & 1)) {
+  if (!(s->hidden_flags & 1)) {
     if (s->context)
       fprintf(fd_tc, "(int) ( ((P%d *)_this)->", pid);
     else
@@ -951,7 +951,7 @@ static void genconditionals(void) {
 
   for (walk = all_names; walk; walk = walk->next) {
     s = walk->entry;
-    if (s->owner)
+    if (s->owner_name)
       continue;
     j = find_id(s->context);
     if (s->type == CHAN) {
@@ -962,7 +962,7 @@ static void genconditionals(void) {
     } else if (s->type == STRUCT) { /* struct may contain a chan */
       char pregat[128];
       strcpy(pregat, "");
-      if (!(s->hidden & 1)) {
+      if (!(s->hidden_flags & 1)) {
         if (s->context)
           sprintf(pregat, "((P%d *)_this)->", j);
         else
@@ -1079,7 +1079,7 @@ static void typ_seq(Sequence *s) {
   }
 }
 
-static int hidden(Lextok *n) {
+static int hidden_flags(Lextok *n) {
   if (n)
     switch (n->ntyp) {
     case FULL:
@@ -1094,7 +1094,7 @@ static int hidden(Lextok *n) {
     case '~':
     case ASSERT:
     case 'c':
-      (void)hidden(n->lft);
+      (void)hidden_flags(n->lft);
       break;
     case '/':
     case '*':
@@ -1115,8 +1115,8 @@ static int hidden(Lextok *n) {
     case AND:
     case LSHIFT:
     case RSHIFT:
-      (void)hidden(n->lft);
-      (void)hidden(n->rgt);
+      (void)hidden_flags(n->lft);
+      (void)hidden_flags(n->rgt);
       break;
     }
   return T_mus;
@@ -1182,7 +1182,7 @@ static void Tpe(Lextok *n) /* mixing in selections */
   Nn[0] = Nn[1] = ZN;
 
   if (n->ntyp == 'c') {
-    if (hidden(n->lft) > 2) {
+    if (hidden_flags(n->lft) > 2) {
       EPT[0] = 5 * DELTA; /* non-mixing */
       EPT[1] = 0;
       return;
@@ -1428,7 +1428,7 @@ static CaseCache *prev_case(Element *e, int owner) {
   }
   for (nc = casing[j]; nc; nc = nc->nxt)
     if (identical(nc->n, e->n) && samedeads(nc->u, e->dead) &&
-        equiv_merges(nc->e, e) && nc->owner == owner)
+        equiv_merges(nc->e, e) && nc->owner_name == owner)
       return nc;
 
   return (CaseCache *)0;
@@ -1459,7 +1459,7 @@ static void new_case(Element *e, int m, int b, int owner) {
     break;
   }
   nc = (CaseCache *)emalloc(sizeof(CaseCache));
-  nc->owner = owner;
+  nc->owner_name = owner;
   nc->m = m;
   nc->b = b;
   nc->e = e;
@@ -2311,7 +2311,7 @@ int has_global(Lextok *n) {
       }
       return 0;
     }
-    if (n->sym->context || (n->sym->hidden & 64) ||
+    if (n->sym->context || (n->sym->hidden_flags & 64) ||
         strcmp(n->sym->name, "_pid") == 0 || strcmp(n->sym->name, "_") == 0)
       return 0;
     return 1;
@@ -2386,7 +2386,7 @@ static void Bailout(FILE *fd, char *str) {
   if (!GenCode) {
     fprintf(fd, "continue%s", str);
   } else if (IsGuard) {
-    fprintf(fd, "%s%s", NextLab[Level], str);
+    fprintf(fd, "%s%s", NextLab[Level].c_str(), str);
   } else {
     fprintf(fd, "Uerror(\"block in d_step seq\")%s", str);
   }
@@ -2557,7 +2557,8 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     check_mtypes(now, now->lft);
     if (now->val < 0 || now->val > 255) /* 0 itself is allowed */
     {
-      loger::fatal("bad process in run %s, valid range: 1..255", now->sym->name);
+      loger::fatal("bad process in run %s, valid range: 1..255",
+                   now->sym->name);
     }
     break;
 
@@ -3026,7 +3027,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
             for (w = v->rgt; w; w = w->rgt)
               if (v->lft->sym == w->lft->sym) {
                 loger::fatal("cannot use var ('%s') in multiple msg fields",
-                           v->lft->sym->name);
+                             v->lft->sym->name);
               }
         }
       }
@@ -3286,7 +3287,8 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     nocast = 0;
     fprintf(fd, " = ");
     _isok--;
-    if (now->lft->sym->is_array && now->rgt->ntyp == ',') /* array initializer */
+    if (now->lft->sym->is_array &&
+        now->rgt->ntyp == ',') /* array initializer */
     {
       putstmnt(fd, now->rgt->lft, m);
       loger::non_fatal("cannot use an array list initializer here");

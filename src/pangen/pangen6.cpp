@@ -1154,11 +1154,10 @@ void AST_track(Lextok *now, int code) /* called from main.c */
       break;
     }
 }
-
 static int AST_dump_rel(void) {
   Slicer *rv;
   Ordered *walk;
-  char buf[64];
+  std::string buf;
   int banner = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -1254,11 +1253,11 @@ static void AST_suggestions(void) {
       }
   no_good:
     if (banner == 1 || banner == 2) {
-      printf("spin: proctype %s defines a %s process\n", a->p->n->name,
+      printf("spin: proctype %s defines a %s process\n", a->p->n->name.c_str(),
              banner == 1 ? "source" : "sink");
       talked |= banner;
     } else if (banner == 3) {
-      printf("spin: proctype %s mimics a buffer\n", a->p->n->name);
+      printf("spin: proctype %s mimics a buffer\n", a->p->n->name.c_str());
       talked |= 4;
     }
   }
@@ -1503,7 +1502,7 @@ static void AST_ctrl(AST *a) {
    * from which relevant transitions can be reached
    */
   if (verbose_flags.NeedToPrintVerbose())
-    printf("CTL -- %s\n", a->p->n->name);
+    printf("CTL -- %s\n", a->p->n->name.c_str());
 
   /* 1 : mark all blockable edges */
   for (f = a->fsm; f; f = f->nxt) {
@@ -1733,7 +1732,7 @@ static void AST_add_explicit(Lextok *d, Lextok *u) {
   explicit_ = e;
 }
 
-static void AST_fp1(char *s, Lextok *t, Lextok *f, int parno) {
+static void AST_fp1(const std::string &s, Lextok *t, Lextok *f, int parno) {
   Lextok *v;
   int cnt;
 
@@ -1741,19 +1740,20 @@ static void AST_fp1(char *s, Lextok *t, Lextok *f, int parno) {
     return;
 
   if (t->ntyp == RUN) {
-    if (strcmp(t->sym->name, s) == 0)
+    if (t->sym->name == s) {
       for (v = t->lft, cnt = 1; v; v = v->rgt, cnt++)
         if (cnt == parno) {
           AST_add_explicit(f, v->lft);
           break;
         }
+    }
   } else {
     AST_fp1(s, t->lft, f, parno);
     AST_fp1(s, t->rgt, f, parno);
   }
 }
 
-static void AST_mk1(char *s, Lextok *c, int parno) {
+static void AST_mk1(const std::string &s, Lextok *c, int parno) {
   AST *a;
   FSM_state *f;
   FSM_trans *t;
@@ -1771,7 +1771,7 @@ static void AST_mk1(char *s, Lextok *c, int parno) {
       }
 }
 
-static void AST_par_init(void) /* parameter passing -- hidden assignments */
+static void AST_par_init() /* parameter passing -- hidden_flags assignments */
 {
   AST *a;
   Lextok *f, *t, *c;
@@ -1794,7 +1794,7 @@ static void AST_par_init(void) /* parameter passing -- hidden assignments */
 }
 
 static void
-AST_var_init(void) /* initialized vars (not chans) - hidden assignments */
+AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
 {
   Ordered *walk;
   Lextok *x;
@@ -1805,7 +1805,8 @@ AST_var_init(void) /* initialized vars (not chans) - hidden assignments */
     sp = walk->entry;
     if (sp && !sp->context /* globals */
         && sp->type != PROCTYPE && sp->init_value &&
-        (sp->type != MTYPE || sp->init_value->ntyp != CONST) /* not mtype defs */
+        (sp->type != MTYPE ||
+         sp->init_value->ntyp != CONST) /* not mtype defs */
         && sp->init_value->ntyp != CHAN) {
       x = nn(ZN, TYPE, ZN, ZN);
       x->sym = sp;
@@ -1818,10 +1819,10 @@ AST_var_init(void) /* initialized vars (not chans) - hidden assignments */
         a->p->b != N_TRACE) /* has no locals */
       for (walk = all_names; walk; walk = walk->next) {
         sp = walk->entry;
-        if (sp && sp->context &&
-            strcmp(sp->context->name, a->p->n->name) == 0 &&
+        if (sp && sp->context && sp->context->name == a->p->n->name &&
             sp->id >= 0 /* not a param */
-            && sp->type != LABEL && sp->init_value && sp->init_value->ntyp != CHAN) {
+            && sp->type != LABEL && sp->init_value &&
+            sp->init_value->ntyp != CHAN) {
           x = nn(ZN, TYPE, ZN, ZN);
           x->sym = sp;
           AST_add_explicit(x, sp->init_value);
@@ -1853,7 +1854,7 @@ static void show_expl(void) {
   printf("End\n");
 }
 
-static void AST_hidden(void) /* reveal all hidden assignments */
+static void AST_hidden(void) /* reveal all hidden_flags assignments */
 {
   AST_par_init();
   expl_par = explicit_;
@@ -2085,7 +2086,7 @@ static void curtail(AST *a) {
 	3. all internal edges are non-data-relevant
 #endif
   if (verbose_flags.NeedToPrintVerbose())
-    printf("Curtail %s:\n", a->p->n->name);
+    printf("Curtail %s:\n", a->p->n->name.c_str());
 
   for (f = a->fsm; f; f = f->nxt) {
     if (!f->seen || (f->scratch & (1 | 2)))
@@ -2254,7 +2255,7 @@ static void AST_dominant(void) {
       a->nwords = (a->nstates + BPW - 1) / BPW; /* round up */
 
       if (verbose_flags.NeedToPrintVerbose()) {
-        printf("%s (%d): ", a->p->n->name, a->i_st);
+        printf("%s (%d): ", a->p->n->name.c_str(), a->i_st);
         printf("states=%d (max %d), words = %d, bpw %d, overflow %d\n",
                a->nstates, o_max, a->nwords, (int)BPW, (int)(a->nstates % BPW));
       }

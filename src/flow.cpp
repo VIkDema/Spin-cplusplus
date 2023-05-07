@@ -571,7 +571,7 @@ void set_lab(models::Symbol *s, Element *e) {
 
   for (l = labtab; l; l = l->nxt) {
     if (l->s->name == s->name && l->c == context &&
-        (old_scope_rules || s->bscp == l->s->bscp) && l->uiid == cur_uiid) {
+        (old_scope_rules || s->block_scope == l->s->block_scope) && l->uiid == cur_uiid) {
       loger::non_fatal("label %s redeclared", s->name);
       break;
     }
@@ -604,11 +604,11 @@ static Label *get_labspec(Lextok *n) {
         && s->context == l->s->context) /* same scope */
     {
       /* same block scope */
-      if (s->bscp == l->s->bscp) {
+      if (s->block_scope == l->s->block_scope) {
         return l; /* definite match */
       }
       /* higher block scope */
-      if (s->bscp.substr(0, l->s->bscp.length()) == l->s->bscp) {
+      if (s->block_scope.substr(0, l->s->block_scope.length()) == l->s->block_scope) {
         anymatch = l; /* possible match */
       } else if (!anymatch) {
         anymatch = l; /* somewhere else in same context */
@@ -720,18 +720,18 @@ int find_lab(models::Symbol *s, models::Symbol *c, int markit) {
   /* generally called for remote references in never claims */
   for (l = labtab; l; l = l->nxt) {
     if (s->name == l->s->name && c->name == l->c->name) {
-      ln = l->s->bscp.length();
+      ln = l->s->block_scope.length();
       if (0) {
         printf("want '%s' in context '%s', scope ref '%s' - label '%s'\n",
-               s->name.c_str(), c->name.c_str(), s->bscp.c_str(),
-               l->s->bscp.c_str());
+               s->name.c_str(), c->name.c_str(), s->block_scope.c_str(),
+               l->s->block_scope.c_str());
       }
       /* same or higher block scope */
-      if (s->bscp == l->s->bscp) {
+      if (s->block_scope == l->s->block_scope) {
         pm = l; /* definite match */
         break;
       }
-      if (s->bscp.substr(0, ln) == l->s->bscp) {
+      if (s->block_scope.substr(0, ln) == l->s->block_scope) {
         pm = l; /* possible match */
       } else {
         apm = l; /* remote */
@@ -802,12 +802,12 @@ int match_struct(models::Symbol *s, models::Symbol *t) {
   }
   /* we already know that s is a STRUCT */
   if (0) {
-    printf("index type %s %p ==\n", s->Snm->name.c_str(), (void *)s->Snm);
+    printf("index type %s %p ==\n", s->struct_name->name.c_str(), (void *)s->struct_name);
     printf("chan type  %s %p --\n\n", t->init_value->rgt->sym->name.c_str(),
            (void *)t->init_value->rgt->sym);
   }
 
-  return (s->Snm == t->init_value->rgt->sym);
+  return (s->struct_name == t->init_value->rgt->sym);
 }
 
 void valid_name(Lextok *a3, Lextok *a5, Lextok *a8, char *tp) {
