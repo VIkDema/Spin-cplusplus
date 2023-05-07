@@ -3,5 +3,5 @@
 
 class ArgumentsParser {
 public:
-  LaunchSettings Parse(int argc, char *argv[]);
+  LaunchSettings Parse(int& argc, char **&argv);
 };

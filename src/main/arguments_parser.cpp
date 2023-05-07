@@ -9,7 +9,7 @@
 // TODO: change it
 extern void qhide(int);
 
-LaunchSettings ArgumentsParser::Parse(int argc, char **argv) {
+LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
   LaunchSettings result;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   auto &seed = utils::seed::Seed::getInstance();
