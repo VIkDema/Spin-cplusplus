@@ -96,7 +96,7 @@ void setutype(Lextok *p, models::Symbol *t,
       loger::fatal("redeclaration of '%s'", n->sym->name);
     }
 
-    if (n->sym->nbits.value() > 0)
+    if (n->sym->nbits.value_or(0) > 0)
       loger::non_fatal("(%s) only an unsigned can have width-field",
                        n->sym->name);
 
@@ -197,7 +197,7 @@ int Rval_struct(Lextok *n, models::Symbol *v,
   if (ix >= tl->value_type || ix < 0)
     loger::fatal("indexing error \'%s\'", tl->name);
 
-  return cast_val(tl->type, tl->value[ix], tl->nbits.value());
+  return cast_val(tl->type, tl->value[ix], tl->nbits.value_or(0));
 }
 
 int Lval_struct(Lextok *n, models::Symbol *v, int xinit,
@@ -221,7 +221,7 @@ int Lval_struct(Lextok *n, models::Symbol *v, int xinit,
     loger::fatal("indexing error \'%s\'", tl->name);
 
   if (tl->nbits > 0)
-    a = (a & ((1 << tl->nbits.value()) - 1));
+    a = (a & ((1 << tl->nbits.value_or(0)) - 1));
 
   if (a != tl->value[ix]) {
     tl->value[ix] = a;

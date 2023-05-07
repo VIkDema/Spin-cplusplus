@@ -164,7 +164,7 @@ static int getglobal(Lextok *sn) {
     return Rval_struct(sn, s, 1); /* 1 = check init */
   }
   if (checkvar(s, n)) {
-    return cast_val(s->type, s->value[n], (int)s->nbits.value());
+    return cast_val(s->type, s->value[n], (int)s->nbits.value_or(0));
   }
   return 0;
 }
@@ -204,7 +204,7 @@ static int setglobal(Lextok *v, int m) {
     int n = eval(v->lft);
     if (checkvar(v->sym, n)) {
       int oval = v->sym->value[n];
-      int nval = cast_val((int)v->sym->type, m, v->sym->nbits.value());
+      int nval = cast_val((int)v->sym->type, m, v->sym->nbits.value_or(0));
       v->sym->value[n] = nval;
       if (oval != nval) {
         v->sym->last_depth = depth;

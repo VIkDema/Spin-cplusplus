@@ -34,6 +34,7 @@ int MainProcessor::main(int argc, char *argv[]) {
   InitSeed();
   InitStreams();
   InitScope();
+  InitPreProcSettings();
   ArgumentsParser parser;
   auto launch_settings = parser.Parse(argc, argv);
   if (HandleLaunchSettings(launch_settings, argc, argv)) {

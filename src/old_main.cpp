@@ -1041,7 +1041,7 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
   if (t == 'R')
     setaccess(n->sym, ZS, 0, 'P');
 
-  if (context->name == claimproc) {
+  if (context->name.c_str() == claimproc) {
     int forbidden = separate;
     switch (t) {
     case ASGN:

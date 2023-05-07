@@ -646,7 +646,7 @@ void multi_claims(void) {
 
 void sched(void) {
   Element *e;
-  RunList *Y = NULL; /* previous process in run queue */
+  RunList *емяY = NULL; /* previous process in run queue */
   RunList *oX;
   int go, notbeyond = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -1031,7 +1031,7 @@ int getlocal(Lextok *sn) {
   if (r && r->type == STRUCT)
     return Rval_struct(sn, r, 1); /* 1 = check init */
   if (in_bound(r, n))
-    return cast_val(r->type, r->value[n], r->nbits.value());
+    return cast_val(r->type, r->value[n], r->nbits.value_or(0));
   return 0;
 }
 
@@ -1043,7 +1043,7 @@ int setlocal(Lextok *p, int m) {
     if (r->type == models::SymbolType::kStruct)
       (void)Lval_struct(p, r, 1, m); /* 1 = check init */
     else {
-      r->value[n] = cast_val(r->type, m, r->nbits.value());
+      r->value[n] = cast_val(r->type, m, r->nbits.value_or(0));
       r->last_depth = depth;
     }
   }
@@ -1161,8 +1161,8 @@ int remotevar(Lextok *n) {
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {
       if (Y->n->name != n->lft->sym->name) {
-        printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name.c_str(),
-               prno - added);
+        printf("spin: remote reference error on '%s[%d]'\n",
+               n->lft->sym->name.c_str(), prno - added);
         loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
       if (n->sym->name == "_p") {
