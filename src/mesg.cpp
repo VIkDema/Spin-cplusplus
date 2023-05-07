@@ -5,6 +5,7 @@
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <assert.h>
+#include <fmt/core.h>
 #include <stdlib.h>
 
 #ifndef MAXQ
@@ -533,7 +534,7 @@ static int s_snd(Queue *q, Lextok *n) {
 }
 
 static void channm(Lextok *n) {
-  char lbuf[512];
+  std::string lbuf;
 
   if (n->sym->type == models::SymbolType::kChan) {
     strcat(GBuf, n->sym->name.c_str());
@@ -550,14 +551,15 @@ static void channm(Lextok *n) {
     }
     ini_struct(r);
     printf("%s", r->name.c_str());
-    strcpy(lbuf, "");
+    lbuf = "";
     struct_name(n->lft, r, 1, lbuf);
-    strcat(GBuf, lbuf);
-  } else
+    strcat(GBuf, lbuf.c_str());
+  } else {
     strcat(GBuf, "-");
+  }
   if (n->lft->lft) {
-    sprintf(lbuf, "[%d]", eval(n->lft->lft));
-    strcat(GBuf, lbuf);
+    lbuf = fmt::format("[{}]", eval(n->lft->lft));
+    strcat(GBuf, lbuf.c_str());
   }
 }
 

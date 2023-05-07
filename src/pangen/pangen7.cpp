@@ -401,8 +401,8 @@ static void check_special(int *nrs) {
             && l->s->name.substr(0, spl[j].n) == std::string(spl[j].s)) {
           if (j == 1) /* accept state */
           {
-            std::string buf;
           is_accepting:
+            std::string buf;
             if (strchr(p->n->name.c_str(), ':')) {
               buf = "N" + std::to_string(i);
             } else {

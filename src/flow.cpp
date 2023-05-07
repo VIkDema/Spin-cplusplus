@@ -1,5 +1,6 @@
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 
@@ -868,9 +869,9 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
     tmp_cnt = lookup(tmp_nm);
     if (z0->val > 255) /* check nr of slots, i.e. max length */
     {
-      tmp_cnt->type = SHORT; /* should be rare */
+      tmp_cnt->type = models::SymbolType::kShort; /* should be rare */
     } else {
-      tmp_cnt->type = BYTE;
+      tmp_cnt->type = models::SymbolType::kByte;
     }
     z3 = nn(ZN, NAME, ZN, ZN);
     z3->sym = tmp_cnt;
@@ -1016,9 +1017,9 @@ void dumplabels(void) {
     if (l->c != 0 && l->s->name[0] != ':') {
       printf("label	%s	%d	", l->s->name.c_str(), l->e->seqno);
       if (l->uiid == 0)
-        printf("<%s>", l->c->name);
+        printf("<%s>", l->c->name.c_str());
       else
-        printf("<%s i%d>", l->c->name, l->uiid);
+        printf("<%s i%d>", l->c->name.c_str(), l->uiid);
       if (!old_scope_rules) {
         printf("\t{scope %s}", l->s->block_scope.c_str());
       }

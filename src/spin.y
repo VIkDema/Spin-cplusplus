@@ -2,6 +2,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
 #include <sys/types.h>
 #include <iostream>
@@ -38,7 +39,7 @@ extern	void	check_mtypes(Lextok *, Lextok *);
 extern	void	count_runs(Lextok *);
 extern	void	no_internals(Lextok *);
 extern	void	any_runs(Lextok *);
-extern	void	ltl_list(char *, char *);
+extern	void	ltl_list(const std::string& , const std::string& );
 extern	void	validref(Lextok *, Lextok *);
 extern	std::string yytext;
 
@@ -192,7 +193,11 @@ init	: INIT		{ context = $1->sym; }
         		}
 	;
 
-ltl	: LTL optname2	{ lexer_.SetLtlMode(true);  ltl_name = $2->sym->name; }
+ltl	: LTL optname2	{ 
+	lexer_.SetLtlMode(true);  
+ltl_name = new char[$2->sym->name.length() + 1];
+strcpy(ltl_name, $2->sym->name.c_str());
+}
 	  ltl_body	{ if ($4) ltl_list($2->sym->name, $4->sym->name);
 			  lexer_.SetLtlMode(false);
 			}
@@ -207,10 +212,11 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 			  }
 			  nclaims++;
 			  context = $1->sym;
-			  if (claimproc && !strcmp(claimproc, $1->sym->name))
+			  if (claimproc && !strcmp(claimproc, $1->sym->name.c_str()))
 			  {	loger::fatal("claim %s redefined", claimproc);
 			  }
-			  claimproc = $1->sym->name;
+			  claimproc = new char[$1->sym->name.length() + 1];
+			  strcpy(claimproc, $1->sym->name.c_str());
 			}
 	  body		{ (void) mk_rdy($1->sym, ZN, $4->sq, 0, ZN, N_CLAIM);
         		  context = ZS;
@@ -237,12 +243,13 @@ optname2 : /* empty */ { char tb[32]; static int nltl = 0;
 
 events : TRACE		{ context = $1->sym;
 			  if (eventmap)
-				loger::non_fatal("trace %s redefined", eventmap);
-			  eventmap = $1->sym->name;
+				loger::non_fatal("trace %s redefined", std::string(eventmap));
+			  eventmap = new char[$1->sym->name.length() + 1];
+			  strcpy(eventmap, $1->sym->name.c_str());
 			  inEventMap++;
 			}
 	  body		{
-			  if (strcmp($1->sym->name, ":trace:") == 0)
+			  if ($1->sym->name ==  ":trace:")
 			  {	(void) mk_rdy($1->sym, ZN, $3->sq, 0, ZN, E_TRACE);
 			  } else
 			  {	(void) mk_rdy($1->sym, ZN, $3->sq, 0, ZN, N_TRACE);
@@ -321,7 +328,7 @@ ccode	: C_CODE		{ models::Symbol *s;
 				  NamesNotAdded++;
 				  s = prep_inline(ZS, ZN);
 				  NamesNotAdded--;
-				  s->type = CODE_DECL;
+				  s->type = models::SymbolType::kCodeDecl;
 				  $$ = nn(ZN, C_CODE, ZN, ZN);
 				  $$->sym = s;
 				  $$->ln = $1->ln;
@@ -472,8 +479,8 @@ ivar    : vardcl           	{ $$ = $1;
 				  if (!initialization_ok)
 				  {	if ($1->sym->is_array)
 					{	fprintf(stderr, "warning: %s:%d initialization of %s[] ",
-							$1->fn->name, $1->ln,
-							$1->sym->name);
+							$1->fn->name.c_str(), $1->ln,
+							$1->sym->name.c_str());
 						fprintf(stderr, "could fail if placed here\n");
 					} else
 					{	Lextok *zx = nn(ZN, NAME, ZN, ZN);
@@ -521,7 +528,7 @@ vardcl  : NAME  		{ $1->sym->value_type = 1; $$ = $1; }
 	| NAME '[' NAME ']'	{	/* make an exception for an initialized scalars */
 					$$ = nn(ZN, CONST, ZN, ZN);
 					fprintf(stderr, "spin: %s:%d, warning: '%s' in array bound ",
-						$1->fn->name, $1->ln, $3->sym->name);
+						$1->fn->name.c_str(), $1->ln, $3->sym->name.c_str());
 					if ($3->sym->init_value
 					&&  $3->sym->init_value->val > 0)
 					{	fprintf(stderr, "evaluated as %d\n", $3->sym->init_value->val);
@@ -550,12 +557,12 @@ pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
 	;
 
 cmpnd	: pfld			{ Embedded++;
-				  if ($1->sym->type == STRUCT)
+				  if ($1->sym->type ==  models::SymbolType::kStruct)
 					owner = $1->sym->struct_name;
 				}
 	  sfld			{ $$ = $1; $$->rgt = $3;
-				  if ($3 && $1->sym->type != STRUCT)
-					$1->sym->type = STRUCT;
+				  if ($3 && $1->sym->type !=  models::SymbolType::kStruct)
+					$1->sym->type = models::SymbolType::kStruct;
 				  Embedded--;
 				  if (!Embedded && !NamesNotAdded
 				  &&  !$1->sym->type)
@@ -628,29 +635,29 @@ Special : varref RCV		{ Expand_Ok++; }
 				}
 	| GOTO NAME		{ $$ = nn($2, GOTO, ZN, ZN);
 				  if ($2->sym->type != 0
-				  &&  $2->sym->type != LABEL) {
+				  &&  $2->sym->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
 					$2->sym->name);
 				  }
-				  $2->sym->type = LABEL;
+				  $2->sym->type = models::SymbolType::kLabel;
 				}
 	| NAME ':' stmnt	{ $$ = nn($1, ':',$3, ZN);
 				  if ($1->sym->type != 0
-				  &&  $1->sym->type != LABEL) {
+				  &&  $1->sym->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
 					$1->sym->name);
 				  }
-				  $1->sym->type = LABEL;
+				  $1->sym->type = models::SymbolType::kLabel;
 				}
 	| NAME ':'		{ $$ = nn($1, ':',ZN,ZN);
 				  if ($1->sym->type != 0
-				  &&  $1->sym->type != LABEL) {
+				  &&  $1->sym->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
 					$1->sym->name);
 				  }
 				  $$->lft = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
 				  $$->lft->lft->val = 1; /* skip */
-				  $1->sym->type = LABEL;
+				  $1->sym->type = models::SymbolType::kLabel;
 				}
 	| error			{ $$ = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
 				  $$->lft->val = 1; /* skip */

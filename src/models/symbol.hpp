@@ -21,7 +21,8 @@ enum SymbolType {
   kPredef = 3, /* predefined name: _p, _last */
   kLabel = 278,
   kName = 315,
-  kMtype = 275
+  kMtype = 275,
+  kCodeDecl = 4
 };
 
 struct Symbol {

@@ -302,15 +302,15 @@ void putprelude(void) {
   char snap[256];
   FILE *fd;
 
-  sprintf(snap, "%s.tcl", oFname ? oFname->name : "msc");
+  sprintf(snap, "%s.tcl", oFname ? oFname->name.c_str() : "msc");
   if (!(pfd = fopen(snap, MFLAGS))) {
     loger::fatal("cannot create file '%s'", snap);
   }
   if (s_trail) {
     if (ntrail)
-      sprintf(snap, "%s%d.trail", oFname ? oFname->name : "msc", ntrail);
+      sprintf(snap, "%s%d.trail", oFname ? oFname->name.c_str() : "msc", ntrail);
     else
-      sprintf(snap, "%s.trail", oFname ? oFname->name : "msc");
+      sprintf(snap, "%s.trail", oFname ? oFname->name.c_str() : "msc");
     if (!(fd = fopen(snap, "r"))) {
       snap[strlen(snap) - 2] = '\0';
       if (!(fd = fopen(snap, "r")))

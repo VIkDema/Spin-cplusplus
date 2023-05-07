@@ -13,7 +13,9 @@ LaunchSettings ArgumentsParser::Parse(int argc, char **argv) {
   LaunchSettings result;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   auto &seed = utils::seed::Seed::getInstance();
-
+  if(argc <=1){
+    result.need_to_print_help_and_stop =true;
+  }
   /* unused flags: y, z, G, L, Q, R, W */
   while (argc > 1 && argv[1][0] == '-') {
     switch (argv[1][1]) {

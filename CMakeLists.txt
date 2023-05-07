@@ -67,6 +67,8 @@ set(SPIN_SOURCES
     src/main/main_processor.cpp
     src/main/pre_proc_settings.hpp
     src/main/pre_proc_settings.cpp
+    src/main/pan_processor.hpp
+    src/main/pan_processor.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

@@ -22,7 +22,7 @@ static UType *Pnames = 0;
 
 static Lextok *cpnn(Lextok *, int, int, int);
 extern void sr_mesg(FILE *, int, int, const std::string&);
-extern void Done_case(std::string&, models::Symbol *);
+extern void Done_case(const std::string&, models::Symbol *);
 
 void setuname(Lextok *n) {
   UType *tmp;

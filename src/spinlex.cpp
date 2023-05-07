@@ -794,7 +794,7 @@ void preruse(FILE *fd,
   }
 }
 
-int glob_inline(char *s) {
+int glob_inline(const std::string &s) {
   IType *tmp;
   char *bdy;
 
@@ -804,7 +804,7 @@ int glob_inline(char *s) {
           || strchr(bdy, '(') > bdy); /* possible C-function call */
 }
 
-char *put_inline(FILE *fd, char *s) {
+char *put_inline(FILE *fd, const std::string& s) {
   IType *tmp;
 
   tmp = find_inline(s);
@@ -853,7 +853,7 @@ int side_scan(char *t, char *pat) {
   return (r && *(r - 1) != '"' && *(r - 1) != '\'');
 }
 
-void no_side_effects(char *s) {
+void no_side_effects(const std::string& s) {
   IType *tmp;
   char *t;
   char *z;

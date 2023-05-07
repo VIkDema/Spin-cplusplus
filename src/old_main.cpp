@@ -44,7 +44,7 @@ extern void putprelude(void);
 static void add_comptime(char *);
 static void add_runtime(char *);
 
-models::Symbol *Fname, *oFname;
+extern models::Symbol *Fname, *oFname;
 
 int Etimeouts; /* nr timeouts in program */
 int Ntimeouts; /* nr timeouts in never claim */
@@ -340,9 +340,9 @@ void alldone(int estatus) {
       strcat(pan_runtime, "-m ");
 
     char *tmp = (char *)emalloc(strlen("spin -t") + strlen(pan_runtime) +
-                                strlen(Fname->name) + 8);
+                                strlen(Fname->name.c_str()) + 8);
 
-    sprintf(tmp, "spin -t %s %s", pan_runtime, Fname->name);
+    sprintf(tmp, "spin -t %s %s", pan_runtime, Fname->name.c_str());
     estatus = e_system(1, tmp); /* replay */
     exit(estatus);              /* replay without c_code */
   }
@@ -924,7 +924,7 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 }
 #endif
 
-void ltl_list(char *nm, char *fm) {
+void ltl_list(const std::string& , const std::string& ) {
   if (s_trail || analyze ||
       dumptab) /* when generating pan.c or replaying a trace */
   {
@@ -936,6 +936,7 @@ void ltl_list(char *nm, char *fm) {
        tl_out = fd_ltl;
      */
     }
+    /*
     add_ltl = (char **)emalloc(5 * sizeof(char *));
     add_ltl[1] = "-c";
     add_ltl[2] = nm;
@@ -944,6 +945,7 @@ void ltl_list(char *nm, char *fm) {
     strcpy(add_ltl[4], "!(");
     strcat(add_ltl[4], fm);
     strcat(add_ltl[4], ")");
+    */
     /* add_ltl[4] = fm; */
     // TODO:    nr_errs += tl_main(4, add_ltl);
 
