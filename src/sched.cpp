@@ -646,7 +646,7 @@ void multi_claims(void) {
 
 void sched(void) {
   Element *e;
-  RunList *емяY = NULL; /* previous process in run queue */
+  RunList *Y = NULL; /* previous process in run queue */
   RunList *oX;
   int go, notbeyond = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -1161,8 +1161,8 @@ int remotevar(Lextok *n) {
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {
       if (Y->n->name != n->lft->sym->name) {
-        printf("spin: remote reference error on '%s[%d]'\n",
-               n->lft->sym->name.c_str(), prno - added);
+        printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name.c_str(),
+               prno - added);
         loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
       if (n->sym->name == "_p") {

@@ -21,8 +21,8 @@ static UType *Unames = 0;
 static UType *Pnames = 0;
 
 static Lextok *cpnn(Lextok *, int, int, int);
-extern void sr_mesg(FILE *, int, int, const std::string&);
-extern void Done_case(const std::string&, models::Symbol *);
+extern void sr_mesg(FILE *, int, int, const std::string &);
+extern void Done_case(const std::string &, models::Symbol *);
 
 void setuname(Lextok *n) {
   UType *tmp;
@@ -144,7 +144,8 @@ static models::Symbol *do_same(Lextok *n, models::Symbol *v, int xinit) {
     ini_struct(v); /* once, at top level */
 
   if (ix >= v->value_type || ix < 0) {
-    printf("spin: indexing %s[%d] - size is %d\n", v->name.c_str(), ix, v->value_type);
+    printf("spin: indexing %s[%d] - size is %d\n", v->name.c_str(), ix,
+           v->value_type);
     loger::fatal("indexing error \'%s\'", v->name);
   }
   if (!n->rgt || !n->rgt->lft) {
@@ -654,7 +655,7 @@ void setpname(Lextok *n) {
   UType *tmp;
 
   for (tmp = Pnames; tmp; tmp = tmp->nxt)
-    if (n->sym->name != tmp->nm->name) {
+    if (n->sym->name == tmp->nm->name) {
       loger::non_fatal("proctype %s redefined", n->sym->name);
       return;
     }
