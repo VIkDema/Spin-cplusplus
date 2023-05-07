@@ -4,8 +4,11 @@
 #include "spin.hpp"
 #include "utils/seed/seed.hpp"
 #include "version/version.hpp"
-#include <stdlib.h>
 #include <fmt/core.h>
+#include <stdlib.h>
+
+#include "main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 
 #define MW 500 /* page width */
 #define RH 100 /* right margin */
@@ -35,7 +38,7 @@ static int xscale = 2;
 static int yscale = 1;
 static int no_box;
 
-extern int ntrail, s_trail, prno, depth;
+extern int prno, depth;
 extern short Have_claim;
 extern models::Symbol *oFname;
 
@@ -83,7 +86,8 @@ static void psline(int x0, int y0, int x1, int y1, const std::string &color) {
   }
 }
 
-static void colbox(int ix, int iy, int w, int h_unused, const std::string& color) {
+static void colbox(int ix, int iy, int w, int h_unused,
+                   const std::string &color) {
   int x = ix * WW;
   int y = iy * HH;
 
@@ -106,7 +110,7 @@ static void colbox(int ix, int iy, int w, int h_unused, const std::string& color
     no_box = 2;
   }
 
-  if (color ==  "black") {
+  if (color == "black") {
     if (no_box == 0) /* shadow */
     {
       fprintf(pfd, ".c create rectangle %d %d %d %d -fill black\n",
@@ -306,9 +310,10 @@ void putprelude(void) {
   if (!(pfd = fopen(snap, MFLAGS))) {
     loger::fatal("cannot create file '%s'", snap);
   }
-  if (s_trail) {
-    if (ntrail)
-      sprintf(snap, "%s%d.trail", oFname ? oFname->name.c_str() : "msc", ntrail);
+  if (launch_settings.need_save_trail) {
+    if (launch_settings.nubmer_trail)
+      sprintf(snap, "%s%d.trail", oFname ? oFname->name.c_str() : "msc",
+              launch_settings.nubmer_trail);
     else
       sprintf(snap, "%s.trail", oFname ? oFname->name.c_str() : "msc");
     if (!(fd = fopen(snap, "r"))) {
@@ -360,19 +365,19 @@ void pstext(int x, char *s) {
 }
 
 void dotag(FILE *fd, char *s) {
-  extern int columns, notabs;
   extern RunList *X_lst;
   int i = (!strncmp(s, "MSC: ", 5)) ? 5 : 0;
-  int pid = s_trail ? (prno - Have_claim) : (X_lst ? X_lst->pid : 0);
+  int pid = launch_settings.need_save_trail ? (prno - Have_claim)
+                                            : (X_lst ? X_lst->pid : 0);
 
   if (pid < 0) {
     pid = 0;
   }
 
-  if (columns == 2) {
+  if (launch_settings.need_generate_mas_flow_tcl_tk) {
     pstext(pid, &s[i]);
   } else {
-    if (!notabs) {
+    if (!launch_settings.need_to_tabs) {
       printf("  ");
       for (i = 0; i <= pid; i++) {
         printf("    ");

@@ -8,8 +8,6 @@
 #include <sys/_types/_size_t.h>
 #include <vector>
 
-extern lexer::Lexer lexer_;
-
 struct LaunchSettings {
   bool need_export_ast = false;                         // OLD:export_ast
   bool need_to_analyze = false;                         // OLD:analyze
@@ -48,9 +46,9 @@ struct LaunchSettings {
   bool need_preprocess_only = false; // OLD: preprocessonly
   int buzzed = 0;
   short has_provided = 0;
-  
-  std::optional<int> separate_version; // OLD: separate
-  std::optional<int> nubmer_trail;     // OLD: ntrail
+
+  int separate_version = 0; // OLD: separate
+  int nubmer_trail = 0;     // OLD: ntrail
 
   std::vector<std::string> trail_file_name;       // old: trailfilename
   std::vector<std::string> never_claim_file_name; // old: nvr_file
@@ -61,8 +59,8 @@ struct LaunchSettings {
   std::vector<std::string> pre_args =
       {}; // OLD: PreArg[++PreCnt] = (char *)&argv[1][0];
 
-  std::optional<std::size_t> count_of_skipping_steps = 0; // OLD: jumpsteps
-  std::optional<std::size_t> count_of_steps = 0;          // OLD: cutoff
+  std::size_t count_of_skipping_steps = 0; // OLD: jumpsteps
+  std::size_t count_of_steps = 0;          // OLD: cutoff
 
   void SetOptimizationsOptions(int value);
   std::string BuildPanRuntime();

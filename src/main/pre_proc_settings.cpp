@@ -31,6 +31,8 @@
 #endif
 #endif
 
+extern LaunchSettings launch_settings;
+
 void PreProcSettings::Init() { command_ = CPP; }
 std::string PreProcSettings::GetCommand() { return command_; }
 void PreProcSettings::SetCommand(const std::string &command) {
@@ -40,7 +42,7 @@ void PreProcSettings::SetCommand(const std::string &command) {
 bool PreProcSettings::IsDefault() { return !was_changed_; }
 
 void PreProcSettings::Preprocess(const std::string &a, const std::string &b,
-                                 int a_tmp, LaunchSettings &launch_settings) {
+                                 int a_tmp) {
   std::string precmd, cmd;
 
   precmd = command_;
@@ -55,7 +57,7 @@ void PreProcSettings::Preprocess(const std::string &a, const std::string &b,
     if (a_tmp)
       unlink(a.c_str());
     fprintf(stdout, "spin: preprocessing failed %s\n", cmd.c_str());
-    MainProcessor::Exit(1, launch_settings); /* no return, error exit */
+    MainProcessor::Exit(1); /* no return, error exit */
   }
   if (a_tmp)
     unlink(a.c_str());

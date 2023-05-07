@@ -4,6 +4,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch_settings.hpp"
 #include <sys/types.h>
 #include <iostream>
 #ifndef PC
@@ -31,7 +32,7 @@ extern	Lextok *sel_index(Lextok *, Lextok *, Lextok *);
 extern  void    keep_track_off(Lextok *);
 extern	void	safe_break(void);
 extern	void	restore_break(void);
-extern  int	u_sync, u_async, dumptab, scope_level;
+extern  int	u_sync, u_async, scope_level;
 extern	int	initialization_ok;
 extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np;
 extern	short	has_state, has_io;
@@ -42,6 +43,7 @@ extern	void	any_runs(Lextok *);
 extern	void	ltl_list(const std::string& , const std::string& );
 extern	void	validref(Lextok *, Lextok *);
 extern	std::string yytext;
+extern LaunchSettings launch_settings;
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
@@ -144,7 +146,9 @@ proc	: inst		/* optional instantiator */
 				{	runnable(rl, $9?$9->val:1, 1);
 					announce(":root:");
 				}
-				if (dumptab) $3->sym->init_value = $1;
+				if (launch_settings.need_produce_symbol_table_information) {
+					$3->sym->init_value = $1;
+				}
 			  } else
 			  {	rl = mk_rdy($3->sym, $6, $11->sq, $2->val, $10, P_PROC);
 			  }

@@ -9,10 +9,11 @@
  * presented at the PSTV Conference, held in 1995, Warsaw, Poland 1995.
  */
 
+#include "../main/launch_settings.hpp"
 #include "tl.hpp"
-
+extern LaunchSettings launch_settings;
 extern FILE *tl_out;
-extern int tl_errs, tl_verbose, tl_terse, newstates, state_cnt;
+extern int tl_errs, tl_verbose, newstates, state_cnt;
 
 int Stack_mx = 0, Max_Red = 0, Total = 0;
 
@@ -918,12 +919,12 @@ void trans(Node *p) {
 
   p = twocases(p);
 
-  if (tl_verbose || tl_terse) {
+  if (tl_verbose || launch_settings.need_short_output) {
     fprintf(tl_out, "\t/* Normlzd: ");
     dump(p);
     fprintf(tl_out, " */\n");
   }
-  if (tl_terse)
+  if (launch_settings.need_short_output)
     return;
 
   op = dupnode(p);

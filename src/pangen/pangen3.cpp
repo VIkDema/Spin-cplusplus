@@ -4,9 +4,10 @@
 #include "../spin.hpp"
 #include "y.tab.h"
 #include <assert.h>
-
+#include "../main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 extern FILE *fd_th, *fd_tc;
-extern int eventmapnr, old_priority_rules, in_settr;
+extern int eventmapnr, in_settr;
 
 struct SRC {
   int ln, st;         /* linenr, statenr */
@@ -468,7 +469,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case GET_P:
-    if (old_priority_rules) {
+    if (launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "1");
     } else {
       Cat3("get_priority(", now->lft, ")");
@@ -476,7 +477,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case SET_P:
-    if (!old_priority_rules) {
+    if (!launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "set_priority(");
       comwork(fd, now->lft->lft, m);
       fprintf(fd, ", ");

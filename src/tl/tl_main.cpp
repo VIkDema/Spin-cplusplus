@@ -11,12 +11,15 @@
 
 #include "tl.hpp"
 
+#include "../main/launch_settings.hpp"
+
+extern LaunchSettings launch_settings;
+
 extern FILE *tl_out;
 
 int newstates = 0; /* debugging only */
 int tl_errs = 0;
 int tl_verbose = 0;
-int tl_terse = 0;
 int tl_clutter = 0;
 int state_cnt = 0;
 
@@ -86,21 +89,13 @@ static void tl_stats(void) {
 
 int tl_main(int argc, char *argv[]) {
   int i;
-  extern int xspin, s_trail;
 
-  tl_verbose = 0; /* was: tl_verbose = verbose; */
-  if (xspin && s_trail) {
-    tl_clutter = 1;
-    /* generating claims for a replay should
-       be done the same as when generating the
-       pan.c that produced the error-trail */
-  } else {
-    tl_clutter = 1 - xspin; /* use -X -f to turn off uncluttering */
-  }
+  tl_verbose = 0;     /* was: tl_verbose = verbose; */
+  tl_clutter = 1 - 0; /* use -X -f to turn off uncluttering */
   newstates = 0;
   state_cnt = 0;
   tl_errs = 0;
-  tl_terse = 0;
+  launch_settings.need_short_output = false;
   All_Mem = 0;
   hasuform = 0;
   cnt = 0;
@@ -133,7 +128,7 @@ int tl_main(int argc, char *argv[]) {
       tl_verbose++;
       break;
     case 'n':
-      tl_terse = 1;
+      launch_settings.need_short_output = true;
       break;
     case 'c':
       argc--;

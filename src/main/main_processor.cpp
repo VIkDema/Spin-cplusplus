@@ -8,6 +8,7 @@
 #include "../utils/verbose/verbose.hpp"
 #include "arguments_parser.hpp"
 #include "help.hpp"
+#include "launch_settings.hpp"
 #include "pan_processor.hpp"
 #include "pre_proc_settings.hpp"
 #include "stdio.h"
@@ -28,6 +29,9 @@ extern void ana_src(int, int);
 int nr_errs;
 static FILE *fd_ltl = (FILE *)0;
 
+extern LaunchSettings launch_settings;
+extern lexer::Lexer lexer_;
+
 std::string MainProcessor::out_;
 
 int MainProcessor::main(int argc, char *argv[]) {
@@ -36,8 +40,8 @@ int MainProcessor::main(int argc, char *argv[]) {
   InitScope();
   InitPreProcSettings();
   ArgumentsParser parser;
-  auto launch_settings = parser.Parse(argc, argv);
-  if (HandleLaunchSettings(launch_settings, argc, argv)) {
+  launch_settings = parser.Parse(argc, argv);
+  if (HandleLaunchSettings(argc, argv)) {
     return 0;
   }
   return 0;
@@ -57,27 +61,26 @@ void MainProcessor::InitScope() { lexer::scope_processor_.InitScopeName("_"); }
 
 void MainProcessor::InitPreProcSettings() { pre_proc_processor.Init(); }
 
-bool MainProcessor::HandleLaunchSettings(LaunchSettings &launch_settings,
-                                         int argc, char *argv[]) {
+bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (launch_settings.need_to_print_help_and_stop) {
     PrintHelp();
-    Exit(0, launch_settings);
+    Exit(0);
   }
 
   if (launch_settings.need_to_print_version_and_stop) {
     PrintVersion();
-    Exit(0, launch_settings);
+    Exit(0);
   }
 
   if (launch_settings.need_pretty_print) {
     format::PrettyPrintViewer pp;
     pp.view();
-    Exit(0, launch_settings);
+    Exit(0);
   }
 
   if (launch_settings.need_generate_mas_flow_tcl_tk &&
-      !launch_settings.count_of_steps.has_value()) {
+      launch_settings.count_of_steps == 0) {
     launch_settings.count_of_steps = 1024;
   }
 
@@ -112,23 +115,23 @@ bool MainProcessor::HandleLaunchSettings(LaunchSettings &launch_settings,
       tl_out = fd;
       // nr_errs = tl_main(2, add_ltl);
       fclose(fd);
-      pre_proc_processor.Preprocess(out2, out_, 1, launch_settings);
+      pre_proc_processor.Preprocess(out2, out_, 1);
     } else if (!launch_settings.never_claim_file_name.empty()) {
       fprintf(fd, "#include \"%s\"\n",
               launch_settings.never_claim_file_name.front().c_str());
       fclose(fd);
-      pre_proc_processor.Preprocess(out2, out_, 1, launch_settings);
+      pre_proc_processor.Preprocess(out2, out_, 1);
     } else {
-      pre_proc_processor.Preprocess(argv[1], out_, 0, launch_settings);
+      pre_proc_processor.Preprocess(argv[1], out_, 0);
     }
 
     if (launch_settings.need_preprocess_only) {
-      Exit(0, launch_settings);
+      Exit(0);
     }
 
     if (!(yyin = fopen(out_.c_str(), "r"))) {
       printf("spin: cannot open %s\n", out_.c_str());
-      Exit(1, launch_settings);
+      Exit(1);
     }
 
     if (strncmp(argv[1], "progress", (size_t)8) == 0 ||
@@ -149,18 +152,18 @@ bool MainProcessor::HandleLaunchSettings(LaunchSettings &launch_settings,
       if (argc > 0)
         //   exit(tl_main(2, add_ltl));
         printf("spin: missing argument to -f\n");
-      Exit(1, launch_settings);
+      Exit(1);
     }
     // printf("%s\n", SpinVersion);
     fprintf(stderr, "spin: error, no filename specified\n");
     fflush(stdout);
-    Exit(1, launch_settings);
+    Exit(1);
   }
 
   if (launch_settings.need_generate_mas_flow_tcl_tk) {
     if (verbose_flags.Active()) {
       std::cout << "spin: -c precludes all flags except -t" << std::endl;
-      Exit(1, launch_settings);
+      Exit(1);
     }
     putprelude();
   }
@@ -216,7 +219,7 @@ bool MainProcessor::HandleLaunchSettings(LaunchSettings &launch_settings,
     }
     // Запуск симуляции
     sched();
-    Exit(nr_errs, launch_settings);
+    Exit(nr_errs);
   }
 
   return false;
@@ -238,7 +241,7 @@ void MainProcessor::InitSymbols() {
   s->type = models::SymbolType::kPredef; /* new 6.2.0 */
 }
 
-void MainProcessor::Exit(int estatus, LaunchSettings &launch_settings) {
+void MainProcessor::Exit(int estatus) {
 #if defined(WIN32) || defined(WIN64)
   struct _stat x;
 #else

@@ -11,6 +11,8 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
+#include "main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 
 #define MAXINL 16  /* max recursion depth inline fcts */
 #define MAXPAR 32  /* max params to an inline call */
@@ -44,7 +46,7 @@ extern ProcList *ready;
 extern models::Symbol *Fname, *oFname;
 extern models::Symbol *context, *owner;
 extern YYSTYPE yylval;
-extern int need_arguments, hastrack, separate;
+extern int need_arguments, hastrack;
 extern int implied_semis;
 extern lexer::Lexer lexer_;
 short has_stack = 0;
@@ -109,7 +111,7 @@ void gencodetable(FILE *fd) {
   char *q;
   int cnt;
 
-  if (separate == 2)
+  if (launch_settings.separate_version == 2)
     return;
 
   fprintf(fd, "struct {\n");
@@ -578,7 +580,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
     r->t->name.front() = ' ';
   }
 
-  if (separate == 2) {
+  if (launch_settings.separate_version == 2) {
     fprintf(fd, "#endif\n");
     return;
   }
@@ -706,7 +708,7 @@ void plunk_reverse(FILE *fd, IType *p, int matchthis) {
 void plunk_c_decls(FILE *fd) { plunk_reverse(fd, seqnames, CODE_DECL); }
 
 void plunk_c_fcts(FILE *fd) {
-  if (separate == 2 && hastrack) {
+  if (launch_settings.separate_version == 2 && hastrack) {
     c_add_def(fd);
     return;
   }

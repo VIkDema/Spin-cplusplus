@@ -1,6 +1,7 @@
 /***** spin: run.c *****/
 
 #include "fatal/fatal.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/seed/seed.hpp"
 #include "utils/verbose/verbose.hpp"
@@ -10,11 +11,11 @@
 extern RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
 extern Element *LastStep;
-extern int Rvous, lineno, Tval, interactive, MadeChoice, Priority_Sum;
-extern int TstOnly, verbose, s_trail, xspin, jumpsteps, depth;
-extern int analyze, nproc, nstop, no_print, like_java, old_priority_rules;
+extern int Rvous, lineno, Tval, MadeChoice, Priority_Sum;
+extern int TstOnly, verbose, depth;
+extern int nproc, nstop;
 extern short Have_claim;
-
+extern LaunchSettings launch_settings;
 static int E_Check = 0, Escape_Check = 0;
 
 static int eval_sync(Element *);
@@ -81,8 +82,9 @@ Element *eval_sub(Element *e) {
     int nr_else = 0, nr_choices = 0;
     only_pos = -1;
 
-    if (interactive && !MadeChoice && !E_Check && !Escape_Check &&
-        !(e->status & (D_ATOM)) && depth >= jumpsteps) {
+    if (launch_settings.need_to_run_in_interactive_mode && !MadeChoice &&
+        !E_Check && !Escape_Check && !(e->status & (D_ATOM)) &&
+        depth >= launch_settings.count_of_skipping_steps) {
       printf("Select stmnt (");
       whoruns(0);
       printf(")\n");
@@ -94,10 +96,11 @@ Element *eval_sub(Element *e) {
     }
     for (z = e->sub, j = 0; z; z = z->nxt) {
       j++;
-      if (interactive && !MadeChoice && !E_Check && !Escape_Check &&
-          !(e->status & (D_ATOM)) && depth >= jumpsteps &&
+      if (launch_settings.need_to_run_in_interactive_mode && !MadeChoice &&
+          !E_Check && !Escape_Check && !(e->status & (D_ATOM)) &&
+          depth >= launch_settings.count_of_skipping_steps &&
           z->this_sequence->frst &&
-          (xspin || verbose_flags.NeedToPrintVerbose() ||
+          (verbose_flags.NeedToPrintVerbose() ||
            Enabled0(z->this_sequence->frst))) {
         if (z->this_sequence->frst->n->ntyp == ELSE) {
           has_else = (Rvous) ? ZE : z->this_sequence->frst->nxt;
@@ -125,14 +128,12 @@ Element *eval_sub(Element *e) {
       MadeChoice = only_pos;
     }
 
-    if (interactive && depth >= jumpsteps && !Escape_Check &&
+    if (launch_settings.need_to_run_in_interactive_mode &&
+        depth >= launch_settings.count_of_skipping_steps && !Escape_Check &&
         !(e->status & (D_ATOM)) && !E_Check) {
       if (!MadeChoice) {
         char buf[256];
-        if (xspin)
-          printf("Make Selection %d\n\n", j);
-        else
-          printf("Select [0-%d]: ", j);
+        printf("Select [0-%d]: ", j);
         fflush(stdout);
         if (scanf("%64s", buf) <= 0) {
           printf("no input\n");
@@ -168,7 +169,8 @@ Element *eval_sub(Element *e) {
       if (z->this_sequence->frst && z->this_sequence->frst->n->ntyp == ELSE) {
         bas_else = z->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
-        if (!interactive || depth < jumpsteps || Escape_Check ||
+        if (!launch_settings.need_to_run_in_interactive_mode ||
+            depth < launch_settings.count_of_skipping_steps || Escape_Check ||
             (e->status & (D_ATOM))) {
           z = (z->nxt) ? z->nxt : e->sub;
           continue;
@@ -181,7 +183,8 @@ Element *eval_sub(Element *e) {
                ELSE)) {
         bas_else = z->this_sequence->frst->n->sl->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
-        if (!interactive || depth < jumpsteps || Escape_Check ||
+        if (!launch_settings.need_to_run_in_interactive_mode ||
+            depth < launch_settings.count_of_skipping_steps || Escape_Check ||
             (e->status & (D_ATOM))) {
           z = (z->nxt) ? z->nxt : e->sub;
           continue;
@@ -190,7 +193,9 @@ Element *eval_sub(Element *e) {
       if (i >= k) {
         if ((f = eval_sub(z->this_sequence->frst)) != ZE)
           return f;
-        else if (interactive && depth >= jumpsteps && !(e->status & (D_ATOM))) {
+        else if (launch_settings.need_to_run_in_interactive_mode &&
+                 depth >= launch_settings.count_of_skipping_steps &&
+                 !(e->status & (D_ATOM))) {
           if (!E_Check && !Escape_Check)
             printf("\tunexecutable\n");
           return ZE;
@@ -234,10 +239,11 @@ Element *eval_sub(Element *e) {
         }
         printf("\n");
       }
-      if (!s_trail) /* trail determines selections, new 5.2.5 */
+      if (!launch_settings
+               .need_save_trail) /* trail determines selections, new 5.2.5 */
       {
         Escape_Check++;
-        if (like_java) {
+        if (launch_settings.reverse_eval_order_of_nested_unlesses) {
           if ((g = rev_escape(e->esc)) != ZE) {
             if (verbose_flags.NeedToPrintAllProcessActions()) {
               printf("\tEscape taken (-J) ");
@@ -427,7 +433,7 @@ int eval(Lextok *now) {
     case NEMPTY:
       return (qlen(now) > 0);
     case ENABLED:
-      if (s_trail)
+      if (launch_settings.need_save_trail)
         return 1;
       return pc_enabled(now->lft);
 
@@ -480,14 +486,14 @@ int eval(Lextok *now) {
       return assign(now);
 
     case C_CODE:
-      if (!analyze) {
+      if (!launch_settings.need_to_analyze) {
         printf("%s:\t", now->sym->name.c_str());
         plunk_inline(stdout, now->sym->name, 0, 1);
       }
       return 1; /* uninterpreted */
 
     case C_EXPR:
-      if (!analyze) {
+      if (!!launch_settings.need_to_analyze) {
         printf("%s:\t", now->sym->name.c_str());
         plunk_expr(stdout, now->sym->name);
         printf("\n");
@@ -501,7 +507,7 @@ int eval(Lextok *now) {
       printf("spin: text of failed assertion: assert(");
       comment(stdout, now->lft, 0);
       printf(")\n");
-      if (s_trail && !xspin)
+      if (launch_settings.need_save_trail)
         return 1;
       wrapup(1); /* doesn't return */
 
@@ -522,7 +528,7 @@ int eval(Lextok *now) {
 
     default:
       printf("spin: bad node type %d (run)\n", now->ntyp);
-      if (s_trail)
+      if (launch_settings.need_save_trail)
         printf("spin: trail file doesn't match spec?\n");
       loger::fatal("aborting");
     }
@@ -536,8 +542,9 @@ int printm(FILE *fd, Lextok *n) {
   int j;
 
   GBuf[0] = '\0';
-  if (!no_print)
-    if (!s_trail || depth >= jumpsteps) {
+  if (!launch_settings.need_dont_execute_printfs_in_sumulation) {
+    if (!launch_settings.need_save_trail ||
+        depth >= launch_settings.count_of_skipping_steps) {
       if (n->lft->sym && n->lft->sym->mtype_name) {
         s = n->lft->sym->mtype_name->name;
       }
@@ -551,6 +558,7 @@ int printm(FILE *fd, Lextok *n) {
       sr_buf(j, 1, s.c_str());
       dotag(fd, GBuf);
     }
+  }
   return 1;
 }
 
@@ -565,8 +573,9 @@ int interprint(FILE *fd, Lextok *n) {
   char c;
 
   GBuf[0] = '\0';
-  if (!no_print)
-    if (!s_trail || depth >= jumpsteps) {
+  if (!launch_settings.need_dont_execute_printfs_in_sumulation)
+    if (!launch_settings.need_save_trail ||
+        depth >= launch_settings.count_of_skipping_steps) {
       for (i = 0; i < s.length(); i++)
         switch (s[i]) {
         case '\"':
@@ -809,7 +818,7 @@ int get_priority(Lextok *n) {
   int pid = eval(n);
   RunList *Y;
 
-  if (old_priority_rules) {
+  if (launch_settings.need_revert_old_rultes_for_priority) {
     return 1;
   }
 
@@ -827,7 +836,7 @@ void set_priority(Lextok *n, Lextok *p) {
   RunList *Y;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (old_priority_rules) {
+  if (launch_settings.need_revert_old_rultes_for_priority) {
     return;
   }
   for (Y = run_lst; Y; Y = Y->nxt) {

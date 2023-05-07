@@ -4,6 +4,7 @@
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include "../main/launch_settings.hpp"
 
 extern Ordered *all_names;
 extern FSM_use *use_free;
@@ -1007,9 +1008,9 @@ static void name_AST_track(Lextok *n, int code) {
 void AST_track(Lextok *now, int code) /* called from main.c */
 {
   Lextok *v;
-  extern int export_ast;
 
-  if (!export_ast)
+  extern LaunchSettings launch_settings;
+  if (!launch_settings.need_export_ast)
     return;
 
   if (now)

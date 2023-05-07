@@ -5,6 +5,9 @@
 #include "pre_proc_settings.hpp"
 #include <fmt/core.h>
 
+extern lexer::Lexer lexer_;
+LaunchSettings launch_settings;
+
 void LaunchSettings::SetOptimizationsOptions(int value) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -69,14 +72,14 @@ std::string LaunchSettings::BuildPanRuntime() {
 
   std::string pan_runtime_ = fmt::format("-n{} ", seed.GetSeed());
 
-  if (count_of_skipping_steps.has_value()) {
-    pan_runtime_ += fmt::format("-j{} ", count_of_skipping_steps.value());
+  if (count_of_skipping_steps != 0) {
+    pan_runtime_ += fmt::format("-j{} ", count_of_skipping_steps);
   }
   if (!trail_file_name.empty()) {
     pan_runtime_ += fmt::format("-k{} ", trail_file_name.front());
   }
-  if (count_of_steps.has_value()) {
-    pan_runtime_ += fmt::format("-u{} ", count_of_steps.value());
+  if (count_of_steps != 0) {
+    pan_runtime_ += fmt::format("-u{} ", count_of_steps);
   }
   for (const auto &pre_arg : pre_args) {
     pan_runtime_ += pre_arg + " ";

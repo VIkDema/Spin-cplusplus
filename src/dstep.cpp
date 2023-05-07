@@ -4,7 +4,8 @@
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
-
+#include "main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 #define MAXDSTEP 2048 /* was 512 */
 
 std::string NextLab[64]; /* must match value in pangen2.c:41 */
@@ -15,7 +16,7 @@ static int Tj = 0, Jt = 0, LastGoto = 0;
 static int Tojump[MAXDSTEP], Jumpto[MAXDSTEP], Special[MAXDSTEP];
 static void putCode(FILE *, Element *, Element *, Element *, int);
 
-extern int Pid_nr, separate, OkBreak;
+extern int Pid_nr, OkBreak;
 
 static void Sourced(int n, int special) {
   int i;
@@ -275,7 +276,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     break;
   case ELSE:
     fprintf(fd, "if (boq != -1 || (");
-    if (separate != 2)
+    if (launch_settings.separate_version != 2)
       fprintf(fd, "trpt->");
     fprintf(fd, "o_pm&1))\n\t\t\tcontinue;");
     {

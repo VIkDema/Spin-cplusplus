@@ -2,15 +2,18 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "main/launch_settings.hpp"
 #include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
 
+extern LaunchSettings launch_settings;
+
 extern models::Symbol *Fname, *owner;
-extern int lineno, depth, verbose, NamesNotAdded, deadvar;
-extern int has_hidden, m_loss, old_scope_rules;
+extern int lineno, depth, verbose, NamesNotAdded;
+extern int has_hidden;
 extern short has_xu;
 extern char CurScope[MAXSCOPESZ];
 
@@ -49,9 +52,9 @@ void disambiguate(void) {
   models::Symbol *sp;
   std::string n, m;
 
-  if (old_scope_rules)
+  if (launch_settings.need_old_scope_rules) {
     return;
-
+  }
   /* prepend the scope_prefix to the names */
 
   for (walk = all_names; walk; walk = walk->next) {
@@ -78,8 +81,8 @@ models::Symbol *lookup(const std::string &s) {
   Ordered *no;
   unsigned int h = hash(s);
 
-  if (old_scope_rules) { /* same scope - global refering to global or local to
-                            local */
+  if (launch_settings.need_old_scope_rules) { /* same scope - global refering to
+                            global or local to local */
     for (sp = symtab[h]; sp; sp = sp->next) {
       if (sp->name == s && samename(sp->context, context) &&
           samename(sp->owner_name, owner)) {
@@ -345,7 +348,7 @@ void setxus(Lextok *p, int t) {
 
   has_xu = 1;
 
-  if (m_loss && t == XS) {
+  if (launch_settings.need_lose_msgs_sent_to_full_queues && t == XS) {
     printf(
         "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
         (p->fn != NULL) ? p->fn->name.c_str() : "stdin", p->ln);
@@ -584,7 +587,7 @@ void symvar(models::Symbol *sp) {
     }
   }
 
-  if (!old_scope_rules) {
+  if (!launch_settings.need_old_scope_rules) {
     printf("\t{scope %s}", sp->block_scope.c_str());
   }
 
@@ -671,17 +674,18 @@ report:
 void chanaccess(void) {
   Ordered *walk;
   std::string buf;
-  extern int Caccess, separate;
   extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
     if (!walk->entry->owner_name)
       switch (walk->entry->type) {
-      case models::SymbolType::kChan:
-        if (Caccess)
+      case models::SymbolType::kChan: {
+        if (launch_settings.need_print_channel_access_info) {
           chan_check(walk->entry);
+        }
         break;
+      }
       case models::SymbolType::kMtype:
       case models::SymbolType::kBit:
       case models::SymbolType::kByte:
@@ -691,10 +695,11 @@ void chanaccess(void) {
         if ((walk->entry->hidden_flags & 128)) /* was: 32 */
           continue;
 
-        if (!separate && !walk->entry->context && !lexer_.GetHasCode() &&
-            deadvar)
+        if (!launch_settings.separate_version && !walk->entry->context &&
+            !lexer_.GetHasCode() &&
+            launch_settings.need_hide_write_only_variables) {
           walk->entry->hidden_flags |= 1; /* auto-hide */
-
+        }
         if (!verbose_flags.NeedToPrintVerbose() || lexer_.GetHasCode())
           continue;
 

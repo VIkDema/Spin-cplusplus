@@ -5,10 +5,11 @@
 #include "utils/verbose/verbose.hpp"
 
 #include "y.tab.h"
-
+#include "main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 extern lexer::Lexer lexer_;
 extern models::Symbol *Fname;
-extern int nr_errs, lineno, old_scope_rules, s_trail;
+extern int nr_errs, lineno;
 extern short has_unless, has_badelse, has_xu;
 extern char CurScope[MAXSCOPESZ];
 
@@ -76,7 +77,7 @@ void cross_dsteps(Lextok *a, Lextok *b) {
   if (a && b && a->indstep != b->indstep) {
     lineno = a->ln;
     Fname = a->fn;
-    if (!s_trail)
+    if (!launch_settings.need_save_trail)
       loger::fatal("jump into d_step sequence");
   }
 }
@@ -572,7 +573,8 @@ void set_lab(models::Symbol *s, Element *e) {
 
   for (l = labtab; l; l = l->nxt) {
     if (l->s->name == s->name && l->c == context &&
-        (old_scope_rules || s->block_scope == l->s->block_scope) && l->uiid == cur_uiid) {
+        (launch_settings.need_old_scope_rules || s->block_scope == l->s->block_scope) &&
+        l->uiid == cur_uiid) {
       loger::non_fatal("label %s redeclared", s->name);
       break;
     }
@@ -609,7 +611,8 @@ static Label *get_labspec(Lextok *n) {
         return l; /* definite match */
       }
       /* higher block scope */
-      if (s->block_scope.substr(0, l->s->block_scope.length()) == l->s->block_scope) {
+      if (s->block_scope.substr(0, l->s->block_scope.length()) ==
+          l->s->block_scope) {
         anymatch = l; /* possible match */
       } else if (!anymatch) {
         anymatch = l; /* somewhere else in same context */
@@ -803,7 +806,8 @@ int match_struct(models::Symbol *s, models::Symbol *t) {
   }
   /* we already know that s is a STRUCT */
   if (0) {
-    printf("index type %s %p ==\n", s->struct_name->name.c_str(), (void *)s->struct_name);
+    printf("index type %s %p ==\n", s->struct_name->name.c_str(),
+           (void *)s->struct_name);
     printf("chan type  %s %p --\n\n", t->init_value->rgt->sym->name.c_str(),
            (void *)t->init_value->rgt->sym);
   }
@@ -820,7 +824,8 @@ void valid_name(Lextok *a3, Lextok *a5, Lextok *a8, char *tp) {
     loger::fatal("bad index in for-construct %s", a3->sym->name.c_str());
   }
   if (a5->ntyp == CONST && a8->ntyp == CONST && a5->val > a8->val) {
-    loger::non_fatal("start value for %s exceeds end-value", a3->sym->name.c_str());
+    loger::non_fatal("start value for %s exceeds end-value",
+                     a3->sym->name.c_str());
   }
 }
 
@@ -849,7 +854,8 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
 
   if (a3->sym->type == STRUCT) {
     if (a5->sym->type != CHAN) {
-      loger::fatal("for ( %s in .channel_name ) { ... }", a3->sym->name.c_str());
+      loger::fatal("for ( %s in .channel_name ) { ... }",
+                   a3->sym->name.c_str());
     }
     z0 = a5->sym->init_value;
     if (!z0 || z0->val <= 0 || z0->rgt->ntyp != STRUCT ||
@@ -982,7 +988,8 @@ static void walk_atomic(Element *a, Element *b, int added) {
           goto mknonat;
         break;
       }
-      printf("spin: %s:%d, warning, d_step inside ", f->n->fn->name.c_str(), f->n->ln);
+      printf("spin: %s:%d, warning, d_step inside ", f->n->fn->name.c_str(),
+             f->n->ln);
       if (added) {
         printf("d_step (ignored)\n");
         goto mknonat;
@@ -1020,7 +1027,7 @@ void dumplabels(void) {
         printf("<%s>", l->c->name.c_str());
       else
         printf("<%s i%d>", l->c->name.c_str(), l->uiid);
-      if (!old_scope_rules) {
+      if (!launch_settings.need_old_scope_rules) {
         printf("\t{scope %s}", l->s->block_scope.c_str());
       }
       printf("\n");

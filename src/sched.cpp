@@ -2,22 +2,23 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
 
-extern int s_trail, analyze, no_wrapup;
 extern char *claimproc, *eventmap, GBuf[];
 extern Ordered *all_names;
 extern models::Symbol *Fname, *context;
-extern int lineno, nr_errs, dumptab, xspin, jumpsteps, columns;
-extern int u_sync, Elcnt, interactive, TstOnly, cutoff;
-extern short has_enabled, replay;
-extern int limited_vis, product, nclaims, old_priority_rules;
-extern int old_scope_rules, scope_seq[256], scope_level, has_stdin;
+extern int lineno, nr_errs;
+extern int u_sync, Elcnt, TstOnly;
+extern short has_enabled;
+extern int limited_vis, nclaims;
+extern int scope_seq[256], scope_level, has_stdin;
 extern lexer::Lexer lexer_;
+extern LaunchSettings launch_settings;
 
 extern int pc_highest(Lextok *n);
 extern void putpostlude(void);
@@ -197,11 +198,12 @@ static void formdump(void) {
 void announce(char *w) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (columns) {
+  if (launch_settings.need_columnated_output ||
+      launch_settings.need_generate_mas_flow_tcl_tk) {
     extern char GBuf[];
     extern int firstrow;
     firstrow = 1;
-    if (columns == 2) {
+    if (launch_settings.need_generate_mas_flow_tcl_tk) {
       sprintf(GBuf, "%d:%s", run_lst->pid - Have_claim,
               run_lst->n->name.c_str());
       pstext(run_lst->pid - Have_claim, GBuf);
@@ -212,7 +214,10 @@ void announce(char *w) {
     return;
   }
 
-  if (dumptab || analyze || product || s_trail ||
+  if (launch_settings.need_produce_symbol_table_information ||
+      launch_settings.need_to_analyze ||
+      launch_settings.need_compute_synchronous_product_multiple_never_claims ||
+      launch_settings.need_save_trail ||
       !verbose_flags.NeedToPrintAllProcessActions())
     return;
 
@@ -304,7 +309,7 @@ void start_claim(int n) {
   goto done;
 found:
   /* move claim to far end of runlist, and reassign it pid 0 */
-  if (columns == 2) {
+  if (launch_settings.need_generate_mas_flow_tcl_tk) {
     extern char GBuf[];
     depth = 0;
     sprintf(GBuf, "%d:%s", 0, p->n->name.c_str());
@@ -354,14 +359,18 @@ int f_pid(const std::string &n) {
 void wrapup(int fini) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   limited_vis = 0;
-  if (columns) {
-    if (columns == 2)
+  if (launch_settings.need_generate_mas_flow_tcl_tk ||
+      launch_settings.need_columnated_output) {
+    if (launch_settings.need_generate_mas_flow_tcl_tk)
       putpostlude();
-    if (!no_wrapup)
+    if (!launch_settings.need_disable_final_state_reporting) {
       printf("-------------\nfinal state:\n-------------\n");
+    }
   }
-  if (no_wrapup)
+
+  if (launch_settings.need_disable_final_state_reporting) {
     goto short_cut;
+  }
   if (nproc != nstop) {
     printf("#processes: %d\n", nproc - nstop - Have_claim + Skip_claim);
     verbose_flags.Clean();
@@ -371,10 +380,10 @@ void wrapup(int fini) {
     verbose_flags.Activate();
   }
   printf("%d process%s created\n", nproc - Have_claim + Skip_claim,
-         (xspin || nproc != 1) ? "es" : "");
+         (nproc != 1) ? "es" : "");
 short_cut:
-  if (s_trail || xspin)
-    alldone(0); /* avoid an abort from xspin */
+  if (launch_settings.need_save_trail)
+    alldone(0);
   if (fini)
     alldone(1);
 }
@@ -425,7 +434,8 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
       printf("pid %d cannot run: not provided\n", X_lst->pid);
     return 0;
   }
-  if (lexer_.GetHasPriority() && !old_priority_rules) {
+  if (lexer_.GetHasPriority() &&
+      !launch_settings.need_revert_old_rultes_for_priority) {
     Lextok *n = nn(ZN, CONST, ZN, ZN);
     n->val = X_lst->pid;
     if (0)
@@ -449,8 +459,10 @@ static RunList *pickproc(RunList *Y) {
     X_lst = run_lst;
     return NULL;
   }
-  if (!interactive || depth < jumpsteps) {
-    if (lexer_.GetHasPriority() && !old_priority_rules) /* new 6.3.2 */
+  if (!launch_settings.need_to_run_in_interactive_mode ||
+      depth < launch_settings.count_of_skipping_steps) {
+    if (lexer_.GetHasPriority() &&
+        !launch_settings.need_revert_old_rultes_for_priority) /* new 6.3.2 */
     {
       j = Rand() % (nproc - nstop);
       for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
@@ -511,7 +523,7 @@ static RunList *pickproc(RunList *Y) {
           no_choice++;
         else
           only_choice = k;
-        if (!xspin && unex && !verbose_flags.NeedToPrintVerbose()) {
+        if (unex && !verbose_flags.NeedToPrintVerbose()) {
           k++;
           continue;
         }
@@ -545,7 +557,7 @@ static RunList *pickproc(RunList *Y) {
             no_choice++;
           else
             only_choice = k;
-          if (!xspin && unex && !verbose_flags.NeedToPrintVerbose()) {
+          if (unex && !verbose_flags.NeedToPrintVerbose()) {
             k++;
             continue;
           }
@@ -578,17 +590,14 @@ static RunList *pickproc(RunList *Y) {
       no_choice = 0;
       only_choice = -1;
       goto try_more;
-    }
-    if (xspin)
-      printf("Make Selection %d\n\n", k - 1);
-    else {
+    } else {
       if (k - no_choice < 2) {
         printf("no executable choices\n");
         alldone(0);
       }
       printf("Select [1-%d]: ", k - 1);
     }
-    if (!xspin && k - no_choice == 2) {
+    if (k - no_choice == 2) {
       printf("%d\n", only_choice);
       j = only_choice;
     } else {
@@ -651,13 +660,13 @@ void sched(void) {
   int go, notbeyond = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (dumptab) {
+  if (launch_settings.need_produce_symbol_table_information) {
     formdump();
     symdump();
     dumplabels();
     return;
   }
-  if (lexer_.GetHasCode() && !analyze) {
+  if (lexer_.GetHasCode() && !launch_settings.need_to_analyze) {
     printf("spin: warning: c_code fragments remain uninterpreted\n");
     printf("      in random simulations with spin; use ./pan -r instead\n");
   }
@@ -667,19 +676,20 @@ void sched(void) {
     printf("models with synchronous channels.\n");
     nr_errs++;
   }
-  if (product) {
+  if (launch_settings.need_compute_synchronous_product_multiple_never_claims) {
     sync_product();
     alldone(0);
   }
-  if (analyze && (!replay || lexer_.GetHasCode())) {
+  if (launch_settings.need_to_analyze &&
+      (!launch_settings.need_to_replay || lexer_.GetHasCode())) {
     gensrc();
     multi_claims();
     return;
   }
-  if (replay && !lexer_.GetHasCode()) {
+  if (launch_settings.need_to_replay && !lexer_.GetHasCode()) {
     return;
   }
-  if (s_trail) {
+  if (launch_settings.need_save_trail) {
     match_trail();
     return;
   }
@@ -698,9 +708,11 @@ void sched(void) {
       lineno = X_lst->pc->n->ln;
       Fname = X_lst->pc->n->fn;
     }
-    if (cutoff > 0 && depth >= cutoff) {
+    if (launch_settings.count_of_steps > 0 &&
+        depth >= launch_settings.count_of_steps) {
       printf("-------------\n");
-      printf("depth-limit (-u%d steps) reached\n", cutoff);
+      printf("depth-limit (-u%d steps) reached\n",
+             launch_settings.count_of_steps);
       break;
     }
     depth++;
@@ -708,15 +720,15 @@ void sched(void) {
     oX = X_lst; /* a rendezvous could change it */
     go = 1;
     if (X_lst->pc && !(X_lst->pc->status & D_ATOM) && !x_can_run()) {
-      if (!xspin && ((verbose_flags.NeedToPrintVerbose()) ||
-                     (verbose_flags.NeedToPrintAllProcessActions()))) {
+      if (((verbose_flags.NeedToPrintVerbose()) ||
+           (verbose_flags.NeedToPrintAllProcessActions()))) {
         p_talk(X_lst->pc, 1);
         printf("\t<<Not Enabled>>\n");
       }
       go = 0;
     }
     if (go && (e = eval_sub(X_lst->pc))) {
-      if (depth >= jumpsteps &&
+      if (depth >= launch_settings.count_of_skipping_steps &&
           ((verbose_flags.NeedToPrintVerbose()) ||
            (verbose_flags.NeedToPrintAllProcessActions()))) {
         if (X_lst == oX)
@@ -735,10 +747,6 @@ void sched(void) {
           dumpglobals();
         if (verbose_flags.NeedToPrintLocalVariables())
           dumplocal(X_lst, 0);
-
-        if (!(e->status & D_ATOM))
-          if (xspin)
-            printf("\n");
       }
       if (oX != X_lst || (X_lst->pc->status & (ATOM | D_ATOM))) /* new 5.0 */
       {
@@ -748,7 +756,7 @@ void sched(void) {
       oX->pc = e;
       LastX = X_lst;
 
-      if (!interactive)
+      if (!launch_settings.need_to_run_in_interactive_mode)
         Tval = 0;
       memset(is_blocked, 0, 256);
 
@@ -776,7 +784,7 @@ void sched(void) {
           dotag(stdout, "terminates\n");
         }
         LastX = X_lst;
-        if (!interactive)
+        if (!launch_settings.need_to_run_in_interactive_mode)
           Tval = 0;
         if (nproc == nstop)
           break;
@@ -788,7 +796,7 @@ void sched(void) {
           if (Tval && !has_stdin) {
             break;
           }
-          if (!Tval && depth >= jumpsteps) {
+          if (!Tval && depth >= launch_settings.count_of_skipping_steps) {
             oX = X_lst;
             X_lst = (RunList *)0; /* to suppress indent */
             dotag(stdout, "timeout\n");
@@ -814,14 +822,15 @@ int complete_rendez(void) {
   Element *s_was = LastStep;
   Element *e;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
-  int j, ointer = interactive;
+  int j;
+  bool ointer = launch_settings.need_to_run_in_interactive_mode;
 
-  if (s_trail)
+  if (launch_settings.need_save_trail)
     return 1;
   if (orun->pc->status & D_ATOM)
     loger::fatal("rv-attempt in d_step sequence");
   Rvous = 1;
-  interactive = 0;
+  launch_settings.need_to_run_in_interactive_mode = false;
 
   j = (int)Rand() % Priority_Sum; /* randomize start point */
   X_lst = run_lst;
@@ -862,7 +871,7 @@ int complete_rendez(void) {
       Rvous = 0; /* before silent_moves */
       X_lst->pc = silent_moves(e);
     out:
-      interactive = ointer;
+      launch_settings.need_to_run_in_interactive_mode = ointer;
       return 1;
     }
 
@@ -872,7 +881,7 @@ int complete_rendez(void) {
   }
   Rvous = 0;
   X_lst = orun;
-  interactive = ointer;
+  launch_settings.need_to_run_in_interactive_mode = ointer;
   return 0;
 }
 
@@ -883,8 +892,8 @@ static void addsymbol(RunList *r, models::Symbol *s) {
   int i;
 
   for (t = r->symtab; t; t = t->next)
-    if (t->name == s->name &&
-        (old_scope_rules || t->block_scope == s->block_scope))
+    if (t->name == s->name && (launch_settings.need_old_scope_rules ||
+                               t->block_scope == s->block_scope))
       return; /* it's already there */
 
   t = (models::Symbol *)emalloc(sizeof(models::Symbol));
@@ -998,8 +1007,8 @@ models::Symbol *findloc(models::Symbol *s) {
     return ZS;
   }
   for (r = X_lst->symtab; r; r = r->next) {
-    if (r->name == s->name &&
-        (old_scope_rules || r->block_scope == s->block_scope)) {
+    if (r->name == s->name && (launch_settings.need_old_scope_rules ||
+                               r->block_scope == s->block_scope)) {
       break;
     }
   }
@@ -1062,7 +1071,7 @@ void whoruns(int lnr) {
     printf(" -");
   else
     printf("%2d", X_lst->pid - Have_claim);
-  if (old_priority_rules) {
+  if (launch_settings.need_revert_old_rultes_for_priority) {
     printf(" (%s) ", X_lst->n->name.c_str());
   } else {
     printf(" (%s:%d) ", X_lst->n->name.c_str(), X_lst->priority);
@@ -1109,7 +1118,7 @@ void p_talk(Element *e, int lnr) {
       nbuf = "-";
     }
     printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->ln : -1, e->seqno);
-    if (!xspin && ((e->status & ENDSTATE) || has_lab(e, 2))) /* 2=end */
+    if ((e->status & ENDSTATE) || has_lab(e, 2)) /* 2=end */
     {
       printf(" <valid end state>");
     }
@@ -1161,8 +1170,8 @@ int remotevar(Lextok *n) {
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {
       if (Y->n->name != n->lft->sym->name) {
-        printf("spin: remote reference error on '%s[%d]'\n", n->lft->sym->name.c_str(),
-               prno - added);
+        printf("spin: remote reference error on '%s[%d]'\n",
+               n->lft->sym->name.c_str(), prno - added);
         loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
       if (n->sym->name == "_p") {
@@ -1185,10 +1194,10 @@ int remotevar(Lextok *n) {
         n->sym->context = Y->n;
       }
       {
-        int rs = old_scope_rules;
-        old_scope_rules = 1; /* 6.4.0 */
+        bool rs = launch_settings.need_old_scope_rules;
+        launch_settings.need_old_scope_rules = true;
         n->sym = findloc(n->sym);
-        old_scope_rules = rs;
+        launch_settings.need_old_scope_rules = rs;
       }
       i = getval(n);
 

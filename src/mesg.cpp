@@ -1,6 +1,7 @@
 /***** spin: mesg.c *****/
 
 #include "fatal/fatal.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -14,10 +15,12 @@
 
 extern RunList *X_lst;
 extern models::Symbol *Fname;
-extern int TstOnly, s_trail, analyze, columns;
-extern int lineno, depth, xspin, m_loss, jumpsteps;
+extern int TstOnly;
+extern int lineno, depth;
 extern int nproc, nstop;
 extern short Have_claim;
+
+extern LaunchSettings launch_settings;
 
 QH *qh_lst;
 Queue *qtab = (Queue *)0; /* linked list of queues */
@@ -61,7 +64,7 @@ int qmake(models::Symbol *s) {
     Fname = s->init_value->fn;
     loger::fatal("too many queues (%s)", s->name);
   }
-  if (analyze && nrqs >= 255) {
+  if (launch_settings.need_to_analyze && nrqs >= 255) {
     loger::fatal("too many channel types");
   }
 
@@ -303,7 +306,7 @@ static int a_snd(Queue *q, Lextok *n) {
   int j = 0;                  /* q field# */
 
   if (q->nslots > 0 && q->qlen >= q->nslots) {
-    return m_loss; /* q is full */
+    return launch_settings.need_lose_msgs_sent_to_full_queues; /* q is full */
   }
 
   if (TstOnly) {
@@ -321,13 +324,15 @@ static int a_snd(Queue *q, Lextok *n) {
     if (q->fld_width[i + j] == MTYPE) {
       mtype_ck(q->mtp[i + j], m->lft); /* 6.4.8 */
     }
-    if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
+    if (verbose_flags.NeedToPrintSends() &&
+        depth >= launch_settings.count_of_skipping_steps) {
       sr_talk(n, New, "Send ", "->", j, q); /* XXX j was i+j in 6.4.8 */
     }
     typ_ck(q->fld_width[i + j], Sym_typ(m->lft), "send");
   }
 
-  if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
+  if (verbose_flags.NeedToPrintSends() &&
+      depth >= launch_settings.count_of_skipping_steps) {
     for (i = j; i < q->nflds; i++) {
       sr_talk(n, 0, "Send ", "->", i, q);
     }
@@ -418,9 +423,10 @@ try_slot:
 
   oi = q->stepnr[i];
   for (m = n->rgt, j = 0; m && j < q->nflds; m = m->rgt, j++) {
-    if (columns && !full) /* was columns == 1 */
+    if (launch_settings.need_columnated_output && !full)
       continue;
-    if (verbose_flags.NeedToPrintReceives() && !Rvous && depth >= jumpsteps) {
+    if (verbose_flags.NeedToPrintReceives() && !Rvous &&
+        depth >= launch_settings.count_of_skipping_steps) {
       char *Recv = "Recv ";
       char *notRecv = "Recv ";
       sr_talk(n, q->contents[i * q->nflds + j],
@@ -440,16 +446,18 @@ try_slot:
       }
   }
 
-  if ((!columns || full) && verbose_flags.NeedToPrintReceives() && !Rvous &&
-      depth >= jumpsteps)
+  if ((!launch_settings.need_columnated_output || full) &&
+      verbose_flags.NeedToPrintReceives() && !Rvous &&
+      depth >= launch_settings.count_of_skipping_steps)
     for (i = j; i < q->nflds; i++) {
       char *Recv = "Recv ";
       char *notRecv = "Recv ";
       sr_talk(n, 0, (full && n->val < 2) ? Recv : notRecv, "<-", i, q);
     }
-  if (columns == 2 && full && !Rvous && depth >= jumpsteps)
+  if (launch_settings.need_generate_mas_flow_tcl_tk && full && !Rvous &&
+      depth >= launch_settings.count_of_skipping_steps) {
     putarrow(oi, depth);
-
+  }
   if (full && n->val < 2)
     q->qlen--;
   return 1;
@@ -480,7 +488,8 @@ static int s_snd(Queue *q, Lextok *n) {
     return 1;
   }
   q->stepnr[0] = depth;
-  if (verbose_flags.NeedToPrintSends() && depth >= jumpsteps) {
+  if (verbose_flags.NeedToPrintSends() &&
+      depth >= launch_settings.count_of_skipping_steps) {
     m = n->rgt;
     rX = X_lst;
     X_lst = sX;
@@ -500,7 +509,7 @@ static int s_snd(Queue *q, Lextok *n) {
     }
 
     X_lst = rX; /* restore receiver's context */
-    if (!s_trail) {
+    if (!launch_settings.need_save_trail) {
       if (!n_rem || !q_rem)
         loger::fatal("cannot happen, s_snd");
       m = n_rem->rgt;
@@ -523,7 +532,7 @@ static int s_snd(Queue *q, Lextok *n) {
           sr_talk(n_rem, 0, "Recv ", "<-", j, q_rem);
         }
       }
-      if (columns == 2) {
+      if (launch_settings.need_generate_mas_flow_tcl_tk) {
         putarrow(depth, depth);
       }
     }
@@ -577,7 +586,7 @@ static void difcolumns(Lextok *n, char *tr, int v, int j, Queue *q) {
   sr_buf(v, q->fld_width[j] == MTYPE, q->mtp[j]);
   if (j == q->nflds - 1) {
     int cnr;
-    if (s_trail) {
+    if (launch_settings.need_save_trail) {
       cnr = prno - Have_claim;
     } else {
       cnr = X_lst ? X_lst->pid - Have_claim : 0;
@@ -641,25 +650,16 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   if (qishidden(eval(n->lft)))
     return;
 
-  if (columns) {
-    if (columns == 2)
+  if (launch_settings.need_columnated_output) {
+    if (launch_settings.need_generate_mas_flow_tcl_tk) {
       difcolumns(n, tr, v, j, q);
-    else
+    } else {
       docolumns(n, tr, v, j, q);
+    }
     return;
   }
-  if (xspin) {
-    if (verbose_flags.NeedToPrintAllProcessActions() && tr[0] != '[')
-      sprintf(s, "(state -)\t[values: %d", eval(n->lft));
-    else
-      sprintf(s, "(state -)\t[%d", eval(n->lft));
-    if (strncmp(tr, "Sen", 3) == 0)
-      strcat(s, "!");
-    else
-      strcat(s, "?");
-  } else {
-    strcpy(s, tr);
-  }
+
+  strcpy(s, tr);
 
   if (j == 0) {
     char snm[128];
@@ -682,13 +682,6 @@ static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   sr_mesg(stdout, v, q->fld_width[j] == MTYPE, q->mtp[j]);
 
   if (j == q->nflds - 1) {
-    if (xspin) {
-      printf("]\n");
-      if (!verbose_flags.NeedToPrintAllProcessActions()) {
-        printf("\n");
-      }
-      return;
-    }
     printf("\t%s queue %d (", a, eval(n->lft));
     GBuf[0] = '\0';
     channm(n);

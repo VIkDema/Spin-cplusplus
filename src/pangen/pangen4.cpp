@@ -4,12 +4,13 @@
 #include "../spin.hpp"
 #include "y.tab.h"
 #include <fmt/format.h>
-
+#include "../main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 extern FILE *fd_tc, *fd_tb;
 extern Queue *qtab;
 extern models::Symbol *Fname;
-extern int lineno, m_loss, Pid_nr, eventmapnr, multi_oval;
-extern short nocast, has_provided, has_sorted;
+extern int lineno, Pid_nr, eventmapnr, multi_oval;
+extern short nocast, has_sorted;
 extern const char *R13_[], *R14_[], *R15_[];
 
 static void check_proc(Lextok *, int);
@@ -72,8 +73,9 @@ void undostmnt(Lextok *now, int m) {
     if (Pid_nr == eventmapnr)
       break;
 
-    if (m_loss)
+    if (launch_settings.need_lose_msgs_sent_to_full_queues) {
       fprintf(fd_tb, "if (_m == 2) ");
+    }
     putname(fd_tb, "_m = unsend(", now->lft, m, ")");
     break;
 
@@ -354,7 +356,7 @@ int proper_enabler(Lextok *n) {
   case LEN:
   case 'R':
   case NAME:
-    has_provided = 1;
+    launch_settings.has_provided = true;
     if (n->sym->name == "_pid" || n->sym->name == "_priority")
       return 1;
     return (!(n->sym->context));
@@ -362,7 +364,7 @@ int proper_enabler(Lextok *n) {
   case C_EXPR:
   case CONST:
   case TIMEOUT:
-    has_provided = 1;
+    launch_settings.has_provided = true;
     return 1;
 
   case ENABLED:

@@ -1,4 +1,5 @@
 #include "lexer/lexer.hpp"
+#include "main/launch_settings.hpp"
 #include "models/symbol.hpp"
 #include "utils/format/preprocessed_file_viewer.hpp"
 #include "utils/format/pretty_print_viewer.hpp"
@@ -28,7 +29,7 @@
 #endif
 #include "y.tab.h"
 
-extern int DstepStart, lineno, tl_terse;
+extern int DstepStart, lineno;
 extern FILE *yyin, *yyout, *tl_out;
 extern models::Symbol *context;
 extern char *claimproc;
@@ -36,8 +37,8 @@ extern void repro_src(void);
 extern void qhide(int);
 extern char CurScope[MAXSCOPESZ];
 extern lexer::Lexer lexer_;
-extern short has_provided, has_accept;
-extern int realread, buzzed;
+extern short has_accept;
+extern int realread;
 extern void ana_src(int, int);
 extern void putprelude(void);
 
@@ -48,37 +49,20 @@ extern models::Symbol *Fname, *oFname;
 
 int Etimeouts; /* nr timeouts in program */
 int Ntimeouts; /* nr timeouts in never claim */
-int analyze, columns, dumptab, has_remote, has_remvar;
-int interactive, jumpsteps, m_loss, cutoff;
-int s_trail, ntrail, xspin, notabs, rvopt;
-int no_print, no_wrapup, Caccess, limited_vis, like_java;
-int separate;           /* separate compilation */
-int export_ast;         /* pangen5.c */
-int norecompile;        /* main.c */
-int old_scope_rules;    /* use pre 5.3.0 rules */
-int old_priority_rules; /* use pre 6.2.0 rules */
-int product, Strict;
-short replay;
+int has_remote, has_remvar;
+int limited_vis;
 
-int merger = 1, deadvar = 1, implied_semis = 1;
+extern LaunchSettings launch_settings;
+int implied_semis = 1;
 int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
-static int preprocessonly, itsr, itsr_n, sw_or_bt;
-static int inlineonly; /* show inlined code */
-static int dataflow = 1;
+static int itsr, itsr_n, sw_or_bt;
 
-static char **add_ltl = (char **)0;
-static char **ltl_file = (char **)0;
-static char **nvr_file = (char **)0;
 static char *ltl_claims = (char *)0;
 static char *pan_runtime = "";
 static char *pan_comptime = "";
 static char *formula = NULL;
-static char *PreArg[64];
-static int PreCnt = 0;
 static char out1[64];
-
-char **trailfilename; /* new option 'k' */
 
 #ifndef CPP
 /* to use visual C++:
@@ -246,318 +230,7 @@ int e_system(int v, const char *s) {
   return system(s);
 }
 
-void alldone(int estatus) {
-  char *ptr;
-#if defined(WIN32) || defined(WIN64)
-  struct _stat x;
-#else
-  struct stat x;
-#endif
-  if (preprocessonly == 0 && strlen(out1) > 0) {
-    (void)unlink((const char *)out1);
-  }
-
-  (void)unlink(TMP_FILE1);
-  (void)unlink(TMP_FILE2);
-  auto &seed = utils::seed::Seed::getInstance();
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
-
-  if (!buzzed && seed.NeedToPrintSeed() && !analyze && !export_ast &&
-      !s_trail && !preprocessonly && depth > 0) {
-    printf("seed used: %d\n", seed.GetSeed());
-  }
-
-  if (!buzzed && xspin && (analyze || s_trail)) {
-    if (estatus) {
-      printf("spin: %d error(s) - aborting\n", estatus);
-    } else {
-      printf("Exit-Status 0\n");
-    }
-  }
-
-  if (buzzed && replay && !lexer_.GetHasCode() && !estatus) {
-    extern QH *qh_lst;
-    QH *j;
-    int i;
-
-    pan_runtime = (char *)emalloc(2048); /* more than enough */
-    sprintf(pan_runtime, "-n%d ", seed.GetSeed());
-    if (jumpsteps) {
-      sprintf(&pan_runtime[strlen(pan_runtime)], "-j%d ", jumpsteps);
-    }
-    if (trailfilename) {
-      sprintf(&pan_runtime[strlen(pan_runtime)], "-k%s ", *trailfilename);
-    }
-    if (cutoff) {
-      sprintf(&pan_runtime[strlen(pan_runtime)], "-u%d ", cutoff);
-    }
-    for (i = 1; i <= PreCnt; i++) {
-      strcat(pan_runtime, PreArg[i]);
-      strcat(pan_runtime, " ");
-    }
-    for (j = qh_lst; j; j = j->nxt) {
-      sprintf(&pan_runtime[strlen(pan_runtime)], "-q%d ", j->n);
-    }
-    if (strcmp(PreProc, CPP) != 0) {
-      sprintf(&pan_runtime[strlen(pan_runtime)], "\"-P%s\" ", PreProc);
-    }
-    /* -oN options 1..5 are ignored in simulations */
-    if (old_priority_rules)
-      strcat(pan_runtime, "-o6 ");
-    if (!lexer_.GetImpliedSemis())
-      strcat(pan_runtime, "-o7 ");
-    if (no_print)
-      strcat(pan_runtime, "-b ");
-    if (no_wrapup)
-      strcat(pan_runtime, "-B ");
-    if (columns == 1)
-      strcat(pan_runtime, "-c ");
-    if (columns == 2)
-      strcat(pan_runtime, "-M ");
-    if (seed.NeedToPrintSeed())
-      strcat(pan_runtime, "-h ");
-    if (like_java == 1)
-      strcat(pan_runtime, "-J ");
-    if (old_scope_rules)
-      strcat(pan_runtime, "-O ");
-    if (notabs)
-      strcat(pan_runtime, "-T ");
-    if (verbose_flags.NeedToPrintGlobalVariables())
-      strcat(pan_runtime, "-g ");
-    if (verbose_flags.NeedToPrintLocalVariables())
-      strcat(pan_runtime, "-l ");
-    if (verbose_flags.NeedToPrintAllProcessActions())
-      strcat(pan_runtime, "-p ");
-    if (verbose_flags.NeedToPrintReceives())
-      strcat(pan_runtime, "-r ");
-    if (verbose_flags.NeedToPrintSends())
-      strcat(pan_runtime, "-s ");
-    if (verbose_flags.NeedToPrintVerbose())
-      strcat(pan_runtime, "-v ");
-    if (verbose_flags.NeedToPrintVeryVerbose())
-      strcat(pan_runtime, "-w ");
-    if (m_loss)
-      strcat(pan_runtime, "-m ");
-
-    char *tmp = (char *)emalloc(strlen("spin -t") + strlen(pan_runtime) +
-                                strlen(Fname->name.c_str()) + 8);
-
-    sprintf(tmp, "spin -t %s %s", pan_runtime, Fname->name.c_str());
-    estatus = e_system(1, tmp); /* replay */
-    exit(estatus);              /* replay without c_code */
-  }
-
-  if (buzzed && (!replay || lexer_.GetHasCode()) && !estatus) {
-    char *tmp, *tmp2 = NULL, *P_X;
-    char *C_X = const_cast<char *>((buzzed == 2) ? "-O" : "");
-
-    if (replay && strlen(pan_comptime) == 0) {
-#if defined(WIN32) || defined(WIN64)
-      P_X = "pan";
-#else
-      P_X = "./pan";
-#endif
-      if (stat(P_X, (struct stat *)&x) < 0) {
-        goto recompile; /* no executable pan for replay */
-      }
-      tmp = (char *)emalloc(8 + strlen(P_X) + strlen(pan_runtime) + 4);
-      /* the final +4 is too allow adding " &" in some cases */
-      sprintf(tmp, "%s %s", P_X, pan_runtime);
-      goto runit;
-    }
-#if defined(WIN32) || defined(WIN64)
-    P_X = "-o pan pan.c && pan";
-#else
-    P_X = "-o pan pan.c && ./pan";
-#endif
-    /* swarm and biterate randomization additions */
-    if (!replay && itsr) /* iterative search refinement */
-    {
-      if (!strstr(pan_comptime, "-DBITSTATE")) {
-        add_comptime("-DBITSTATE");
-      }
-      if (!strstr(pan_comptime, "-DPUTPID")) {
-        add_comptime("-DPUTPID");
-      }
-      if (!strstr(pan_comptime, "-DT_RAND") &&
-          !strstr(pan_comptime, "-DT_REVERSE")) {
-        add_runtime("-T0  "); /* controls t_reverse */
-      }
-      if (!strstr(pan_runtime, "-P")                       /* runtime flag */
-          || pan_runtime[2] < '0' || pan_runtime[2] > '1') /* no -P0 or -P1 */
-      {
-        add_runtime("-P0  "); /* controls p_reverse */
-      }
-      if (!strstr(pan_runtime, "-w")) {
-        add_runtime("-w18 "); /* -w18 = 256K */
-      } else {
-        char nv[32];
-        int x;
-        x = omit_str(pan_runtime, "-w");
-        if (x >= 0) {
-          sprintf(nv, "-w%d  ", x);
-          add_runtime(nv); /* added spaces */
-        }
-      }
-      if (!strstr(pan_runtime, "-h")) {
-        add_runtime("-h0  "); /* 0..499 */
-                              /* leave 2 spaces for increments up to -h499 */
-      } else if (!strstr(pan_runtime, "-hash")) {
-        char nv[32];
-        int x;
-        x = omit_str(pan_runtime, "-h");
-        if (x >= 0) {
-          sprintf(nv, "-h%d  ", x % 500);
-          add_runtime(nv); /* added spaces */
-        }
-      }
-      if (!strstr(pan_runtime, "-k")) {
-        add_runtime("-k1  "); /* 1..3 */
-      } else {
-        char nv[32];
-        int x;
-        x = omit_str(pan_runtime, "-k");
-        if (x >= 0) {
-          sprintf(nv, "-k%d  ", x % 4);
-          add_runtime(nv); /* added spaces */
-        }
-      }
-      if (strstr(pan_runtime, "-p_rotate")) {
-        char nv[32];
-        int x;
-        x = omit_str(pan_runtime, "-p_rotate");
-        if (x < 0) {
-          x = 0;
-        }
-        sprintf(nv, "-p_rotate%d  ", x % 256);
-        add_runtime(nv); /* added spaces */
-      } else if (strstr(pan_runtime, "-p_permute") == 0) {
-        add_runtime("-p_rotate0  ");
-      }
-      if (strstr(pan_runtime, "-RS")) {
-        (void)omit_str(pan_runtime, "-RS");
-      }
-      /* need room for at least 10 digits */
-      add_runtime("-RS1234567890 ");
-      change_rs(pan_runtime);
-    }
-  recompile:
-    if (strstr(PreProc, "cpp")) /* unix/linux */
-    {
-      strcpy(PreProc, "gcc"); /* need compiler */
-    } else if ((tmp = strstr(PreProc, "-E")) != NULL) {
-      *tmp = '\0'; /* strip preprocessing flags */
-    }
-
-    final_fiddle();
-    tmp = (char *)emalloc(8 + /* account for alignment */
-                          strlen(PreProc) + strlen(C_X) + strlen(pan_comptime) +
-                          strlen(P_X) + strlen(pan_runtime) +
-                          strlen(" -p_reverse & "));
-    tmp2 = tmp;
-
-    /* P_X ends with " && ./pan " */
-    sprintf(tmp, "%s %s %s %s %s", PreProc, C_X, pan_comptime, P_X,
-            pan_runtime);
-
-    if (!replay) {
-      if (itsr < 0) /* swarm only */
-      {
-        strcat(tmp, " &"); /* after ./pan */
-        itsr = -itsr;      /* now same as biterate */
-      }
-      /* do compilation first
-       * split cc command from run command
-       * leave cc in tmp, and set tmp2 to run
-       */
-      if ((ptr = strstr(tmp, " && ")) != NULL) {
-        tmp2 = ptr + 4; /* first run */
-        *ptr = '\0';
-      }
-    }
-
-    if (lexer_.HasLtl()) {
-      (void)unlink("_spin_nvr.tmp");
-    }
-
-    if (!norecompile) { /* make sure that if compilation fails we do not
-                           continue */
-#ifdef PC
-      (void)unlink("./pan.exe");
-#else
-      (void)unlink("./pan");
-#endif
-    }
-  runit:
-    if (norecompile && tmp != tmp2) {
-      estatus = 0;
-    } else {
-      estatus = e_system(1, tmp); /* compile or run */
-    }
-    if (replay || estatus < 0) {
-      goto skipahead;
-    }
-    /* !replay */
-    if (itsr == 0 && !sw_or_bt) /* single run */
-    {
-      estatus = e_system(1, tmp2);
-    } else if (itsr > 0) /* iterative search refinement */
-    {
-      int is_swarm = 0;
-      if (tmp2 != tmp) /* swarm: did only compilation so far */
-      {
-        tmp = tmp2;                 /* now we point to the run command */
-        estatus = e_system(1, tmp); /* first run */
-        itsr--;
-      }
-      itsr--; /* count down */
-
-      /* the following are added back randomly later */
-      (void)omit_str(tmp, "-p_reverse"); /* replaced by spaces */
-      (void)omit_str(tmp, "-p_normal");
-
-      if (strstr(tmp, " &") != NULL) {
-        (void)omit_str(tmp, " &");
-        is_swarm = 1;
-      }
-
-      /* increase -w every itsr_n-th run */
-      if ((itsr_n > 0 && (itsr == 0 || (itsr % itsr_n) != 0)) ||
-          (change_param(tmp, "-w", 36, 18) >= 0)) /* max 4G bit statespace */
-      {
-        (void)change_param(tmp, "-h", 500, 0);        /* hash function 0.499 */
-        (void)change_param(tmp, "-p_rotate", 256, 0); /* if defined */
-        (void)change_param(tmp, "-k", 4, 1); /* nr bits per state 0->1,2,3 */
-        (void)change_param(tmp, "-T", 2, 0); /* with or without t_reverse*/
-        (void)change_param(tmp, "-P", 2, 0); /* -P 0..1 != p_reverse */
-        change_rs(tmp);                      /* change random seed */
-        string_trim(tmp);
-        if (rand() % 5 == 0) /* 20% of all runs */
-        {
-          strcat(tmp, " -p_reverse ");
-          /* at end, so this overrides -p_rotateN, if there */
-          /* but -P0..1 disable this in 50% of the cases */
-          /* so its really activated in 10% of all runs */
-        } else if (rand() % 6 == 0) /* override p_rotate and p_reverse */
-        {
-          strcat(tmp, " -p_normal ");
-        }
-        if (is_swarm) {
-          strcat(tmp, " &");
-        }
-        goto runit;
-      }
-    }
-  skipahead:
-    (void)unlink("pan.b");
-    (void)unlink("pan.c");
-    (void)unlink("pan.h");
-    (void)unlink("pan.m");
-    (void)unlink("pan.p");
-    (void)unlink("pan.t");
-  }
-  exit(estatus);
-}
+void alldone(int estatus) { return; }
 #if 0
 	-P0	normal active process creation
 	-P1	reversed order for *active* process creation != p_reverse
@@ -591,48 +264,7 @@ void alldone(int estatus) {
 		-p_reverse
 #endif
 
-void preprocess(char *a, char *b, int a_tmp) {
-  char precmd[1024], cmd[2048];
-  int i;
-#ifdef PC
-  /* gcc is sometimes a symbolic link to gcc-4
-     that does not work well in cygwin, so we try
-     to use the actual executable that is used.
-     the code below assumes we are on a cygwin-like system
-   */
-  if (strncmp(PreProc, "gcc ", strlen("gcc ")) == 0) {
-    if (e_system(0, "gcc-4 --version > pan.pre 2>&1") == 0) {
-      strcpy(PreProc, "gcc-4 -std=gnu99 -Wno-unknown-warning-option "
-                      "-Wformat-overflow=0 -E -x c");
-    } else if (e_system(0, "gcc-3 --version > pan.pre 2>&1") == 0) {
-      strcpy(PreProc, "gcc-3 -std=gnu99 -Wno-unknown-warning-option "
-                      "-Wformat-overflow=0 -E -x c");
-    }
-  }
-#endif
-
-  assert(strlen(PreProc) < sizeof(precmd));
-  strcpy(precmd, PreProc);
-  for (i = 1; i <= PreCnt; i++) {
-    strcat(precmd, " ");
-    strcat(precmd, PreArg[i]);
-  }
-  if (strlen(precmd) > sizeof(precmd)) {
-    fprintf(stdout, "spin: too many -D args, aborting\n");
-    alldone(1);
-  }
-  sprintf(cmd, "%s \"%s\" > \"%s\"", precmd, a, b);
-  if (e_system(2, (const char *)cmd)) /* preprocessing step */
-  {
-    (void)unlink((const char *)b);
-    if (a_tmp)
-      (void)unlink((const char *)a);
-    fprintf(stdout, "spin: preprocessing failed %s\n", cmd);
-    alldone(1); /* no return, error exit */
-  }
-  if (a_tmp)
-    (void)unlink((const char *)a);
-}
+void preprocess(char *a, char *b, int a_tmp) { return; }
 
 void usage(void) {
   printf("use: spin [-option] ... [-option] file\n");
@@ -747,66 +379,7 @@ void usage(void) {
   alldone(1);
 }
 
-int optimizations(int nr) {
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
-
-  switch (nr) {
-  case '1':
-    dataflow = 1 - dataflow; /* dataflow */
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: dataflow optimizations turned %s\n",
-             dataflow ? "on" : "off");
-    }
-    break;
-  case '2':
-    /* dead variable elimination */
-    deadvar = 1 - deadvar;
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: dead variable elimination turned %s\n",
-             deadvar ? "on" : "off");
-    }
-    break;
-  case '3':
-    /* statement merging */
-    merger = 1 - merger;
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: statement merging turned %s\n", merger ? "on" : "off");
-    }
-    break;
-
-  case '4':
-    /* rv optimization */
-    rvopt = 1 - rvopt;
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: rendezvous optimization turned %s\n", rvopt ? "on" : "off");
-    }
-    break;
-  case '5':
-    /* case caching */
-    ccache = 1 - ccache;
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: case caching turned %s\n", ccache ? "on" : "off");
-    }
-    break;
-  case '6':
-    old_priority_rules = 1;
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: using old priority rules (pre version 6.2)\n");
-    }
-    return 0; /* no break */
-  case '7':
-    lexer_.SetImpliedSemis(0);
-    if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: no implied semi-colons (pre version 6.3)\n");
-    }
-    return 0; /* no break */
-  default:
-    printf("spin: bad or missing parameter on -o\n");
-    usage();
-    break;
-  }
-  return 1;
-}
+int optimizations(int nr) { return 0; }
 
 static void add_comptime(char *s) {
   char *tmp;
@@ -924,9 +497,11 @@ ssize_t getline(char **lineptr, size_t *n, FILE *stream) {
 }
 #endif
 
-void ltl_list(const std::string& , const std::string& ) {
-  if (s_trail || analyze ||
-      dumptab) /* when generating pan.c or replaying a trace */
+void ltl_list(const std::string &, const std::string &) {
+  if (true
+      // s_trail || launch_settings.need_to_analyze ||
+      //       dumptab
+      ) /* when generating pan.c or replaying a trace */
   {
     if (!ltl_claims) {
       ltl_claims = "_spin_nvr.tmp";
@@ -1042,7 +617,7 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
     setaccess(n->sym, ZS, 0, 'P');
 
   if (context->name.c_str() == claimproc) {
-    int forbidden = separate;
+    int forbidden = launch_settings.separate_version;
     switch (t) {
     case ASGN:
       printf("spin: Warning, never claim has side-effect\n");
@@ -1067,7 +642,7 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
       /* status becomes non-exclusive */
       if (n->sym && !(n->sym->xu & XX)) {
         n->sym->xu |= XX;
-        if (separate == 2) {
+        if (launch_settings.separate_version == 2) {
           printf("spin: warning, make sure that the S1 model\n");
           printf("      also polls channel '%s' in its claim\n",
                  n->sym->name.c_str());
@@ -1131,8 +706,9 @@ Lextok *rem_var(models::Symbol *a, Lextok *b, models::Symbol *c, Lextok *ndx) {
 
   has_remote++;
   has_remvar++;
-  dataflow = 0; /* turn off dead variable resets 4.2.5 */
-  merger = 0;   /* turn off statement merging for locals 6.4.9 */
+  launch_settings.need_use_dataflow_optimizations = false;
+  launch_settings.need_statemate_merging = false;
+
   tmp1 = nn(ZN, '?', b, ZN);
   tmp1->sym = a;
   tmp1 = nn(ZN, 'p', tmp1, ndx);

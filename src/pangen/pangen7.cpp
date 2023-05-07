@@ -9,11 +9,14 @@
 #ifndef PC
 #include <unistd.h>
 #endif
+#include "../main/launch_settings.hpp"
 #include <iostream>
+
+extern LaunchSettings launch_settings;
 
 extern ProcList *ready;
 extern Element *Al_El;
-extern int nclaims, verbose, Strict;
+extern int nclaims, verbose;
 extern short has_accept;
 
 struct Succ_List;
@@ -388,7 +391,8 @@ static void check_special(int *nrs) {
        * so that all its states should be considered accepting
        * --- but only if other claims do have accept states!
        */
-      if (Strict == 0 && j == 1 && Nacc[i] == 0 && any_accepts > 0) {
+      if (!launch_settings.need_use_strict_lang_intersection && j == 1 &&
+          Nacc[i] == 0 && any_accepts > 0) {
         if (verbose_flags.NeedToPrintVerbose() && i == unfolding) {
           printf("	/* claim %d pseudo-accept */\n", i);
         }

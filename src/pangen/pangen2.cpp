@@ -8,20 +8,23 @@
 #include "pangen5.hpp"
 #include "pangen7.hpp"
 #include "y.tab.h"
-#include <iostream>
 #include <fmt/core.h>
+#include <iostream>
+
+#include "../main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 
 #define DELTA 500 /* sets an upperbound on nr of chan names */
 
 #define blurb(fd, e)                                                           \
   {                                                                            \
     fprintf(fd, "\n");                                                         \
-    if (!merger)                                                               \
+    if (!launch_settings.need_statemate_merging)                               \
       fprintf(fd, "\t\t/* %s:%d */\n", e->n->fn->name.c_str(), e->n->ln);      \
   }
 #define tr_map(m, e)                                                           \
   {                                                                            \
-    if (!merger)                                                               \
+    if (!launch_settings.need_statemate_merging)                               \
       fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m,                     \
               e->n->fn->name.c_str(), e->n->ln);                               \
   }
@@ -32,8 +35,8 @@ extern Lextok *runstmnts;
 extern models::Symbol *Fname, *oFname, *context;
 extern char *claimproc, *eventmap;
 extern int lineno, verbose, Npars, Mpars, nclaims;
-extern int m_loss, has_remote, has_remvar, merger, rvopt, separate;
-extern int Ntimeouts, Etimeouts, deadvar, old_scope_rules, old_priority_rules;
+extern int has_remote, has_remvar, rvopt;
+extern int Ntimeouts, Etimeouts;
 extern int u_sync, u_async, nrRdy, Unique;
 extern int GenCode, IsGuard, Level, TestOnly;
 extern int globmin, globmax, dont_simplify;
@@ -41,7 +44,6 @@ extern int globmin, globmax, dont_simplify;
 extern short has_stack;
 extern std::string NextLab[64]; /* must match value in dstep.c:18 */
 
-int buzzed;
 FILE *fd_tc, *fd_th, *fd_tt, *fd_tb;
 static FILE *fd_tm;
 
@@ -57,7 +59,6 @@ short has_sorted = 0;   /* spec contains `!!' (sorted-send) operator */
 short has_random = 0;   /* spec contains `??' (random-recv) operator */
 short has_xu = 0;       /* spec contains xr or xs assertions */
 short has_unless = 0;   /* spec contains unless statements */
-short has_provided = 0; /* spec contains PROVIDED clauses on procs */
 extern lexer::Lexer lexer_;
 int mstp = 0;        /* max nr of state/process */
 int claimnr = -1;    /* claim process, if any */
@@ -85,7 +86,7 @@ static short evalindex = 0;    /* evaluate index of var names */
 
 extern int has_global(Lextok *);
 extern void check_mtypes(Lextok *, Lextok *);
-extern void walk2_struct(const std::string&, models::Symbol *);
+extern void walk2_struct(const std::string &, models::Symbol *);
 extern int find_min(Sequence *);
 extern int find_max(Sequence *);
 
@@ -166,7 +167,7 @@ static void tm_predef_np(void) {
 
   fprintf(fd_tm, "\tcase  _T5:\t/* np_ */\n");
 
-  if (separate == 2) {
+  if (launch_settings.separate_version == 2) {
     fprintf(fd_tm, "\t\tif (!((!(o_pm&4) && !(tau&128))))\n");
   } else {
     fprintf(fd_tm, "\t\tif (!((!(trpt->o_pm&4) && !(trpt->tau&128))))\n");
@@ -203,11 +204,11 @@ void gensrc(void) {
 
   disambiguate(); /* avoid name-clashes between scopes */
 
-  if (!(fd_tc = fopen(Cfile[0].nm[separate], MFLAGS))    /* main routines */
-      || !(fd_th = fopen(Cfile[1].nm[separate], MFLAGS)) /* header file   */
-      || !(fd_tt = fopen(Cfile[2].nm[separate], MFLAGS)) /* transition matrix */
-      || !(fd_tm = fopen(Cfile[3].nm[separate], MFLAGS)) /* forward  moves */
-      || !(fd_tb = fopen(Cfile[4].nm[separate], MFLAGS))) /* backward moves */
+  if (!(fd_tc = fopen(Cfile[0].nm[launch_settings.separate_version], MFLAGS))    /* main routines */
+      || !(fd_th = fopen(Cfile[1].nm[launch_settings.separate_version], MFLAGS)) /* header file   */
+      || !(fd_tt = fopen(Cfile[2].nm[launch_settings.separate_version], MFLAGS)) /* transition matrix */
+      || !(fd_tm = fopen(Cfile[3].nm[launch_settings.separate_version], MFLAGS)) /* forward  moves */
+      || !(fd_tb = fopen(Cfile[4].nm[launch_settings.separate_version], MFLAGS))) /* backward moves */
   {
     printf("spin: cannot create pan.[chtmfb]\n");
     alldone(1);
@@ -325,7 +326,7 @@ void gensrc(void) {
   fprintf(fd_th, "	#define uint	unsigned int\n");
   fprintf(fd_th, "#endif\n");
 
-  if (separate == 1 && !claimproc) {
+  if (launch_settings.separate_version == 1 && !claimproc) {
     models::Symbol *n = (models::Symbol *)emalloc(sizeof(models::Symbol));
     Sequence *s = (Sequence *)emalloc(sizeof(Sequence));
     s->minel = -1;
@@ -333,7 +334,7 @@ void gensrc(void) {
     n->name = "_:never_template:_";
     mk_rdy(n, ZN, s, 0, ZN, N_CLAIM);
   }
-  if (separate == 2) {
+  if (launch_settings.separate_version == 2) {
     if (has_remote) {
       printf("spin: warning, make sure that the S1 model\n");
       printf("      includes the same remote references\n");
@@ -343,7 +344,7 @@ void gensrc(void) {
     fprintf(fd_th, "#endif\n");
     if (lexer_.GetHasLast())
       fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
-    if (lexer_.GetHasPriority() && !old_priority_rules)
+    if (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority)
       fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
     goto doless;
   }
@@ -384,11 +385,11 @@ void gensrc(void) {
   }
   if (lexer_.GetHasLast())
     fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
-  if (lexer_.GetHasPriority() && !old_priority_rules)
+  if (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority)
     fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
   if (has_sorted)
     fprintf(fd_th, "#define HAS_SORTED	%d\n", has_sorted);
-  if (m_loss)
+  if (launch_settings.need_lose_msgs_sent_to_full_queues)
     fprintf(fd_th, "#define M_LOSS\n");
   if (has_random)
     fprintf(fd_th, "#define HAS_RANDOM	%d\n", has_random);
@@ -405,17 +406,17 @@ void gensrc(void) {
   fprintf(fd_th, "#endif\n");
   if (has_stack)
     fprintf(fd_th, "#define HAS_STACK	%d\n", has_stack);
-  if (has_enabled || (lexer_.GetHasPriority() && !old_priority_rules))
+  if (has_enabled || (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority))
     fprintf(fd_th, "#define HAS_ENABLED	1\n");
   if (has_unless)
     fprintf(fd_th, "#define HAS_UNLESS	%d\n", has_unless);
-  if (has_provided)
-    fprintf(fd_th, "#define HAS_PROVIDED	%d\n", has_provided);
+  if (launch_settings.has_provided)
+    fprintf(fd_th, "#define HAS_PROVIDED	%d\n", launch_settings.has_provided);
   if (has_pcvalue)
     fprintf(fd_th, "#define HAS_PCVALUE	%d\n", has_pcvalue);
   if (has_badelse)
     fprintf(fd_th, "#define HAS_BADELSE	%d\n", has_badelse);
-  if (has_enabled || (lexer_.GetHasPriority() && !old_priority_rules) ||
+  if (has_enabled || (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority) ||
       has_pcvalue || has_badelse || lexer_.GetHasLast()) {
     fprintf(fd_th, "#ifndef NOREDUCE\n");
     fprintf(fd_th, "	#define NOREDUCE	1\n");
@@ -423,7 +424,7 @@ void gensrc(void) {
   }
   if (has_np)
     fprintf(fd_th, "#define HAS_NP	%d\n", has_np);
-  if (merger)
+  if (launch_settings.need_statemate_merging)
     fprintf(fd_th, "#define MERGED	1\n");
 
 doless:
@@ -477,7 +478,7 @@ doless:
 
   plunk_c_decls(fd_tc); /* types can be refered to in State */
 
-  switch (separate) {
+  switch (launch_settings.separate_version) {
   case 0:
     fprintf(fd_tc, "#include \"pan.h\"\n");
     break;
@@ -489,7 +490,7 @@ doless:
     break;
   }
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     fprintf(fd_tc, "char *TrailFile = PanSource; /* default */\n");
     fprintf(fd_tc, "char *trailfilename;\n");
   }
@@ -513,7 +514,7 @@ doless:
 
   plunk_c_fcts(fd_tc); /* State can be used in fcts */
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     ntimes(fd_tc, 0, 1, Preamble);
     ntimes(fd_tc, 0, 1, Separate); /* things that moved out of pan.h */
   } else {
@@ -532,7 +533,7 @@ doless:
   for (p = ready; p; p = p->nxt)
     mstp = max(p->s->maxel, mstp);
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     fprintf(fd_tt, "#ifdef PEG\n");
     fprintf(fd_tt, "struct T_SRC {\n");
     fprintf(fd_tt, "	char *fl; int ln;\n");
@@ -546,7 +547,7 @@ doless:
     fprintf(fd_tt, "	printf(\"%%s:%%d\\n\",\n");
     fprintf(fd_tt, "		T_SRC[n].fl, T_SRC[n].ln);\n");
     fprintf(fd_tt, "}\n");
-    if (!merger) {
+    if (!launch_settings.need_statemate_merging) {
       fprintf(fd_tt, "#else\n");
       fprintf(fd_tt, "#define tr_2_src(m,f,l)\n");
     }
@@ -558,7 +559,7 @@ doless:
     fprintf(fd_tt, "emalloc(%d*sizeof(Trans **));\n", nrRdy + 1);
     /* +1 for np_ automaton */
 
-    if (separate == 1) {
+    if (launch_settings.separate_version == 1) {
       fprintf(fd_tm, "	if (II == 0)\n");
       fprintf(fd_tm, "	{ _m = step_claim(trpt->o_pm, trpt->tau, tt, ot, "
                      "t);\n");
@@ -599,11 +600,11 @@ doless:
   fprintf(fd_tm, "	case 0:	/* if without executable clauses */\n");
   fprintf(fd_tm, "		continue;\n");
   fprintf(fd_tm, "	case 1: /* generic 'goto' or 'skip' */\n");
-  if (separate != 2)
+  if (launch_settings.separate_version != 2)
     fprintf(fd_tm, "		IfNotBlocked\n");
   fprintf(fd_tm, "		_m = 3; goto P999;\n");
   fprintf(fd_tm, "	case 2: /* generic 'else' */\n");
-  if (separate == 2)
+  if (launch_settings.separate_version == 2)
     fprintf(fd_tm, "		if (o_pm&1) continue;\n");
   else {
     fprintf(fd_tm, "		IfNotBlocked\n");
@@ -612,7 +613,7 @@ doless:
   fprintf(fd_tm, "		_m = 3; goto P999;\n");
   uniq = 3;
 
-  if (separate == 1)
+  if (launch_settings.separate_version == 1)
     fprintf(fd_tb, "	if (II == 0) goto R999;\n");
 
   fprintf(fd_tb, "	switch (t->back) {\n");
@@ -623,7 +624,7 @@ doless:
     putproc(p);
   }
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     fprintf(fd_th, "\n");
     for (p = ready; p; p = p->nxt)
       fprintf(fd_th, "extern short src_ln%d[];\n", p->tn);
@@ -662,7 +663,7 @@ doless:
     fprintf(fd_th, "#define T_ID	unsigned int\n");
   }
 
-  if (separate != 1) {
+  if (launch_settings.separate_version != 1) {
     tm_predef_np();
     tt_predef_np();
   }
@@ -672,10 +673,10 @@ doless:
   fprintf(fd_tm, "	}\n\n");
   fprintf(fd_tb, "	}\n\n");
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     ntimes(fd_tt, 0, 1, Tail);
     genheader();
-    if (separate == 1) {
+    if (launch_settings.separate_version == 1) {
       fprintf(fd_th, "#define FORWARD_MOVES\t\"pan_s.m\"\n");
       fprintf(fd_th, "#define BACKWARD_MOVES\t\"pan_s.b\"\n");
       fprintf(fd_th, "#define SEPARATE\n");
@@ -756,7 +757,7 @@ doless:
     fprintf(fd_tc, "#include TRANSITIONS\n");
   }
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     c_wrapper(fd_tc);
     c_chandump(fd_tc);
   }
@@ -786,7 +787,7 @@ doless:
 
   fprintf(fd_tc, "\nTrans *t_id_lkup[%d];\n\n", globmax + 1);
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     fprintf(fd_tc, "\n#ifdef BFS_PAR\n\t#include \"pan.p\"\n#endif\n");
   }
   fprintf(fd_tc, "\n/* end of pan.c */\n");
@@ -857,7 +858,7 @@ void bb_or_dd(int j, int which) {
   }
 }
 
-void Done_case(const std::string& nm, models::Symbol *z) {
+void Done_case(const std::string &nm, models::Symbol *z) {
   int j, k;
   int nid = z->id;
   int qln = z->value_type;
@@ -983,7 +984,7 @@ static void putproc(ProcList *p) {
   Pid_nr = p->tn;
   Det = p->det;
 
-  if (pid_is_claim(Pid_nr) && separate == 1) {
+  if (pid_is_claim(Pid_nr) && launch_settings.separate_version == 1) {
     fprintf(fd_th, "extern uchar reached%d[];\n", Pid_nr);
     fprintf(fd_th, "\n#define _nstates%d	%d\t/* %s */\n", Pid_nr,
             p->s->maxel, p->n->name.c_str());
@@ -994,7 +995,7 @@ static void putproc(ProcList *p) {
             p->s->last ? p->s->last->seqno : 0);
     return;
   }
-  if (!pid_is_claim(Pid_nr) && separate == 2) {
+  if (!pid_is_claim(Pid_nr) && launch_settings.separate_version == 2) {
     fprintf(fd_th, "extern short src_ln%d[];\n", Pid_nr);
     fprintf(fd_th, "extern uchar *loopstate%d;\n", Pid_nr);
     return;
@@ -1254,7 +1255,8 @@ static void put_sub(Element *e, int Tt0, int Tt1) {
       fprintf(fd_tm, "#endif\n");
 
       fprintf(fd_tm, "\t\t_m = %d", getweight(s->frst->n));
-      if (m_loss && s->frst->n->ntyp == 's')
+      if (launch_settings.need_lose_msgs_sent_to_full_queues &&
+          s->frst->n->ntyp == 's')
         fprintf(fd_tm, "+delta_m; delta_m = 0");
       fprintf(fd_tm, "; goto P999;\n\n");
     }
@@ -1560,7 +1562,7 @@ static void doforward(FILE *tm_fd, Element *e) {
     fprintf(tm_fd, ";\n\t\tif (trpt->o_pm&1)\n\t\t");
     fprintf(tm_fd, "\tuerror(\"non-determinism in D_proctype\")");
   }
-  if (deadvar && !lexer_.GetHasCode())
+  if (launch_settings.need_hide_write_only_variables && !lexer_.GetHasCode())
     for (u = e->dead; u; u = u->nxt) {
       fprintf(tm_fd, ";\n\t\t");
       fprintf(tm_fd, "if (TstOnly) return 1; /* TT */\n");
@@ -1694,12 +1696,11 @@ static int case_cache(Element *e, int a) {
   CaseCache *Cached = (CaseCache *)0;
   Element *f, *g;
   int j, nrbups, mark, ntarget;
-  extern int ccache;
 
   mark = (e->status & ATOM); /* could lose atomicity in a merge chain */
 
   if (e->merge_mark > 0 ||
-      (merger &&
+      (launch_settings.need_statemate_merging &&
        e->merge_in ==
            0)) { /* state nominally unreachable (part of merge chains) */
     if (e->n->ntyp != '.' && e->n->ntyp != GOTO) {
@@ -1721,8 +1722,8 @@ static int case_cache(Element *e, int a) {
 
   fprintf(fd_tt, "\ttrans[%d][%d]\t= ", Pid_nr, e->seqno);
 
-  if (ccache && !pid_is_claim(Pid_nr) && Pid_nr != eventmapnr &&
-      (Cached = prev_case(e, Pid_nr))) {
+  if (launch_settings.need_case_caching && !pid_is_claim(Pid_nr) &&
+      Pid_nr != eventmapnr && (Cached = prev_case(e, Pid_nr))) {
     bupcase = Cached->b;
     casenr = Cached->m;
     fromcache = 1;
@@ -1837,7 +1838,7 @@ static int case_cache(Element *e, int a) {
   }
 out:
   fprintf(fd_tm, "_m = %d", getweight(e->n));
-  if (m_loss && e->n->ntyp == 's')
+  if (launch_settings.need_lose_msgs_sent_to_full_queues && e->n->ntyp == 's')
     fprintf(fd_tm, "+delta_m; delta_m = 0");
   fprintf(fd_tm, "; goto P999; /* %d */\n", YZcnt);
 
@@ -2305,7 +2306,7 @@ int has_global(Lextok *n) {
 
   case NAME:
     if (n->sym->name == "_priority") {
-      if (old_priority_rules) {
+      if (launch_settings.need_revert_old_rultes_for_priority) {
         if (n_seen != n->sym)
           loger::fatal("cannot refer to _priority with -o6");
         n_seen = n->sym;
@@ -2519,7 +2520,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     break;
 
   case TIMEOUT:
-    if (separate == 2)
+    if (launch_settings.separate_version == 2)
       fprintf(fd, "((tau)&1)");
     else
       fprintf(fd, "((trpt->tau)&1)");
@@ -2541,7 +2542,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       loger::fatal("'run' in d_step sequence (use atomic)");
 
     fprintf(fd, "addproc(II, %d, %d",
-            (now->val > 0 && !old_priority_rules) ? now->val : 1,
+            (now->val > 0 && !launch_settings.need_revert_old_rultes_for_priority) ? now->val : 1,
             fproc(now->sym->name));
     for (v = now->lft, i = 0; v; v = v->rgt, i++) {
       cat2(", ", v->lft);
@@ -2568,7 +2569,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     break;
 
   case GET_P:
-    if (old_priority_rules) {
+    if (launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "1");
     } else {
       cat3("get_priority(", now->lft, ")");
@@ -2576,7 +2577,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     break;
 
   case SET_P:
-    if (!old_priority_rules) {
+    if (!launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "if (TstOnly) return 1; /* T30 */\n\t\t");
       fprintf(fd, "set_priority(");
       putstmnt(fd, now->lft->lft, m);
@@ -2588,7 +2589,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
   case NONPROGRESS:
     /* o_pm&4=progress, tau&128=claim stutter */
-    if (separate == 2)
+    if (launch_settings.separate_version == 2)
       fprintf(fd, "(!(o_pm&4) && !(tau&128))");
     else
       fprintf(fd, "(!(trpt->o_pm&4) && !(trpt->tau&128))");
@@ -2679,7 +2680,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       break;
     }
     if (TestOnly) {
-      if (m_loss)
+      if (launch_settings.need_lose_msgs_sent_to_full_queues)
         fprintf(fd, "1");
       else
         putname(fd, "!q_full(", now->lft, m, ")");
@@ -2702,7 +2703,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     fprintf(fd, "if (q_%s", (u_sync > 0 && u_async == 0) ? "len" : "full");
     putname(fd, "(", now->lft, m, "))\n");
 
-    if (m_loss) {
+    if (launch_settings.need_lose_msgs_sent_to_full_queues) {
       fprintf(fd, "\t\t{ nlost++; delta_m = 1; } else {");
     } else {
       fprintf(fd, "\t\t\t");
@@ -2712,7 +2713,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "\n\t\tif (TstOnly) return 1; /* T1 */");
 
-    if (u_sync && !u_async && rvopt)
+    if (u_sync && !u_async && launch_settings.need_rendezvous_optimizations)
       fprintf(fd, "\n\n\t\tif (no_recvs(II)) continue;\n");
 
     fprintf(fd, "\n#ifdef HAS_CODE\n");
@@ -2757,7 +2758,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
       }
       fprintf(fd, "; }");
     }
-    if (m_loss) {
+    if (launch_settings.need_lose_msgs_sent_to_full_queues) {
       fprintf(fd, ";\n\t\t}\n\t\t"); /* end of m_loss else */
     }
     break;
@@ -3238,7 +3239,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 
   case ELSE:
     if (!GenCode) {
-      if (separate == 2)
+      if (launch_settings.separate_version == 2)
         fprintf(fd, "if (o_pm&1)\n\t\t\t");
       else
         fprintf(fd, "if (trpt->o_pm&1)\n\t\t\t");
@@ -3438,7 +3439,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
 std::string simplify_name(const std::string &s) {
   std::string t = s;
 
-  if (!old_scope_rules) {
+  if (!launch_settings.need_old_scope_rules) {
     size_t i = 0;
     while (i < t.length() && (t[i] == '_' || std::isdigit(t[i]))) {
       i++;
@@ -3483,7 +3484,7 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
 
   fprintf(fd, pre.c_str(), 0);
   if (!terse && !s->owner_name && evalindex != 1) {
-    if (old_priority_rules && s->name == "_priority") {
+    if (launch_settings.need_revert_old_rultes_for_priority && s->name == "_priority") {
       fprintf(fd, "1");
       goto shortcut;
     } else {
@@ -3500,7 +3501,7 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
     }
   }
 
-  if (terse && buzzed == 1) {
+  if (terse && launch_settings.buzzed == 1) {
     fprintf(fd, "B_state.%s", (s->context) ? "local[B_pid]." : "");
   }
 

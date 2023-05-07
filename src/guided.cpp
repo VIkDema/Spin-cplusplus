@@ -1,5 +1,6 @@
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -7,16 +8,16 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+extern LaunchSettings launch_settings;
 
 extern RunList *run_lst, *X_lst;
 extern Element *Al_El;
 extern models::Symbol *Fname, *oFname;
-extern int lineno, xspin, jumpsteps, depth, merger, cutoff;
-extern int nproc, nstop, Tval, ntrail, columns;
+extern int lineno, depth;
+extern int nproc, nstop, Tval;
 extern short Have_claim, Skip_claim;
 extern lexer::Lexer lexer_;
 extern void ana_src(int, int);
-extern char **trailfilename;
 
 int TstOnly = 0, prno;
 
@@ -133,15 +134,17 @@ void match_trail(void) {
   std::string snap;
   std::string q;
 
-  if (trailfilename) {
-    if (strlen(*trailfilename) < snap.capacity()) {
-      snap = *trailfilename;
+  if (!launch_settings.trail_file_name.empty()) {
+    if (launch_settings.trail_file_name.front().length() < snap.capacity()) {
+      snap = launch_settings.trail_file_name.front();
     } else {
-      loger::fatal("filename %s too long", *trailfilename);
+      loger::fatal("filename %s too long",
+                   launch_settings.trail_file_name.front().c_str());
     }
   } else {
-    if (ntrail)
-      snap = oFname->name + std::to_string(ntrail) + ".trail";
+    if (launch_settings.nubmer_trail)
+      snap = oFname->name + std::to_string(launch_settings.nubmer_trail) +
+             ".trail";
     else
       snap = oFname->name + ".trail";
   }
@@ -154,8 +157,9 @@ void match_trail(void) {
       if (dotPos != std::string::npos) {
         q = oFname->name.substr(dotPos);
         oFname->name[dotPos] = '\0';
-        if (ntrail)
-          snap = oFname->name + std::to_string(ntrail) + ".trail";
+        if (launch_settings.nubmer_trail)
+          snap = oFname->name + std::to_string(launch_settings.nubmer_trail) +
+                 ".trail";
         else
           snap = oFname->name + ".trail";
         oFname->name[dotPos] = '.';
@@ -175,7 +179,7 @@ void match_trail(void) {
   // Rest of the code...
 
 okay:
-  if (xspin == 0 && newer(oFname->name, snap)) {
+  if (newer(oFname->name, snap)) {
     printf("spin: warning, \"%s\" is newer than %s\n", oFname->name.c_str(),
            snap.c_str());
   }
@@ -201,13 +205,13 @@ okay:
       if (verbose_flags.NeedToPrintVerbose()) {
         printf("using statement merging\n");
       }
-      merger = 1;
+      launch_settings.need_statemate_merging = true;
       ana_src(0, 1);
       continue;
     }
     if (depth == -1) {
       if (1 || verbose_flags.Active()) {
-        if (columns == 2)
+        if (launch_settings.need_generate_mas_flow_tcl_tk)
           dotag(stdout, " CYCLE>\n");
         else
           dotag(stdout, "<<<<<START OF CYCLE>>>>>\n");
@@ -219,9 +223,9 @@ okay:
       return; /* permuted: -5, -6, -7, -8 */
     }
 
-    if (cutoff > 0 && depth >= cutoff) {
+    if (launch_settings.count_of_steps > 0 && depth >= launch_settings.count_of_steps) {
       printf("-------------\n");
-      printf("depth-limit (-u%d steps) reached\n", cutoff);
+      printf("depth-limit (-u%d steps) reached\n", launch_settings.count_of_steps);
       break;
     }
 
@@ -245,7 +249,7 @@ okay:
         run_lst = run_lst->nxt;
         nstop++;
         if (verbose_flags.NeedToPrintAllProcessActions()) {
-          if (columns == 2) {
+          if (launch_settings.need_generate_mas_flow_tcl_tk) {
             dotag(stdout, "<end>\n");
             continue;
           }
@@ -264,9 +268,6 @@ okay:
       lost_trail();
     }
 
-    if (0 && !xspin && verbose_flags.NeedToPrintVerbose()) {
-      printf("step %d i=%d pno %d stmnt %d\n", depth, i, prno, nst);
-    }
 
     for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
       if (--i == prno)
@@ -314,10 +315,10 @@ okay:
       Element *g, *og = dothis;
       do {
         g = eval_sub(og);
-        if (g && depth >= jumpsteps &&
+        if (g && depth >= launch_settings.count_of_skipping_steps &&
             (verbose_flags.NeedToPrintVerbose() ||
              (verbose_flags.NeedToPrintAllProcessActions() && not_claim()))) {
-          if (columns != 2) {
+          if (!launch_settings.need_generate_mas_flow_tcl_tk) {
             p_talk(og, 1);
 
             if (og->n->ntyp == D_STEP)
@@ -331,8 +332,6 @@ okay:
             dumpglobals();
           if (verbose_flags.NeedToPrintLocalVariables())
             dumplocal(X_lst, 0);
-          if (xspin)
-            printf("\n");
         }
         og = g;
       } while (g && g != dothis->nxt);
@@ -352,12 +351,12 @@ okay:
           X_lst->pc = huntele(X_lst->pc, 0, a);
       }
 
-      if (depth >= jumpsteps &&
+      if (depth >= launch_settings.count_of_skipping_steps &&
           (verbose_flags.NeedToPrintVerbose() ||
            (verbose_flags.NeedToPrintAllProcessActions() &&
             not_claim()))) /* -v or -p */
       {
-        if (columns != 2) {
+        if (!launch_settings.need_generate_mas_flow_tcl_tk) {
           p_talk(dothis, 1);
 
           if (dothis->n->ntyp == D_STEP)
@@ -376,8 +375,6 @@ okay:
           dumpglobals();
         if (verbose_flags.NeedToPrintLocalVariables())
           dumplocal(X_lst, 0);
-        if (xspin)
-          printf("\n");
 
         if (X_lst && !X_lst->pc) {
           X_lst->pc = dothis;
@@ -394,7 +391,7 @@ okay:
     if (Have_claim && X_lst && X_lst->pid == 0 && dothis->n &&
         lastclaim != dothis->n->ln) {
       lastclaim = dothis->n->ln;
-      if (columns == 2) {
+      if (launch_settings.need_generate_mas_flow_tcl_tk) {
         char t[128];
         sprintf(t, "#%d", lastclaim);
         pstext(0, t);

@@ -1,9 +1,12 @@
 /***** spin: pangen5.c *****/
 
 #include "../fatal/fatal.hpp"
+#include "../main/launch_settings.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
+
+extern LaunchSettings launch_settings;
 
 struct BuildStack {
   FSM_trans *t;
@@ -11,7 +14,7 @@ struct BuildStack {
 };
 
 extern ProcList *ready;
-extern int verbose, eventmapnr, claimnr, rvopt, export_ast, u_sync;
+extern int verbose, eventmapnr, claimnr, u_sync;
 extern Element *Al_El;
 
 static FSM_state *fsm_free;
@@ -318,7 +321,7 @@ static void FSM_ANA(void) {
             u->special = n + 1;  /* means, reset to 0 after use */
         }
 
-  if (!export_ast)
+  if (!launch_settings.need_export_ast)
     for (f = fsmx; f; f = f->nxt)
       for (t = f->t; t; t = t->nxt)
         for (n = 0; n < 2; n++)
@@ -429,7 +432,7 @@ static void FSM_EDGE(int from, int to, Element *e) {
   f = mkstate(to);
   f->in++;
 
-  if (export_ast) {
+  if (launch_settings.need_export_ast) {
     t = get_trans(from);
     t->step = e;
     t->nxt = f->p; /* from is a predecessor of to */
@@ -641,7 +644,7 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
       FSM_MERGER(/* p->n->name */);
       huntele(e, e->status, -1)->merge_in = 1; /* start-state */
     }
-    if (export_ast)
+    if (launch_settings.need_export_ast)
       AST_store(p, huntele(e, e->status, -1)->seqno);
 
     FSM_DEL();
@@ -656,7 +659,7 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
     }
     e->status &= ~DONE;
   }
-  if (export_ast) {
+  if (launch_settings.need_export_ast) {
     AST_slice();
     alldone(0); /* changed in 5.3.0: was exit(0) */
   }
@@ -694,7 +697,7 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
   }
   fprintf(f2, "}\n");
 
-  if (rvopt) {
+  if (launch_settings.need_rendezvous_optimizations) {
     fprintf(f2, "int\nno_recvs(int me)\n{\n");
     fprintf(f2, "	int h; uchar ot; short tt;\n");
     fprintf(f2, "	Trans *t;\n");

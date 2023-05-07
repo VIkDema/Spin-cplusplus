@@ -14,6 +14,8 @@
 #include <stdint.h>
 #endif
 #include <fmt/core.h>
+#include "../main/launch_settings.hpp"
+extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
 extern Label *labtab;
@@ -21,9 +23,9 @@ extern Ordered *all_names;
 extern ProcList *ready;
 extern Queue *qtab;
 extern models::Symbol *Fname;
-extern int lineno, verbose, Pid_nr, separate, old_scope_rules, nclaims;
+extern int lineno, verbose, Pid_nr, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
-extern short has_sorted, has_random, has_provided;
+extern short has_sorted, has_random;
 extern Queue *ltab[];
 
 int Npars = 0, u_sync = 0, u_async = 0, hastrack = 1;
@@ -77,7 +79,7 @@ void genheader(void) {
   ProcList *p;
   int i;
 
-  if (separate == 2) {
+  if (launch_settings.separate_version == 2) {
     putunames(fd_th);
     goto here;
   }
@@ -196,7 +198,7 @@ here:
 
   ntimes(fd_th, 0, 1, Head0);
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     ntimes(fd_th, 0, 1, Header);
     fprintf(fd_th, "#define StackSize	(");
     c_stack_size(fd_th);
@@ -249,7 +251,7 @@ here:
             "	#error cannot use BFS_PAR on models with c_track stmnts\n");
     fprintf(fd_th, "#endif\n");
   }
-  if (separate != 2)
+  if (launch_settings.separate_version != 2)
     dohidden();
 }
 
@@ -257,7 +259,7 @@ void genaddproc(void) {
   ProcList *p;
   int i = 0;
 
-  if (separate == 2)
+  if (launch_settings.separate_version == 2)
     goto shortcut;
 
   ntimes(fd_tc, nrRdy + 1, nrRdy + 2, R2); /* +1 for np_ -- was th */
@@ -290,7 +292,7 @@ void genaddproc(void) {
 
   ntimes(fd_tc, 0, 1, Addp1);
 
-  if (has_provided) {
+  if (launch_settings.has_provided) {
     fprintf(fd_tt, "\nint\nprovided(int II, unsigned char ot, ");
     fprintf(fd_tt, "int tt, Trans *t)\n");
     fprintf(fd_tt, "{\n\tswitch(ot) {\n");
@@ -304,17 +306,17 @@ shortcut:
     Pid_nr = p->tn;
     put_pinit(p);
   }
-  if (separate == 2)
+  if (launch_settings.separate_version == 2)
     return;
 
   Pid_nr = 0;
-  if (has_provided) {
+  if (launch_settings.has_provided) {
     fprintf(fd_tt, "\tdefault: return 1; /* e.g., a claim */\n");
     fprintf(fd_tt, "\t}\n\treturn 0;\n}\n");
   }
 
   ntimes(fd_tc, i, i + 1, R6);
-  if (separate == 0)
+  if (launch_settings.separate_version == 0)
     ntimes(fd_tc, 1, nrRdy + 1, R5); /* +1 for np_ */
   else
     ntimes(fd_tc, 1, nrRdy, R5);
@@ -340,7 +342,7 @@ void do_locinits(FILE *fd) {
 void genother(void) {
   ProcList *p;
 
-  switch (separate) {
+  switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
       for (p = ready; p; p = p->nxt) {
@@ -375,7 +377,7 @@ void genother(void) {
   /* new place, make sure Maxbody is set to its final value here */
   fprintf(fd_tc, "\n");
 
-  if (separate != 2) {
+  if (launch_settings.separate_version != 2) {
     ntimes(fd_tc, 1, u_sync + u_async + 1, R3); /* nrqs is still 0 */
     fprintf(fd_tc, "\tMaxbody = max(Maxbody, sizeof(State)-VECTORSZ);\n");
     fprintf(fd_tc, "\tif ((Maxbody %% WS) != 0)\n");
@@ -385,7 +387,7 @@ void genother(void) {
   for (p = ready; p; p = p->nxt)
     end_labs(p->n, p->tn);
 
-  switch (separate) {
+  switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
       for (p = ready; p; p = p->nxt) {
@@ -453,7 +455,7 @@ static void end_labs(models::Symbol *s, int i) {
   int j;
   char foo[128];
 
-  if ((pid_is_claim(i) && separate == 1) || (!pid_is_claim(i) && separate == 2))
+  if ((pid_is_claim(i) && launch_settings.separate_version == 1) || (!pid_is_claim(i) && launch_settings.separate_version == 2))
     return;
 
   for (l = labtab; l; l = l->nxt)
@@ -679,7 +681,7 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
   }
 
   auto ptr = sp->name.begin();
-  if (!old_scope_rules) {
+  if (!launch_settings.need_old_scope_rules) {
     while (*ptr == '_' || isdigit((int)*ptr)) {
       ptr++;
     }
@@ -897,7 +899,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
     break;
 
   case LOGV:
-    if (!old_scope_rules) {
+    if (!launch_settings.need_old_scope_rules) {
       while (*ptr == '_' || isdigit((int)*ptr)) {
         ptr++;
       }
@@ -1056,7 +1058,7 @@ static void tc_predef_np(void) {
   fprintf(fd_th, "#define _start%d	0 /* np_ */\n", nrRdy);
 
   fprintf(fd_tc, "\tcase %d:	/* np_ */\n", nrRdy);
-  if (separate == 1) {
+  if (launch_settings.separate_version == 1) {
     fprintf(fd_tc, "\t\tini_claim(%d, h);\n", nrRdy);
   } else {
     fprintf(fd_tc, "\t\t((P%d *)pptr(h))->_t = %d;\n", nrRdy, nrRdy);
@@ -1122,13 +1124,13 @@ static void put_pinit(ProcList *P) {
   int i = P->tn;
   int init_value, j, k;
 
-  if (pid_is_claim(i) && separate == 1) {
+  if (pid_is_claim(i) && launch_settings.separate_version == 1) {
     fprintf(fd_tc, "\tcase %d:	/* %s */\n", i, s->name.c_str());
     fprintf(fd_tc, "\t\tini_claim(%d, h);\n", i);
     fprintf(fd_tc, "\t\tbreak;\n");
     return;
   }
-  if (!pid_is_claim(i) && separate == 2)
+  if (!pid_is_claim(i) && launch_settings.separate_version == 2)
     return;
 
   init_value = huntele(e, e->status, -1)->seqno;
@@ -1151,7 +1153,7 @@ static void put_pinit(ProcList *P) {
     fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", i);
   }
 
-  if (has_provided) {
+  if (launch_settings.has_provided) {
     fprintf(fd_tt, "\tcase %d: /* %s */\n\t\t", i, s->name.c_str());
     if (P->prov) {
       fprintf(fd_tt, "if (");

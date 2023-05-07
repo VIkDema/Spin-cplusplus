@@ -1,16 +1,18 @@
 /***** spin: vars.c *****/
 
 #include "fatal/fatal.hpp"
+#include "main/launch_settings.hpp"
 #include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
+extern LaunchSettings launch_settings;
 
 extern char GBuf[];
-extern int analyze, jumpsteps, nproc, nstop, columns, old_priority_rules;
-extern int lineno, depth, verbose, xspin, limited_vis, Pid_nr;
+extern int nproc, nstop;
+extern int lineno, depth, verbose, limited_vis, Pid_nr;
 extern Lextok *Xu_List;
 extern Ordered *all_names;
 extern RunList *X_lst, *LastX;
@@ -44,7 +46,7 @@ int getval(Lextok *sn) {
     if (!X_lst)
       return 0;
 
-    if (old_priority_rules) {
+    if (launch_settings.need_revert_old_rultes_for_priority) {
       loger::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
@@ -75,7 +77,7 @@ int setval(Lextok *v, int n) {
     loger::non_fatal("illegal assignment to %s", v->sym->name.c_str());
   }
   if (v->sym->name == "_priority") {
-    if (old_priority_rules) {
+    if (launch_settings.need_revert_old_rultes_for_priority) {
       loger::non_fatal("cannot refer to _priority with -o6");
       return 1;
     }
@@ -139,7 +141,7 @@ int checkvar(models::Symbol *s, int n) {
       if (s->type != models::kChan) {
         rm_selfrefs(s, y);
         s->value[i] = eval(y);
-      } else if (!analyze) {
+      } else if (!launch_settings.need_to_analyze) {
         s->value[i] = qmake(s);
       }
     }
@@ -264,7 +266,8 @@ void dumpglobals(void) {
     if (sp->type == STRUCT) {
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() &&
-          (sp->last_depth < depth && jumpsteps != depth)) {
+          (sp->last_depth < depth &&
+           launch_settings.count_of_skipping_steps != depth)) {
         continue;
       }
       dump_struct(sp, sp->name, 0);
@@ -279,7 +282,8 @@ void dumpglobals(void) {
       }
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() &&
-          (sp->last_depth < depth && jumpsteps != depth)) {
+          (sp->last_depth < depth &&
+           launch_settings.count_of_skipping_steps != depth)) {
         continue;
       }
 
@@ -299,33 +303,22 @@ void dumpglobals(void) {
       if (limited_vis && (sp->hidden_flags & 2)) {
         int colpos;
         GBuf[0] = '\0';
-        if (!xspin) {
-          if (columns == 2)
-            sprintf(GBuf, "~G%s = ", sp->name.c_str());
-          else
-            sprintf(GBuf, "%s = ", sp->name.c_str());
-        }
+        if (launch_settings.need_generate_mas_flow_tcl_tk)
+          sprintf(GBuf, "~G%s = ", sp->name.c_str());
+        else
+          sprintf(GBuf, "%s = ", sp->name.c_str());
         sr_buf(prefetch, sp->type == MTYPE, s);
         if (sp->color_number == 0) {
           sp->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
         }
         colpos = nproc + sp->color_number - 1;
-        if (columns == 2) {
+        if (launch_settings.need_generate_mas_flow_tcl_tk) {
           pstext(colpos, GBuf);
           continue;
         }
-        if (!xspin) {
-          printf("\t\t%s\n", GBuf);
-          continue;
-        }
-        printf("MSC: ~G %s %s\n", sp->name.c_str(), GBuf);
-        printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
-        printf("(state 0)\t[printf('MSC: globvar\\\\n')]\n");
-        printf("\t\t%s", sp->name.c_str());
-        if (sp->value_type > 1 || sp->is_array)
-          printf("[%d]", j);
-        printf(" = %s\n", GBuf);
+        printf("\t\t%s\n", GBuf);
+        continue;
       }
     }
   }
@@ -360,14 +353,16 @@ void dumplocal(RunList *r, int final) {
 
       if (verbose_flags.NeedToPrintAllProcessActions() &&
           !verbose_flags.NeedToPrintVeryVerbose() && !final &&
-          (z->last_depth < depth && jumpsteps != depth)) {
+          (z->last_depth < depth &&
+           launch_settings.count_of_skipping_steps != depth)) {
         continue;
       }
 
       dummy->sym = z;
       dummy->lft->val = i;
 
-      printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid - Have_claim, z->name.c_str());
+      printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid - Have_claim,
+             z->name.c_str());
       if (z->value_type > 1 || z->is_array)
         printf("[%d]", i);
       printf(" = ");
@@ -380,34 +375,24 @@ void dumplocal(RunList *r, int final) {
       if (limited_vis && (z->hidden_flags & 2)) {
         int colpos;
         GBuf[0] = '\0';
-        if (!xspin) {
-          if (columns == 2)
-            sprintf(GBuf, "~G%s(%d):%s = ", r->n->name.c_str(), r->pid, z->name.c_str());
-          else
-            sprintf(GBuf, "%s(%d):%s = ", r->n->name.c_str(), r->pid, z->name.c_str());
-        }
+        if (launch_settings.need_generate_mas_flow_tcl_tk)
+          sprintf(GBuf, "~G%s(%d):%s = ", r->n->name.c_str(), r->pid,
+                  z->name.c_str());
+        else
+          sprintf(GBuf, "%s(%d):%s = ", r->n->name.c_str(), r->pid,
+                  z->name.c_str());
         sr_buf(getval(dummy), z->type == MTYPE, t);
         if (z->color_number == 0) {
           z->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
         }
         colpos = nproc + z->color_number - 1;
-        if (columns == 2) {
+        if (launch_settings.need_generate_mas_flow_tcl_tk) {
           pstext(colpos, GBuf);
           continue;
         }
-        if (!xspin) {
-          printf("\t\t%s\n", GBuf);
-          continue;
-        }
-        printf("MSC: ~G %s(%d):%s %s\n", r->n->name.c_str(), r->pid, z->name.c_str(), GBuf);
-
-        printf("%3d:\tproc %3d (TRACK) line   1 \"var\" ", depth, colpos);
-        printf("(state 0)\t[printf('MSC: locvar\\\\n')]\n");
-        printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid, z->name.c_str());
-        if (z->value_type > 1 || z->is_array)
-          printf("[%d]", i);
-        printf(" = %s\n", GBuf);
+        printf("\t\t%s\n", GBuf);
+        continue;
       }
     }
   }
