@@ -53,6 +53,7 @@ set(SPIN_SOURCES
     src/lexer/yylex.cpp
     src/lexer/yylex.hpp
     src/lexer/helpers.hpp
+    src/lexer/helpers.cpp
     src/lexer/deferred.hpp
     src/lexer/deferred.cpp
     src/lexer/scope.hpp

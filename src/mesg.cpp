@@ -645,7 +645,6 @@ int qishidden(int q) {
 
 static void sr_talk(Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
   char s[128];
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (qishidden(eval(n->lft)))
     return;

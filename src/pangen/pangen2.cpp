@@ -34,7 +34,7 @@ extern RunList *run_lst;
 extern Lextok *runstmnts;
 extern models::Symbol *Fname, *oFname, *context;
 extern char *claimproc, *eventmap;
-extern int lineno, verbose, Npars, Mpars, nclaims;
+extern int lineno, Npars, Mpars, nclaims;
 extern int has_remote, has_remvar, rvopt;
 extern int Ntimeouts, Etimeouts;
 extern int u_sync, u_async, nrRdy, Unique;

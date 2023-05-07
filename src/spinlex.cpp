@@ -2,6 +2,7 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -11,7 +12,6 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
-#include "main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
 
 #define MAXINL 16  /* max recursion depth inline fcts */
@@ -58,20 +58,9 @@ FILE *yyin, *yyout;
 
 static C_Added *c_added, *c_tracked;
 static IType *Inline_stub[MAXINL];
-static char *ReDiRect;
 static char *Inliner[MAXINL], IArg_cont[MAXPAR][MAXLEN];
-static int IArgno = 0, Inlining = -1;
 static int last_token = 0;
-
-static int notdollar(int c) { return (c != '$' && c != '\n'); }
-
-static int notquote(int c) { return (c != '\"' && c != '\n'); }
-
-int isalnum_(int c) { return (isalnum(c) || c == '_'); }
-
-static int isalpha_(int c) { return isalpha(c); /* could be macro */ }
-
-static int isdigit_(int c) { return isdigit(c); /* could be macro */ }
+static int Inlining = -1;
 
 static IType *seqnames;
 
@@ -806,7 +795,7 @@ int glob_inline(const std::string &s) {
           || strchr(bdy, '(') > bdy); /* possible C-function call */
 }
 
-char *put_inline(FILE *fd, const std::string& s) {
+char *put_inline(FILE *fd, const std::string &s) {
   IType *tmp;
 
   tmp = find_inline(s);
@@ -855,7 +844,7 @@ int side_scan(char *t, char *pat) {
   return (r && *(r - 1) != '"' && *(r - 1) != '\'');
 }
 
-void no_side_effects(const std::string& s) {
+void no_side_effects(const std::string &s) {
   IType *tmp;
   char *t;
   char *z;

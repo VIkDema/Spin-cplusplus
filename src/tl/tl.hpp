@@ -89,11 +89,10 @@ Symbol *DoDump(Node *);
 
 extern char *emalloc(size_t); /* in main.c */
 
-extern unsigned int hash(const std::string&); /* in sym.c */
+extern unsigned int hash(const std::string &); /* in sym.c */
 
 int anywhere(int, Node *, Node *);
 int dump_cond(Node *, Node *, int);
-int isalnum_(int); /* in spinlex.c */
 int isequal(Node *, Node *);
 int tl_Getchar(void);
 
@@ -154,7 +153,7 @@ typedef Node *Nodeptr;
   {                                                                            \
     if (!(x)) {                                                                \
       tl_explain(y);                                                           \
-      loger::fatal(": assertion failed\n", (char *)0);                                \
+      loger::fatal(": assertion failed\n", (char *)0);                         \
     }                                                                          \
   }
 
