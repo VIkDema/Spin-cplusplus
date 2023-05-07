@@ -28,6 +28,8 @@ extern void ana_src(int, int);
 int nr_errs;
 static FILE *fd_ltl = (FILE *)0;
 
+std::string MainProcessor::out_;
+
 int MainProcessor::main(int argc, char *argv[]) {
   InitSeed();
   InitStreams();
@@ -89,8 +91,69 @@ bool MainProcessor::HandleLaunchSettings(LaunchSettings &launch_settings,
   }
 
   if (argc > 1) {
+    FILE *fd = stdout;
+    std::string cmd, out2;
 
+    /* must remain in current dir */
+    out_ = "pan.pre";
+    if (!launch_settings.ltl_add.empty() ||
+        !launch_settings.never_claim_file_name.empty()) {
+      assert(strlen(argv[1]) + 6 < sizeof(out2));
+      out2 = fmt::format("{}.nvr", argv[1]);
+      if ((fd = fopen(out2.c_str(), MFLAGS)) == NULL) {
+        printf("spin: cannot create tmp file %s\n", out2.c_str());
+        alldone(1);
+      }
+      fprintf(fd, "#include \"%s\"\n", argv[1]);
+    }
+
+    if (!launch_settings.ltl_add.empty()) {
+      tl_out = fd;
+      // nr_errs = tl_main(2, add_ltl);
+      fclose(fd);
+      pre_proc_processor.Preprocess(out2, out_, 1, launch_settings);
+    } else if (!launch_settings.never_claim_file_name.empty()) {
+      fprintf(fd, "#include \"%s\"\n",
+              launch_settings.never_claim_file_name.front().c_str());
+      fclose(fd);
+      pre_proc_processor.Preprocess(out2, out_, 1, launch_settings);
+    } else {
+      pre_proc_processor.Preprocess(argv[1], out_, 0, launch_settings);
+    }
+
+    if (launch_settings.need_preprocess_only) {
+      Exit(0, launch_settings);
+    }
+
+    if (!(yyin = fopen(out_.c_str(), "r"))) {
+      printf("spin: cannot open %s\n", out_.c_str());
+      Exit(1, launch_settings);
+    }
+
+    if (strncmp(argv[1], "progress", (size_t)8) == 0 ||
+        strncmp(argv[1], "accept", (size_t)6) == 0) {
+      cmd = fmt::format("_{}", argv[1]);
+    } else {
+      cmd = fmt::format("{}", argv[1]);
+    }
+    oFname = Fname = lookup(cmd);
+    if (oFname->name[0] == '\"') {
+      oFname->name[oFname->name.length() - 1] = '\0';
+      oFname =
+          lookup(std::string(oFname->name.begin() + 1, oFname->name.end()));
+    }
   } else {
+    oFname = Fname = lookup("<stdin>");
+    if (!launch_settings.ltl_add.empty()) {
+      if (argc > 0)
+        //   exit(tl_main(2, add_ltl));
+        printf("spin: missing argument to -f\n");
+      Exit(1, launch_settings);
+    }
+    // printf("%s\n", SpinVersion);
+    fprintf(stderr, "spin: error, no filename specified\n");
+    fflush(stdout);
+    Exit(1, launch_settings);
   }
 
   if (launch_settings.need_generate_mas_flow_tcl_tk) {

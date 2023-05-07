@@ -1,4 +1,6 @@
 #include "pre_proc_settings.hpp"
+#include "main_processor.hpp"
+#include <fmt/core.h>
 
 #ifndef CPP
 /* to use visual C++:
@@ -35,6 +37,26 @@ void PreProcSettings::SetCommand(const std::string &command) {
   was_changed_ = true;
   command_ = command;
 }
-bool PreProcSettings::IsDefault() {
-  return !was_changed_;
+bool PreProcSettings::IsDefault() { return !was_changed_; }
+
+void PreProcSettings::Preprocess(const std::string &a, const std::string &b,
+                                 int a_tmp, LaunchSettings &launch_settings) {
+  std::string precmd, cmd;
+
+  precmd = command_;
+  for (auto &pre_arg : launch_settings.pre_args) {
+    precmd += " " + pre_arg;
+  }
+  cmd = fmt::format("{} \"{}\" > \"{}\"", precmd, a, b);
+
+  if (MainProcessor::e_system(2, cmd)) /* preprocessing step */
+  {
+    unlink(b.c_str());
+    if (a_tmp)
+      unlink(a.c_str());
+    fprintf(stdout, "spin: preprocessing failed %s\n", cmd.c_str());
+    MainProcessor::Exit(1, launch_settings); /* no return, error exit */
+  }
+  if (a_tmp)
+    unlink(a.c_str());
 }
