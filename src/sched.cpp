@@ -3,9 +3,9 @@
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "main/launch_settings.hpp"
+#include "main/main_processor.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
-#include "main/main_processor.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -233,9 +233,8 @@ void announce(char *w) {
   printf("\n");
 }
 
-#ifndef MAXP
-#define MAXP 255 /* matches max nr of processes in verifier */
-#endif
+constexpr int kMaxNrOfProcesses =
+    255; /* matches max nr of processes in verifier */
 
 int enable(Lextok *m) {
   ProcList *p;
@@ -247,8 +246,8 @@ int enable(Lextok *m) {
   }
   for (p = ready; p; p = p->nxt) {
     if (s->name == p->n->name) {
-      if (nproc - nstop >= MAXP) {
-        printf("spin: too many processes (%d max)\n", MAXP);
+      if (nproc - nstop >= kMaxNrOfProcesses) {
+        printf("spin: too many processes (%d max)\n", kMaxNrOfProcesses);
         break;
       }
       runnable(p, m->val, 0);
@@ -384,9 +383,9 @@ void wrapup(int fini) {
          (nproc != 1) ? "es" : "");
 short_cut:
   if (launch_settings.need_save_trail)
-      MainProcessor::Exit(0);
+    MainProcessor::Exit(0);
   if (fini)
-      MainProcessor::Exit(1);
+    MainProcessor::Exit(1);
 }
 
 static char is_blocked[256];
@@ -594,7 +593,7 @@ static RunList *pickproc(RunList *Y) {
     } else {
       if (k - no_choice < 2) {
         printf("no executable choices\n");
-      MainProcessor::Exit(0);
+        MainProcessor::Exit(0);
       }
       printf("Select [1-%d]: ", k - 1);
     }
@@ -613,7 +612,7 @@ static RunList *pickproc(RunList *Y) {
         j = atoi(buf);
       else {
         if (buf[0] == 'q')
-      MainProcessor::Exit(0);
+          MainProcessor::Exit(0);
       }
       if (j < 1 || j >= k) {
         printf("\tchoice is outside range\n");
@@ -679,7 +678,7 @@ void sched(void) {
   }
   if (launch_settings.need_compute_synchronous_product_multiple_never_claims) {
     sync_product();
-      MainProcessor::Exit(0);
+    MainProcessor::Exit(0);
   }
   if (launch_settings.need_to_analyze &&
       (!launch_settings.need_to_replay || lexer_.GetHasCode())) {

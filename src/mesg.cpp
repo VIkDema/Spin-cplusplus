@@ -9,9 +9,8 @@
 #include <fmt/core.h>
 #include <stdlib.h>
 
-#ifndef MAXQ
-#define MAXQ 2500 /* default max # queues  */
-#endif
+constexpr int kMaxQueueSize = 2500; 
+
 
 extern RunList *X_lst;
 extern models::Symbol *Fname;
@@ -24,7 +23,7 @@ extern LaunchSettings launch_settings;
 
 QH *qh_lst;
 Queue *qtab = (Queue *)0; /* linked list of queues */
-Queue *ltab[MAXQ];        /* linear list of queues */
+Queue *ltab[kMaxQueueSize];        /* linear list of queues */
 int nrqs = 0, firstrow = 1, has_stdin = 0;
 char GBuf[4096];
 
@@ -59,7 +58,7 @@ int qmake(models::Symbol *s) {
   if (!s->init_value)
     return 0;
 
-  if (nrqs >= MAXQ) {
+  if (nrqs >= kMaxQueueSize) {
     lineno = s->init_value->ln;
     Fname = s->init_value->fn;
     loger::fatal("too many queues (%s)", s->name);
@@ -105,7 +104,7 @@ int qmake(models::Symbol *s) {
 int qfull(Lextok *n) {
   int whichq = eval(n->lft) - 1;
 
-  if (whichq < MAXQ && whichq >= 0 && ltab[whichq])
+  if (whichq < kMaxQueueSize && whichq >= 0 && ltab[whichq])
     return (ltab[whichq]->qlen >= ltab[whichq]->nslots);
   return 0;
 }
@@ -113,7 +112,7 @@ int qfull(Lextok *n) {
 int qlen(Lextok *n) {
   int whichq = eval(n->lft) - 1;
 
-  if (whichq < MAXQ && whichq >= 0 && ltab[whichq])
+  if (whichq < kMaxQueueSize && whichq >= 0 && ltab[whichq])
     return ltab[whichq]->qlen;
   return 0;
 }
@@ -121,7 +120,7 @@ int qlen(Lextok *n) {
 int q_is_sync(Lextok *n) {
   int whichq = eval(n->lft) - 1;
 
-  if (whichq < MAXQ && whichq >= 0 && ltab[whichq])
+  if (whichq < kMaxQueueSize && whichq >= 0 && ltab[whichq])
     return (ltab[whichq]->nslots == 0);
   return 0;
 }
@@ -134,7 +133,7 @@ int qsend(Lextok *n) {
     /* whichq = 0; */
     return 0;
   }
-  if (whichq < MAXQ && whichq >= 0 && ltab[whichq]) {
+  if (whichq < kMaxQueueSize && whichq >= 0 && ltab[whichq]) {
     ltab[whichq]->setat = depth;
     if (ltab[whichq]->nslots > 0) {
       return a_snd(ltab[whichq], n);
@@ -216,7 +215,7 @@ int qrecv(Lextok *n, int full) {
     /* whichq = 0; */
     return 0;
   }
-  if (whichq < MAXQ && whichq >= 0 && ltab[whichq]) {
+  if (whichq < kMaxQueueSize && whichq >= 0 && ltab[whichq]) {
     ltab[whichq]->setat = depth;
     return a_rcv(ltab[whichq], n, full);
   }

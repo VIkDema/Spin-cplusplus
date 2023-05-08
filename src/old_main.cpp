@@ -51,8 +51,6 @@ int has_remote, has_remvar;
 int limited_vis;
 
 extern LaunchSettings launch_settings;
-int implied_semis = 1;
-int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
 static char *ltl_claims = (char *)0;
 

@@ -1,19 +1,19 @@
 #include "fatal/fatal.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
-#include "main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
-#define MAXDSTEP 2048 /* was 512 */
+constexpr int kMaxDstep = 2048; // было 512
 
 std::string NextLab[64]; /* must match value in pangen2.c:41 */
 
 int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
-static int Tojump[MAXDSTEP], Jumpto[MAXDSTEP], Special[MAXDSTEP];
+static int Tojump[kMaxDstep], Jumpto[kMaxDstep], Special[kMaxDstep];
 static void putCode(FILE *, Element *, Element *, Element *, int);
 
 extern int Pid_nr, OkBreak;
@@ -23,7 +23,7 @@ static void Sourced(int n, int special) {
   for (i = 0; i < Tj; i++)
     if (Tojump[i] == n)
       return;
-  if (Tj >= MAXDSTEP)
+  if (Tj >= kMaxDstep)
     loger::fatal("d_step sequence too long");
   Special[Tj] = special;
   Tojump[Tj++] = n;
@@ -37,7 +37,7 @@ static void Dested(int n) {
   for (i = 0; i < Jt; i++)
     if (Jumpto[i] == n)
       return;
-  if (Jt >= MAXDSTEP)
+  if (Jt >= kMaxDstep)
     loger::fatal("d_step sequence too long");
   Jumpto[Jt++] = n;
   LastGoto = 1;
@@ -72,7 +72,7 @@ static void Mopup(FILE *fd) {
   }
   for (j = i = 0; j < Tj; j++)
     if (Special[j]) {
-      if (i >= MAXDSTEP) {
+      if (i >= kMaxDstep) {
         loger::fatal("cannot happen (dstep.c)");
       }
       Tojump[i] = Tojump[j];

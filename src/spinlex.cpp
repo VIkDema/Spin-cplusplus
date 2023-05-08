@@ -14,9 +14,9 @@
 #include <string>
 extern LaunchSettings launch_settings;
 
-#define MAXINL 16  /* max recursion depth inline fcts */
-#define MAXPAR 32  /* max params to an inline call */
-#define MAXLEN 512 /* max len of an actual parameter text */
+constexpr int kMaxInl = 16;
+constexpr int kMaxPar = 32;
+constexpr int kMaxLen = 512;
 
 struct IType {
   models::Symbol *nm;        /* name of the type */
@@ -47,7 +47,6 @@ extern models::Symbol *Fname, *oFname;
 extern models::Symbol *context, *owner;
 extern YYSTYPE yylval;
 extern int need_arguments, hastrack;
-extern int implied_semis;
 extern lexer::Lexer lexer_;
 short has_stack = 0;
 int lineno = 1;
@@ -56,8 +55,8 @@ std::string yytext;
 FILE *yyin, *yyout;
 
 static C_Added *c_added, *c_tracked;
-static IType *Inline_stub[MAXINL];
-static char *Inliner[MAXINL], IArg_cont[MAXPAR][MAXLEN];
+static IType *Inline_stub[kMaxInl];
+static char *Inliner[kMaxInl], IArg_cont[kMaxPar][kMaxLen];
 static int last_token = 0;
 static int Inlining = -1;
 
@@ -893,7 +892,7 @@ void pickup_inline(models::Symbol *t, Lextok *apars, Lextok *rval) {
 
   tmp = find_inline(t->name);
 
-  if (++Inlining >= MAXINL)
+  if (++Inlining >= kMaxInl)
     loger::fatal("inlines nested too deeply");
   tmp->cln = lineno; /* remember calling point */
   tmp->cfn = Fname;  /* and filename */
