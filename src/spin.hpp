@@ -2,8 +2,8 @@
 #define SEEN_SPIN_H
 
 #include "models/lextok.hpp"
-#include "models/symbol.hpp"
 #include "models/models_fwd.hpp"
+#include "models/symbol.hpp"
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
@@ -135,7 +135,7 @@ struct RunList {
   int tn;                 /* ordinal of type */
   int pid;                /* process id      */
   int priority;           /* for simulations only */
-  models::btypes b;          /* the type of process */
+  models::btypes b;       /* the type of process */
   Element *pc;            /* current stmnt   */
   struct Sequence *ps;    /* used by analyzer generator */
   models::Lextok *prov;   /* provided clause */
@@ -148,7 +148,7 @@ struct ProcList {
   models::Lextok *p;      /* parameters */
   Sequence *s;            /* body       */
   models::Lextok *prov;   /* provided clause */
-  models::btypes b;          /* e.g., claim, trace, proc */
+  models::btypes b;       /* e.g., claim, trace, proc */
   short tn;               /* ordinal number */
   unsigned char det;      /* deterministic */
   unsigned char unsafe;   /* contains global var inits */
@@ -213,9 +213,9 @@ typedef models::Lextok *Lexptr;
 
 /** NEW**/
 int ismtype(const std::string &);
-bool IsProctype(const std::string &value);
-bool IsEqname(const std::string &value);
-bool IsUtype(const std::string &value);
+bool IsProctype(const std::string &);
+bool IsEqname(const std::string &);
+bool IsUtype(const std::string &);
 /***** prototype definitions *****/
 Element *eval_sub(Element *);
 Element *get_lab(models::Lextok *, int);

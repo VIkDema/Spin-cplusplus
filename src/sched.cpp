@@ -4,9 +4,9 @@
 #include "lexer/lexer.hpp"
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
+#include "models/lextok.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
-#include "models/lextok.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -115,7 +115,8 @@ ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, Sequence *s, int det,
   return ready;
 }
 
-void check_mtypes(models::Lextok *pnm, models::Lextok *args) /* proctype name, actual params */
+void check_mtypes(models::Lextok *pnm,
+                  models::Lextok *args) /* proctype name, actual params */
 {
   ProcList *p = NULL;
   models::Lextok *fp, *fpt, *at;
@@ -133,7 +134,7 @@ void check_mtypes(models::Lextok *pnm, models::Lextok *args) /* proctype name, a
     std::string pnm_sym_name_default = "?";
     loger::fatal("cannot find proctype '%s'",
                  (pnm && pnm->symbol) ? pnm->symbol->name
-                                   : pnm_sym_name_default.c_str());
+                                      : pnm_sym_name_default.c_str());
   }
 
   for (fp = p->p, at = args; fp; fp = fp->right)
@@ -158,8 +159,8 @@ void check_mtypes(models::Lextok *pnm, models::Lextok *args) /* proctype name, a
       if (s != "" && s != t) {
         printf(
             "spin: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
-            pnm->file_name->name.c_str(), pnm->line_number, at->left->symbol->name.c_str(),
-            s.c_str(), t.c_str());
+            pnm->file_name->name.c_str(), pnm->line_number,
+            at->left->symbol->name.c_str(), s.c_str(), t.c_str());
         loger::fatal("wrong arg type '%s'", at->left->symbol->name);
       }
     }
@@ -186,7 +187,7 @@ static void formdump(void) {
     if (!p->p)
       continue;
     count = -1;
-    for (f = p->p; f; f = f->right)     /* types */
+    for (f = p->p; f; f = f->right)      /* types */
       for (t = f->left; t; t = t->right) /* formals */
       {
         if (t->node_type != ',')
@@ -240,7 +241,7 @@ constexpr int kMaxNrOfProcesses =
 int enable(models::Lextok *m) {
   ProcList *p;
   models::Symbol *s = m->symbol; /* proctype name */
-  models::Lextok *n = m->left;         /* actual parameters */
+  models::Lextok *n = m->left;   /* actual parameters */
 
   if (m->value < 1) {
     m->value = 1; /* minimum priority */
@@ -265,7 +266,7 @@ int enable(models::Lextok *m) {
 void check_param_count(int i, models::Lextok *m) {
   ProcList *p;
   models::Symbol *s = m->symbol; /* proctype name */
-  models::Lextok *f, *t;              /* formal pars */
+  models::Lextok *f, *t;         /* formal pars */
   int count = 0;
 
   for (p = ready; p; p = p->nxt) {
@@ -275,7 +276,7 @@ void check_param_count(int i, models::Lextok *m) {
         lineno = m->left->line_number;
         Fname = m->left->file_name;
       }
-      for (f = p->p; f; f = f->right)     /* one type at a time */
+      for (f = p->p; f; f = f->right)      /* one type at a time */
         for (t = f->left; t; t = t->right) /* count formal params */
         {
           count++;
@@ -953,7 +954,8 @@ static void setlocals(RunList *r) {
   X_lst = oX;
 }
 
-static void oneparam(RunList *r, models::Lextok *t, models::Lextok *a, ProcList *p) {
+static void oneparam(RunList *r, models::Lextok *t, models::Lextok *a,
+                     ProcList *p) {
   int k;
   int at, ft;
   RunList *oX = X_lst;
@@ -1118,7 +1120,8 @@ void p_talk(Element *e, int lnr) {
     } else {
       nbuf = "-";
     }
-    printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->line_number : -1, e->seqno);
+    printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->line_number : -1,
+           e->seqno);
     if ((e->status & ENDSTATE) || has_lab(e, 2)) /* 2=end */
     {
       printf(" <valid end state>");
