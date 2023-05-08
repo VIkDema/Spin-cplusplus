@@ -172,7 +172,7 @@ void match_trail(void) {
           goto okay;
       }
       printf("spin: cannot find trail file\n");
-      alldone(1);
+      MainProcessor::Exit(1);
     }
   }
 

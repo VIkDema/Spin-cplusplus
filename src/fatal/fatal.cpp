@@ -7,6 +7,7 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <sstream>
+#include "main/main_processor.hpp"
 
 extern models::Symbol *Fname;
 extern models::Symbol *oFname;

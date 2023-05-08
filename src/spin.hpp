@@ -316,7 +316,6 @@ int yyparse(void);
 
 void AST_track(Lextok *, int);
 void add_seq(Lextok *);
-void alldone(int);
 void announce(char *);
 void c_state(models::Symbol *, models::Symbol *, models::Symbol *);
 void c_add_def(FILE *);

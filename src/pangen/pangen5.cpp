@@ -2,6 +2,7 @@
 
 #include "../fatal/fatal.hpp"
 #include "../main/launch_settings.hpp"
+#include "../main/main_processor.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -661,7 +662,7 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
   }
   if (launch_settings.need_export_ast) {
     AST_slice();
-    alldone(0); /* changed in 5.3.0: was exit(0) */
+    MainProcessor::Exit(0);
   }
 }
 

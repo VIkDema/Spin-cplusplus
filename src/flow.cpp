@@ -6,6 +6,8 @@
 
 #include "y.tab.h"
 #include "main/launch_settings.hpp"
+#include "main/main_processor.hpp"
+
 extern LaunchSettings launch_settings;
 extern lexer::Lexer lexer_;
 extern models::Symbol *Fname;
@@ -186,7 +188,7 @@ Sequence *close_seq(int nottop) {
       break;
     }
     if (nottop != 6) {
-      alldone(1);
+      MainProcessor::Exit(1);
     }
   }
 

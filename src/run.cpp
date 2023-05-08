@@ -7,6 +7,7 @@
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
+#include "main/main_processor.hpp"
 
 extern RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
@@ -142,8 +143,9 @@ Element *eval_sub(Element *e) {
         if (isdigit((int)buf[0]))
           k = atoi(buf);
         else {
-          if (buf[0] == 'q')
-            alldone(0);
+          if (buf[0] == 'q') {
+            MainProcessor::Exit(1);
+          }
           k = -1;
         }
       } else {

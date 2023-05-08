@@ -26,6 +26,7 @@ static char *ltl_claims = nullptr;
 extern PanProcessor pan_processor_;
 extern void putprelude(void);
 extern void ana_src(int, int);
+extern short has_accept;
 int nr_errs;
 static FILE *fd_ltl = (FILE *)0;
 
@@ -106,7 +107,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
       out2 = fmt::format("{}.nvr", argv[1]);
       if ((fd = fopen(out2.c_str(), MFLAGS)) == NULL) {
         printf("spin: cannot create tmp file %s\n", out2.c_str());
-        alldone(1);
+        MainProcessor::Exit(1);
       }
       fprintf(fd, "#include \"%s\"\n", argv[1]);
     }
@@ -388,7 +389,7 @@ void MainProcessor::Exit(int estatus) {
       pre_proc_processor.SetCommand(temp);
     }
 
-    // final_fiddle();
+    FinalFiddle();
 
     tmp2 = tmp;
     tmp = fmt::format("{} {} {} {} {}", pre_proc_processor.GetCommand(), C_X,
@@ -593,5 +594,37 @@ void MainProcessor::StringTrim(std::string &t) {
   while (n > 0 && t[n] == ' ') {
     t.pop_back();
     n--;
+  }
+}
+
+void FinalFiddle() {
+  /* no -a or -l but has_accept: add -a */
+  /* no -a or -l in pan_runtime: add -DSAFETY to pan_comptime */
+  /* -a or -l but no -f then add -DNOFAIR  pan_processor_*/
+  bool has_a = pan_processor_.GetPanRuntime().find("-a") != std::string::npos;
+  bool has_l = pan_processor_.GetPanRuntime().find("-l") != std::string::npos;
+  bool has_f = pan_processor_.GetPanRuntime().find("-f") != std::string::npos;
+
+  if (!has_l && !has_a &&
+      pan_processor_.GetPanRuntime().find("-DNP") != std::string::npos) {
+    pan_processor_.AddRuntime("-l");
+    has_l = true;
+  }
+
+  if (!has_a && !has_l &&
+      pan_processor_.GetPanRuntime().find("-DSAFETY") == std::string::npos) {
+    if (has_accept &&
+        pan_processor_.GetPanRuntime().find("-DBFS") == std::string::npos &&
+        pan_processor_.GetPanRuntime().find("-DNOCLAIM") == std::string::npos) {
+      pan_processor_.AddRuntime("-a");
+      has_a = true;
+    } else {
+      pan_processor_.AddRuntime("-DSAFETY");
+    }
+  }
+
+  if ((has_a || has_l) && !has_f &&
+      pan_processor_.GetPanRuntime().find("-DNOCLAIM") == std::string::npos) {
+    pan_processor_.AddComptime("-DNOFAIR");
   }
 }

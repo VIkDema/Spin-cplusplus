@@ -101,7 +101,7 @@ models::Symbol *lookup(const std::string &s) {
           printf("    old: %s\n",
                  sp->owner_name ? sp->owner_name->name.c_str() : "--");
           printf("    new: %s\n", owner ? owner->name.c_str() : "--");
-          /*    alldone(1);    */
+          /*        MainProcessor::Exit(1);    */
         }
         return sp; /* found */
       }

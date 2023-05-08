@@ -20,6 +20,7 @@ private:
   static void ChangeRandomSeed(std::string &t);
   static int OmitStr(std::string &in, const std::string &s);
   static void StringTrim(std::string &t);
+  static void FinalFiddle();
 
   static std::string out_;
 };

@@ -5,6 +5,7 @@
 #include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "main/main_processor.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -383,9 +384,9 @@ void wrapup(int fini) {
          (nproc != 1) ? "es" : "");
 short_cut:
   if (launch_settings.need_save_trail)
-    alldone(0);
+      MainProcessor::Exit(0);
   if (fini)
-    alldone(1);
+      MainProcessor::Exit(1);
 }
 
 static char is_blocked[256];
@@ -593,7 +594,7 @@ static RunList *pickproc(RunList *Y) {
     } else {
       if (k - no_choice < 2) {
         printf("no executable choices\n");
-        alldone(0);
+      MainProcessor::Exit(0);
       }
       printf("Select [1-%d]: ", k - 1);
     }
@@ -612,7 +613,7 @@ static RunList *pickproc(RunList *Y) {
         j = atoi(buf);
       else {
         if (buf[0] == 'q')
-          alldone(0);
+      MainProcessor::Exit(0);
       }
       if (j < 1 || j >= k) {
         printf("\tchoice is outside range\n");
@@ -678,7 +679,7 @@ void sched(void) {
   }
   if (launch_settings.need_compute_synchronous_product_multiple_never_claims) {
     sync_product();
-    alldone(0);
+      MainProcessor::Exit(0);
   }
   if (launch_settings.need_to_analyze &&
       (!launch_settings.need_to_replay || lexer_.GetHasCode())) {

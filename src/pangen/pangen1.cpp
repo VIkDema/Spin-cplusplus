@@ -513,7 +513,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
   std::string buf;
   int i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
-  if (!s.empty() || (sp->type != BYTE && sp->type != SHORT && sp->type != INT))
+  if (s.empty() || (sp->type != BYTE && sp->type != SHORT && sp->type != INT))
     return;
 
   if (sp->hidden_flags & 16) /* formal parameter */
@@ -846,7 +846,7 @@ static int doglobal(char *pre, int dowhat) {
             do_var(fd_tc, dowhat, "", sp, pre, "\", now.", ");\n");
             break;
           case INIV:
-            checktype(sp, (char *)0);
+            checktype(sp, std::string{});
             cnt++; /* fall through */
           case PUTV:
             char *putv_char = "now.";

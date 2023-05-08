@@ -5,6 +5,9 @@
 #include "y.tab.h"
 #include <fmt/format.h>
 #include "../main/launch_settings.hpp"
+#include "../main/main_processor.hpp"
+
+
 extern LaunchSettings launch_settings;
 extern FILE *fd_tc, *fd_tb;
 extern Queue *qtab;
@@ -228,7 +231,7 @@ void undostmnt(Lextok *now, int m) {
     } /* else fall thru */
   default:
     printf("spin: bad node type %d (.b)\n", now->ntyp);
-    alldone(1);
+    MainProcessor::Exit(1);
   }
 }
 

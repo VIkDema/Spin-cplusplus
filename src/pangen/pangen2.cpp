@@ -10,7 +10,7 @@
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
-
+#include "../main/main_processor.hpp"
 #include "../main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
 
@@ -51,14 +51,14 @@ int OkBreak = -1, has_hidden = 0; /* has_hidden set in sym.c and structs.c */
 short nocast = 0;                 /* to turn off casts in lvalues */
 short terse = 0;                  /* terse printing of varnames */
 short no_arrays = 0;
-short has_badelse = 0;  /* spec contains else combined with chan refs */
-short has_enabled = 0;  /* spec contains enabled() */
-short has_pcvalue = 0;  /* spec contains pc_value() */
-short has_np = 0;       /* spec contains np_ */
-short has_sorted = 0;   /* spec contains `!!' (sorted-send) operator */
-short has_random = 0;   /* spec contains `??' (random-recv) operator */
-short has_xu = 0;       /* spec contains xr or xs assertions */
-short has_unless = 0;   /* spec contains unless statements */
+short has_badelse = 0; /* spec contains else combined with chan refs */
+short has_enabled = 0; /* spec contains enabled() */
+short has_pcvalue = 0; /* spec contains pc_value() */
+short has_np = 0;      /* spec contains np_ */
+short has_sorted = 0;  /* spec contains `!!' (sorted-send) operator */
+short has_random = 0;  /* spec contains `??' (random-recv) operator */
+short has_xu = 0;      /* spec contains xr or xs assertions */
+short has_unless = 0;  /* spec contains unless statements */
 extern lexer::Lexer lexer_;
 int mstp = 0;        /* max nr of state/process */
 int claimnr = -1;    /* claim process, if any */
@@ -204,14 +204,19 @@ void gensrc(void) {
 
   disambiguate(); /* avoid name-clashes between scopes */
 
-  if (!(fd_tc = fopen(Cfile[0].nm[launch_settings.separate_version], MFLAGS))    /* main routines */
-      || !(fd_th = fopen(Cfile[1].nm[launch_settings.separate_version], MFLAGS)) /* header file   */
-      || !(fd_tt = fopen(Cfile[2].nm[launch_settings.separate_version], MFLAGS)) /* transition matrix */
-      || !(fd_tm = fopen(Cfile[3].nm[launch_settings.separate_version], MFLAGS)) /* forward  moves */
-      || !(fd_tb = fopen(Cfile[4].nm[launch_settings.separate_version], MFLAGS))) /* backward moves */
+  if (!(fd_tc = fopen(Cfile[0].nm[launch_settings.separate_version],
+                      MFLAGS)) /* main routines */
+      || !(fd_th = fopen(Cfile[1].nm[launch_settings.separate_version],
+                         MFLAGS)) /* header file   */
+      || !(fd_tt = fopen(Cfile[2].nm[launch_settings.separate_version],
+                         MFLAGS)) /* transition matrix */
+      || !(fd_tm = fopen(Cfile[3].nm[launch_settings.separate_version],
+                         MFLAGS)) /* forward  moves */
+      || !(fd_tb = fopen(Cfile[4].nm[launch_settings.separate_version],
+                         MFLAGS))) /* backward moves */
   {
     printf("spin: cannot create pan.[chtmfb]\n");
-    alldone(1);
+    MainProcessor::Exit(1);
   }
 
   fprintf(fd_th, "#ifndef PAN_H\n");
@@ -344,7 +349,8 @@ void gensrc(void) {
     fprintf(fd_th, "#endif\n");
     if (lexer_.GetHasLast())
       fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
-    if (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority)
+    if (lexer_.GetHasPriority() &&
+        !launch_settings.need_revert_old_rultes_for_priority)
       fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
     goto doless;
   }
@@ -385,7 +391,8 @@ void gensrc(void) {
   }
   if (lexer_.GetHasLast())
     fprintf(fd_th, "#define HAS_LAST	%d\n", lexer_.GetHasLast());
-  if (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority)
+  if (lexer_.GetHasPriority() &&
+      !launch_settings.need_revert_old_rultes_for_priority)
     fprintf(fd_th, "#define HAS_PRIORITY	%d\n", lexer_.GetHasPriority());
   if (has_sorted)
     fprintf(fd_th, "#define HAS_SORTED	%d\n", has_sorted);
@@ -406,17 +413,21 @@ void gensrc(void) {
   fprintf(fd_th, "#endif\n");
   if (has_stack)
     fprintf(fd_th, "#define HAS_STACK	%d\n", has_stack);
-  if (has_enabled || (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority))
+  if (has_enabled || (lexer_.GetHasPriority() &&
+                      !launch_settings.need_revert_old_rultes_for_priority))
     fprintf(fd_th, "#define HAS_ENABLED	1\n");
   if (has_unless)
     fprintf(fd_th, "#define HAS_UNLESS	%d\n", has_unless);
   if (launch_settings.has_provided)
-    fprintf(fd_th, "#define HAS_PROVIDED	%d\n", launch_settings.has_provided);
+    fprintf(fd_th, "#define HAS_PROVIDED	%d\n",
+            launch_settings.has_provided);
   if (has_pcvalue)
     fprintf(fd_th, "#define HAS_PCVALUE	%d\n", has_pcvalue);
   if (has_badelse)
     fprintf(fd_th, "#define HAS_BADELSE	%d\n", has_badelse);
-  if (has_enabled || (lexer_.GetHasPriority() && !launch_settings.need_revert_old_rultes_for_priority) ||
+  if (has_enabled ||
+      (lexer_.GetHasPriority() &&
+       !launch_settings.need_revert_old_rultes_for_priority) ||
       has_pcvalue || has_badelse || lexer_.GetHasLast()) {
     fprintf(fd_th, "#ifndef NOREDUCE\n");
     fprintf(fd_th, "	#define NOREDUCE	1\n");
@@ -2541,9 +2552,12 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     if (GenCode)
       loger::fatal("'run' in d_step sequence (use atomic)");
 
-    fprintf(fd, "addproc(II, %d, %d",
-            (now->val > 0 && !launch_settings.need_revert_old_rultes_for_priority) ? now->val : 1,
-            fproc(now->sym->name));
+    fprintf(
+        fd, "addproc(II, %d, %d",
+        (now->val > 0 && !launch_settings.need_revert_old_rultes_for_priority)
+            ? now->val
+            : 1,
+        fproc(now->sym->name));
     for (v = now->lft, i = 0; v; v = v->rgt, i++) {
       cat2(", ", v->lft);
     }
@@ -3432,7 +3446,7 @@ void putstmnt(FILE *fd, Lextok *now, int m) {
     printf("spin: error, %s:%d, bad node type %d (.m)\n", now->fn->name.c_str(),
            now->ln, now->ntyp);
     fflush(fd);
-    alldone(1);
+    MainProcessor::Exit(1);
   }
 }
 
@@ -3484,7 +3498,8 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
 
   fprintf(fd, pre.c_str(), 0);
   if (!terse && !s->owner_name && evalindex != 1) {
-    if (launch_settings.need_revert_old_rultes_for_priority && s->name == "_priority") {
+    if (launch_settings.need_revert_old_rultes_for_priority &&
+        s->name == "_priority") {
       fprintf(fd, "1");
       goto shortcut;
     } else {
@@ -3493,9 +3508,9 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
         fprintf(fd, "((P%d *)_this)->", Pid_nr);
       } else {
         bool x = s->name == "_";
-        if (!(s->hidden_flags & 1) && x)
+        if (!(s->hidden_flags & 1) && x == true)  
           fprintf(fd, "now.");
-        if (!x && _isok == 0)
+        if (x == false && _isok == 0)
           loger::fatal("attempt to read value of '_'");
       }
     }

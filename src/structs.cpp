@@ -4,6 +4,7 @@
 #include "lexer/lexer.hpp"
 #include "spin.hpp"
 #include "y.tab.h"
+#include "main/main_processor.hpp"
 
 struct UType {
   models::Symbol *nm; /* name of the type */
@@ -157,13 +158,13 @@ static models::Symbol *do_same(Lextok *n, models::Symbol *v, int xinit) {
 
   if (n->rgt->ntyp != '.') {
     printf("bad subfield type %d\n", n->rgt->ntyp);
-    alldone(1);
+    MainProcessor::Exit(1);
   }
 
   tmp = n->rgt->lft;
   if (tmp->ntyp != NAME && tmp->ntyp != TYPE) {
     printf("bad subfield entry %d\n", tmp->ntyp);
-    alldone(1);
+    MainProcessor::Exit(1);
   }
   for (fp = v->Sval[ix]; fp; fp = fp->rgt)
     for (tl = fp->lft; tl; tl = tl->rgt)
