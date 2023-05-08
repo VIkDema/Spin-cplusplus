@@ -55,8 +55,6 @@ extern LaunchSettings launch_settings;
 int implied_semis = 1;
 int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
-static int itsr, itsr_n, sw_or_bt;
-
 static char *ltl_claims = (char *)0;
 
 extern int depth; /* at least some steps were made */
