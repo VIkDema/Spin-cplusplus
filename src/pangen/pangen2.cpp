@@ -139,7 +139,7 @@ int pid_is_claim(int p) /* Pid_nr (p->tn) to type (p->b) */
 
   for (r = ready; r; r = r->nxt) {
     if (r->tn == p)
-      return (r->b == N_CLAIM);
+      return (r->b == models::btypes::N_CLAIM);
   }
   printf("spin: error, cannot find pid %d\n", p);
   return 0;
@@ -337,7 +337,7 @@ void gensrc(void) {
     s->minel = -1;
     claimproc = "_:never_template:_";
     n->name = "_:never_template:_";
-    mk_rdy(n, ZN, s, 0, ZN, N_CLAIM);
+    mk_rdy(n, ZN, s, 0, ZN, models::btypes::N_CLAIM);
   }
   if (launch_settings.separate_version == 2) {
     if (has_remote) {
@@ -1028,7 +1028,7 @@ static void putproc(ProcList *p) {
   fprintf(fd_th, "#define _endstate%d	%d\n", Pid_nr,
           p->s->last ? p->s->last->seqno : 0);
 
-  if (p->b == N_CLAIM || p->b == E_TRACE || p->b == N_TRACE) {
+  if (p->b == models::btypes::N_CLAIM || p->b == models::btypes::E_TRACE || p->b == models::btypes::N_TRACE) {
     fprintf(fd_tm, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
     fprintf(fd_tb, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
   } else {

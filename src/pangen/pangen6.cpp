@@ -1,10 +1,10 @@
 /***** spin: pangen6.c *****/
 
 #include "../fatal/fatal.hpp"
+#include "../main/launch_settings.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
-#include "../main/launch_settings.hpp"
 
 extern Ordered *all_names;
 extern FSM_use *use_free;
@@ -43,15 +43,15 @@ struct RPN { /* relevant proctype names */
 };
 
 struct ALIAS {         /* channel aliasing info */
-  models::Lextok *cnm;         /* this chan */
+  models::Lextok *cnm; /* this chan */
   int origin;          /* debugging - origin of the alias */
   struct ALIAS *alias; /* can be an alias for these other chans */
   struct ALIAS *nxt;   /* linked list */
 };
 
 struct ChanList {
-  models::Lextok *s;            /* containing stmnt */
-  models::Lextok *n;            /* point of reference - could be struct */
+  models::Lextok *s;    /* containing stmnt */
+  models::Lextok *n;    /* point of reference - could be struct */
   struct ChanList *nxt; /* linked list */
 };
 
@@ -146,7 +146,7 @@ static void name_def_use(models::Lextok *n, int code) {
 
   if ((code & USE) && cur_t->step && cur_t->step->n) {
     switch (cur_t->step->n->node_type) {
-    case 'c':                    /* possible predicate abstraction? */
+    case 'c':                       /* possible predicate abstraction? */
       n->symbol->color_number |= 2; /* yes */
       break;
     default:
@@ -683,7 +683,9 @@ static void AST_relevant(models::Lextok *n) {
 
   for (a = ast; a; a = a->nxt) /* all other stmnts */
   {
-    if (a->p->b != N_CLAIM && a->p->b != E_TRACE && a->p->b != N_TRACE)
+    if (a->p->b != models::btypes::N_CLAIM &&
+        a->p->b != models::btypes::E_TRACE &&
+        a->p->b != models::btypes::N_TRACE)
       for (f = a->fsm; f; f = f->nxt)
         for (t = f->t; t; t = t->nxt) {
           if (!(t->relevant & 1))
@@ -771,8 +773,8 @@ static void AST_tagruns(void) {
    */
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b == N_CLAIM || a->p->b == I_PROC || a->p->b == E_TRACE ||
-        a->p->b == N_TRACE) {
+    if (a->p->b == models::btypes::N_CLAIM || a->p->b == models::btypes::I_PROC || a->p->b == models::btypes::E_TRACE ||
+        a->p->b == models::btypes::N_TRACE) {
       a->relevant |= 1; /* the proctype is relevant */
       continue;
     }
@@ -1177,7 +1179,8 @@ static int AST_dump_rel(void) {
   for (walk = all_names; walk; walk = walk->next) {
     models::Symbol *s;
     s = walk->entry;
-    if (!s->last_depth && (s->type != MTYPE || s->init_value->node_type != CONST) &&
+    if (!s->last_depth &&
+        (s->type != MTYPE || s->init_value->node_type != CONST) &&
         s->type != STRUCT /* report only fields */
         && s->type != PROCTYPE && !s->owner_name && sputtype(buf, s->type)) {
       if (!banner) {
@@ -1598,7 +1601,7 @@ static void AST_control_dep(void) {
   AST *a;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != N_CLAIM && a->p->b != E_TRACE && a->p->b != N_TRACE) {
+    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE && a->p->b != models::btypes::N_TRACE) {
       AST_ctrl(a);
     }
   }
@@ -1610,7 +1613,7 @@ static void AST_prelabel(void) {
   FSM_trans *t;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != N_CLAIM && a->p->b != E_TRACE && a->p->b != N_TRACE)
+    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE && a->p->b != models::btypes::N_TRACE)
       for (f = a->fsm; f; f = f->nxt)
         for (t = f->t; t; t = t->nxt) {
           if (t->step && t->step->n && t->step->n->node_type == ASSERT) {
@@ -1702,7 +1705,7 @@ void AST_slice(void) {
 void AST_store(ProcList *p, int start_state) {
   AST *n_ast;
 
-  if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE) {
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE && p->b != models::btypes::N_TRACE) {
     n_ast = (AST *)emalloc(sizeof(AST));
     n_ast->p = p;
     n_ast->i_st = start_state;
@@ -1733,7 +1736,8 @@ static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
   explicit_ = e;
 }
 
-static void AST_fp1(const std::string &s, models::Lextok *t, models::Lextok *f, int parno) {
+static void AST_fp1(const std::string &s, models::Lextok *t, models::Lextok *f,
+                    int parno) {
   models::Lextok *v;
   int cnt;
 
@@ -1779,17 +1783,17 @@ static void AST_par_init() /* parameter passing -- hidden_flags assignments */
   int cnt;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b == N_CLAIM || a->p->b == I_PROC || a->p->b == E_TRACE ||
-        a->p->b == N_TRACE) {
+    if (a->p->b == models::btypes::N_CLAIM || a->p->b == models::btypes::I_PROC || a->p->b == models::btypes::E_TRACE ||
+        a->p->b == models::btypes::N_TRACE) {
       continue; /* has no params */
     }
     cnt = 0;
-    for (f = a->p->p; f; f = f->right)  /* types */
+    for (f = a->p->p; f; f = f->right)   /* types */
       for (t = f->left; t; t = t->right) /* formals */
       {
-        cnt++;                             /* formal par count */
+        cnt++;                                   /* formal par count */
         c = (t->node_type != ',') ? t : t->left; /* the formal parameter */
-        AST_mk1(a->p->n->name, c, cnt);    /* all matching run statements */
+        AST_mk1(a->p->n->name, c, cnt); /* all matching run statements */
       }
   }
 }
@@ -1816,8 +1820,8 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
   }
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != N_CLAIM && a->p->b != E_TRACE &&
-        a->p->b != N_TRACE) /* has no locals */
+    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE &&
+        a->p->b != models::btypes::N_TRACE) /* has no locals */
       for (walk = all_names; walk; walk = walk->next) {
         sp = walk->entry;
         if (sp && sp->context && sp->context->name == a->p->n->name &&

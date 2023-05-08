@@ -3,6 +3,7 @@
 
 #include "models/lextok.hpp"
 #include "models/symbol.hpp"
+#include "models/models_fwd.hpp"
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
@@ -14,9 +15,6 @@
 #ifndef PC
 #include <memory.h>
 #endif
-
-enum { INIV, PUTV, LOGV }; /* used in pangen1.c */
-enum btypes { NONE, N_CLAIM, I_PROC, A_PROC, P_PROC, E_TRACE, N_TRACE };
 
 struct Slicer {
   models::Lextok *n;  /* global var, usable as slice criterion */
@@ -137,7 +135,7 @@ struct RunList {
   int tn;                 /* ordinal of type */
   int pid;                /* process id      */
   int priority;           /* for simulations only */
-  enum btypes b;          /* the type of process */
+  models::btypes b;          /* the type of process */
   Element *pc;            /* current stmnt   */
   struct Sequence *ps;    /* used by analyzer generator */
   models::Lextok *prov;   /* provided clause */
@@ -150,7 +148,7 @@ struct ProcList {
   models::Lextok *p;      /* parameters */
   Sequence *s;            /* body       */
   models::Lextok *prov;   /* provided clause */
-  enum btypes b;          /* e.g., claim, trace, proc */
+  models::btypes b;          /* e.g., claim, trace, proc */
   short tn;               /* ordinal number */
   unsigned char det;      /* deterministic */
   unsigned char unsafe;   /* contains global var inits */
@@ -238,7 +236,7 @@ models::Lextok *tail_add(models::Lextok *, models::Lextok *);
 models::Lextok *return_statement(models::Lextok *);
 
 ProcList *mk_rdy(models::Symbol *, models::Lextok *, Sequence *, int,
-                 models::Lextok *, enum btypes);
+                 models::Lextok *, models::btypes);
 
 SeqList *seqlist(Sequence *, SeqList *);
 Sequence *close_seq(int);

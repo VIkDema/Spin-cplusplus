@@ -13,8 +13,8 @@
 #else
 #include <stdint.h>
 #endif
-#include <fmt/core.h>
 #include "../main/launch_settings.hpp"
+#include <fmt/core.h>
 extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
@@ -43,7 +43,7 @@ static int doglobal(char *, int);
 static void dohidden(void);
 static void do_init(FILE *, models::Symbol *);
 static void end_labs(models::Symbol *, int);
-static void put_ptype(const std::string &, int, int, int, enum btypes);
+static void put_ptype(const std::string &, int, int, int, models::btypes);
 static void tc_predef_np(void);
 static void put_pinit(ProcList *);
 static void multi_init(void);
@@ -117,10 +117,13 @@ void genheader(void) {
   fprintf(fd_tc, "	0\n");
   fprintf(fd_tc, "};\n\n");
 
-  fprintf(fd_tc, "enum btypes { NONE=%d, N_CLAIM=%d,", NONE, N_CLAIM);
-  fprintf(fd_tc, " I_PROC=%d, A_PROC=%d,", I_PROC, A_PROC);
-  fprintf(fd_tc, " P_PROC=%d, E_TRACE=%d, N_TRACE=%d };\n\n", P_PROC, E_TRACE,
-          N_TRACE);
+  fprintf(fd_tc, "enum btypes { NONE=%d, N_CLAIM=%d,", models::btypes::NONE,
+          models::btypes::N_CLAIM);
+  fprintf(fd_tc, " I_PROC=%d, A_PROC=%d,", models::btypes::I_PROC,
+          models::btypes::A_PROC);
+  fprintf(fd_tc, " P_PROC=%d, E_TRACE=%d, N_TRACE=%d };\n\n",
+          models::btypes::P_PROC, models::btypes::E_TRACE,
+          models::btypes::N_TRACE);
 
   fprintf(fd_tc, "int Btypes[] = {\n");
   reverse_types(ready);
@@ -131,7 +134,7 @@ here:
   for (p = ready; p; p = p->nxt)
     put_ptype(p->n->name, p->tn, mstp, nrRdy + 1, p->b);
   /* +1 for np_ */
-  put_ptype("np_", nrRdy, mstp, nrRdy + 1, static_cast<btypes>(0));
+  put_ptype("np_", nrRdy, mstp, nrRdy + 1, static_cast<models::btypes>(0));
 
   if (nclaims >
       1) { /* this is the structure that goes into the state-vector
@@ -212,7 +215,7 @@ here:
   ntimes(fd_th, 0, 1, Head1);
 
   LstSet = ZS;
-  doglobal("", PUTV);
+  doglobal("", models::PUTV);
 
   hastrack = c_add_sv(fd_th);
 
@@ -346,7 +349,7 @@ void genother(void) {
   case 2:
     if (nclaims > 0) {
       for (p = ready; p; p = p->nxt) {
-        if (p->b == N_CLAIM) {
+        if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0); /* claims only */
           fprintf(fd_tc, "#ifdef HAS_CODE\n");
           ntimes(fd_tc, p->tn, p->tn + 1, R00);
@@ -358,7 +361,7 @@ void genother(void) {
   case 1:
     ntimes(fd_tc, 0, 1, Code0);
     for (p = ready; p; p = p->nxt) {
-      if (p->b != N_CLAIM) {
+      if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0); /* all except claims */
         fprintf(fd_tc, "#ifdef HAS_CODE\n");
         ntimes(fd_tc, p->tn, p->tn + 1, R00);
@@ -391,7 +394,7 @@ void genother(void) {
   case 2:
     if (nclaims > 0) {
       for (p = ready; p; p = p->nxt) {
-        if (p->b == N_CLAIM) {
+        if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* claims only */
         }
       }
@@ -399,7 +402,7 @@ void genother(void) {
     return;
   case 1:
     for (p = ready; p; p = p->nxt) {
-      if (p->b != N_CLAIM) {
+      if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* all except claims */
       }
     }
@@ -428,9 +431,9 @@ void genother(void) {
   fprintf(fd_tc, "}\n\n");
 
   fprintf(fd_tc, "void\niniglobals(int calling_pid)\n{\n");
-  if (doglobal("", INIV) > 0) {
+  if (doglobal("", models::INIV) > 0) {
     fprintf(fd_tc, "#ifdef VAR_RANGES\n");
-    (void)doglobal("logval(\"", LOGV);
+    (void)doglobal("logval(\"", models::LOGV);
     fprintf(fd_tc, "#endif\n");
   }
   fprintf(fd_tc, "}\n\n");
@@ -455,7 +458,8 @@ static void end_labs(models::Symbol *s, int i) {
   int j;
   char foo[128];
 
-  if ((pid_is_claim(i) && launch_settings.separate_version == 1) || (!pid_is_claim(i) && launch_settings.separate_version == 2))
+  if ((pid_is_claim(i) && launch_settings.separate_version == 1) ||
+      (!pid_is_claim(i) && launch_settings.separate_version == 2))
     return;
 
   for (l = labtab; l; l = l->nxt)
@@ -565,7 +569,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
 }
 
 static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
-                   const std::string &s, enum btypes b) {
+                   const std::string &s, models::btypes b) {
   int h, j, k = 0;
   extern int nr_errs;
   Ordered *walk;
@@ -573,7 +577,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
   char buf[128], buf2[128], buf3[128];
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (dowhat == INIV) { /* initialize in order of declaration */
+  if (dowhat == models::INIV) { /* initialize in order of declaration */
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (sp->context && !sp->owner_name && s == sp->context->name) {
@@ -595,7 +599,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
                (h == 1 && (sp->value_type > 1 || sp->is_array == 1))) &&
               s == sp->context->name) {
             switch (dowhat) {
-            case LOGV:
+            case models::LOGV:
               if (sp->type == CHAN && !verbose_flags.Active())
                 break;
               sprintf(buf, "%s%s:", pre, s.c_str());
@@ -605,13 +609,13 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
               }
               do_var(ofd, dowhat, "", sp, buf, buf2, buf3);
               break;
-            case PUTV:
+            case models::PUTV:
               sprintf(buf, "((P%d *)pptr(h))->", p);
               do_var(ofd, dowhat, buf, sp, "", " = ", ";\n");
               k++;
               break;
             }
-            if (b == N_CLAIM) {
+            if (b == models::btypes::N_CLAIM) {
               printf("error: %s defines local %s\n", s.c_str(),
                      sp->name.c_str());
               nr_errs++;
@@ -746,7 +750,8 @@ int c_splurge_any(ProcList *p) {
   Ordered *walk;
   models::Symbol *sp;
 
-  if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
+      p->b != models::btypes::N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
@@ -764,7 +769,8 @@ void c_splurge(FILE *fd, ProcList *p) {
   models::Symbol *sp;
   char pref[64];
 
-  if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
+      p->b != models::btypes::N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
@@ -838,17 +844,17 @@ static int doglobal(char *pre, int dowhat) {
       if (!sp->context && !sp->owner_name && sp->type == Types[j]) {
         if (Types[j] != MTYPE || !ismtype(sp->name))
           switch (dowhat) {
-          case LOGV:
+          case models::LOGV:
             if (sp->type == CHAN && !verbose_flags.Active())
               break;
             if (sp->hidden_flags & 1)
               break;
             do_var(fd_tc, dowhat, "", sp, pre, "\", now.", ");\n");
             break;
-          case INIV:
+          case models::INIV:
             checktype(sp, std::string{});
             cnt++; /* fall through */
-          case PUTV:
+          case models::PUTV:
             char *putv_char = "now.";
             if (sp->hidden_flags & 1) {
               putv_char = "";
@@ -891,29 +897,29 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
   }
 
   switch (dowhat) {
-  case PUTV:
+  case models::PUTV:
     if (sp->hidden_flags & 1)
       break;
 
     typ2c(sp);
     break;
 
-  case LOGV:
+  case models::LOGV:
     if (!launch_settings.need_old_scope_rules) {
       while (*ptr == '_' || isdigit((int)*ptr)) {
         ptr++;
       }
     }
     /* fall thru */
-  case INIV:
+  case models::INIV:
     if (sp->type == STRUCT) { /* struct may contain a chan */
       walk_struct(ofd, dowhat, s, sp, pre, sep, ter);
       break;
     }
-    if (!sp->init_value && dowhat != LOGV) /* it defaults to 0 */
+    if (!sp->init_value && dowhat != models::LOGV) /* it defaults to 0 */
       break;
     if (sp->value_type == 1 && sp->is_array == 0) {
-      if (dowhat == LOGV) {
+      if (dowhat == models::LOGV) {
         fprintf(ofd, "\t\t%s%s%s%s", pre.c_str(), s.c_str(), ptr, sep.c_str());
         fprintf(ofd, "%s%s", s.c_str(), sp->name.c_str());
       } else {
@@ -927,14 +933,15 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
         for (i = 0; i < sp->value_type; i++) {
           fprintf(ofd, "\t\t%s%s%s[%d]%s", pre.c_str(), s.c_str(),
                   sp->name.c_str(), i, sep.c_str());
-          if (dowhat == LOGV)
+          if (dowhat == models::LOGV)
             fprintf(ofd, "%s%s[%d]", s.c_str(), sp->name.c_str(), i);
           else
             do_init(ofd, sp);
           fprintf(ofd, "%s", ter.c_str());
         }
       } else if (sp->init_value) {
-        if (dowhat != LOGV && sp->is_array && sp->init_value->node_type == ',') {
+        if (dowhat != models::LOGV && sp->is_array &&
+            sp->init_value->node_type == ',') {
           models::Lextok *z, *y;
           z = sp->init_value;
           for (i = 0; i < sp->value_type; i++) {
@@ -956,7 +963,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
           fprintf(ofd, "\t\t{\n");
           fprintf(ofd, "\t\t\t%s%s%s[l_in]%s", pre.c_str(), s.c_str(),
                   sp->name.c_str(), sep.c_str());
-          if (dowhat == LOGV) {
+          if (dowhat == models::LOGV) {
             fprintf(ofd, "%s%s[l_in]", s.c_str(), sp->name.c_str());
           } else {
             putstmnt(ofd, sp->init_value, 0);
@@ -986,12 +993,12 @@ static void do_init(FILE *ofd, models::Symbol *sp) {
   }
 }
 static void put_ptype(const std::string &s, int i, int m0, int m1,
-                      enum btypes b) {
+                      models::btypes b) {
   int k;
 
-  if (b == I_PROC) {
+  if (b == models::btypes::I_PROC) {
     fprintf(fd_th, "#define Pinit	((P%d *)_this)\n", i);
-  } else if (b == P_PROC || b == A_PROC) {
+  } else if (b == models::btypes::P_PROC || b == models::btypes::A_PROC) {
     fprintf(fd_th, "#define P%s	((P%d *)_this)\n", s.c_str(), i);
   }
 
@@ -1004,7 +1011,7 @@ static void put_ptype(const std::string &s, int i, int m0, int m1,
   fprintf(fd_th, "#endif\n");
   LstSet = ZS;
   nBits = 8 + blog(m1) + blog(m0);
-  k = dolocal(fd_tc, "", PUTV, i, s, b); /* includes pars */
+  k = dolocal(fd_tc, "", models::PUTV, i, s, b); /* includes pars */
   c_add_loc(fd_th, s);
 
   fprintf(fd_th, "} P%d;\n", i);
@@ -1084,7 +1091,7 @@ static void multi_init(void) {
   fprintf(fd_tc, "#ifndef NOCLAIM\n");
   fprintf(fd_tc, "\tcase %d:	/* claim select */\n", i);
   for (p = ready, j = 0; p; p = p->nxt, j++) {
-    if (p->b == N_CLAIM) {
+    if (p->b == models::btypes::N_CLAIM) {
       e = p->s->frst;
       init_value = huntele(e, e->status, -1)->seqno;
 
@@ -1149,7 +1156,7 @@ static void put_pinit(ProcList *P) {
 
   fprintf(fd_tc, "#endif\n");
   fprintf(fd_tc, "\t\treached%d[%d]=1;\n", i, init_value);
-  if (P->b == N_CLAIM) {
+  if (P->b == models::btypes::N_CLAIM) {
     fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", i);
   }
 
@@ -1187,10 +1194,10 @@ static void put_pinit(ProcList *P) {
       fprintf(fd_tc, " = par%d;\n", j);
     }
   fprintf(fd_tc, "\t\t/* locals: */\n");
-  k = dolocal(fd_tc, "", INIV, i, s->name.c_str(), P->b);
+  k = dolocal(fd_tc, "", models::INIV, i, s->name.c_str(), P->b);
   if (k > 0) {
     fprintf(fd_tc, "#ifdef VAR_RANGES\n");
-    (void)dolocal(fd_tc, "logval(\"", LOGV, i, s->name.c_str(), P->b);
+    (void)dolocal(fd_tc, "logval(\"", models::LOGV, i, s->name.c_str(), P->b);
     fprintf(fd_tc, "#endif\n");
   }
 

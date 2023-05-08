@@ -290,7 +290,7 @@ static ProcList *locate_claim(int n) {
       break;
     }
   }
-  assert(p && p->b == N_CLAIM);
+  assert(p && p->b == models::btypes::N_CLAIM);
 
   return p;
 }
@@ -357,7 +357,7 @@ static void mk_accepting(int n, Element *e) {
       break;
     }
   }
-  assert(p && p->b == N_CLAIM);
+  assert(p && p->b == models::btypes::N_CLAIM);
   Nacc[n] = 1;
   has_accept = 1;
 
@@ -383,7 +383,7 @@ static void check_special(int *nrs) {
     nmatches = 0;
     for (p = ready, i = 0; p; p = p->nxt, i++) /* check each claim */
     {
-      if (p->b != N_CLAIM) {
+      if (p->b != models::btypes::N_CLAIM) {
         continue;
       }
       /* claim i in state nrs[i], type p->tn, name p->n->name
@@ -617,7 +617,7 @@ void sync_product(void) {
   matrix = (Element ****)emalloc(sizeof(Element ***) * nclaims); /* claims */
 
   for (p = ready, i = 0; p; p = p->nxt, i++) {
-    if (p->b == N_CLAIM) {
+    if (p->b == models::btypes::N_CLAIM) {
       nst = max(p->s->maxel, nst);
       Nacc[i] = claim_has_accept(p);
     }
@@ -637,7 +637,7 @@ void sync_product(void) {
   }
 
   for (p = ready, n = 0; p; p = p->nxt, n++) {
-    if (p->b == N_CLAIM) { /* fill in matrix[n] */
+    if (p->b == models::btypes::N_CLAIM) { /* fill in matrix[n] */
       e = p->s->frst;
       Ist[n] = huntele(e, e->status, -1)->seqno;
 

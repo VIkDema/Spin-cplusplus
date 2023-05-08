@@ -83,7 +83,7 @@ void runnable(ProcList *p, int weight, int noparams) {
 }
 
 ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, Sequence *s, int det,
-                 models::Lextok *prov, enum btypes b)
+                 models::Lextok *prov, models::btypes b)
 /* n=name, p=formals, s=body det=deterministic prov=provided */
 {
   ProcList *r = (ProcList *)emalloc(sizeof(ProcList));
@@ -295,7 +295,7 @@ void start_claim(int n) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (p = ready; p; p = p->nxt)
-    if (p->tn == n && p->b == N_CLAIM) {
+    if (p->tn == n && p->b == models::btypes::N_CLAIM) {
       runnable(p, 1, 1);
       goto found;
     }
@@ -316,7 +316,7 @@ found:
     sprintf(GBuf, "%d:%s", 0, p->n->name.c_str());
     pstext(0, GBuf);
     for (r = run_lst; r; r = r->nxt) {
-      if (r->b != N_CLAIM) {
+      if (r->b != models::btypes::N_CLAIM) {
         sprintf(GBuf, "%d:%s", r->pid + 1, r->n->name.c_str());
         pstext(r->pid + 1, GBuf);
       }
@@ -639,7 +639,7 @@ void multi_claims(void) {
   if (nclaims > 1) {
     printf("  the model contains %d never claims:", nclaims);
     for (p = ready; p; p = p->nxt) {
-      if (p->b == N_CLAIM) {
+      if (p->b == models::btypes::N_CLAIM) {
         printf("%s%s", q ? ", " : " ", p->n->name.c_str());
         q = p;
       }

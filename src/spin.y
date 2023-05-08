@@ -142,7 +142,7 @@ proc	: inst		/* optional instantiator */
 	  body		{ ProcList *rl;
 			  if ($1 != ZN && $1->value > 0)
 			  {	int j;
-				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, A_PROC);
+				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, models::btypes::A_PROC);
 			  	for (j = 0; j < $1->value; j++)
 				{	runnable(rl, $9?$9->value:1, 1);
 					announce(":root:");
@@ -151,7 +151,7 @@ proc	: inst		/* optional instantiator */
 					$3->symbol->init_value = $1;
 				}
 			  } else
-			  {	rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, P_PROC);
+			  {	rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, models::btypes::P_PROC);
 			  }
 			  if (rl && has_ini == 1) /* global initializations, unsafe */
 			  {	/* printf("proctype %s has initialized data\n",
@@ -193,7 +193,7 @@ init	: INIT		{
 	 }
 	  Opt_priority
 	  body		{ ProcList *rl;
-			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN, I_PROC);
+			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN,    models::btypes::I_PROC);
 			  runnable(rl, $3?$3->value:1, 1);
 			  announce(":root:");
 			  context = ZS;
@@ -225,7 +225,7 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 			  claimproc = new char[$1->symbol->name.length() + 1];
 			  strcpy(claimproc, $1->symbol->name.c_str());
 			}
-	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, N_CLAIM);
+	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, models::btypes::N_CLAIM);
         		  context = ZS;
         		}
 	;
@@ -258,9 +258,9 @@ events : TRACE		{
 			}
 	  body		{
 			  if ($1->symbol->name ==  ":trace:")
-			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, E_TRACE);
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, models::btypes::E_TRACE);
 			  } else
-			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, N_TRACE);
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, models::btypes::N_TRACE);
 			  }
         		  context = ZS;
 			  inEventMap--;
