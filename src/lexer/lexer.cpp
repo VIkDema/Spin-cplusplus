@@ -4,12 +4,14 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
 #include "helpers.hpp"
 #include "names.hpp"
+#include "scope.hpp"
 #include <algorithm>
 #include <fmt/core.h>
 #include <iostream>
 #include <optional>
 
 extern std::string yytext;
+extern lexer::ScopeProcessor scope_processor_;
 extern models::Symbol *Fname, *oFname;
 extern YYSTYPE yylval;
 

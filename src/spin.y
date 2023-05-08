@@ -187,7 +187,9 @@ inst	: /* empty */	{ $$ = ZN; }
 			}
 	;
 
-init	: INIT		{ context = $1->sym; }
+init	: INIT		{ 
+	context = $1->sym;
+	 }
 	  Opt_priority
 	  body		{ ProcList *rl;
 			  rl = mk_rdy(context, ZN, $4->sq, 0, ZN, I_PROC);
@@ -245,7 +247,8 @@ optname2 : /* empty */ { char tb[32]; static int nltl = 0;
 	| NAME		{ $$ = $1; }
 	;
 
-events : TRACE		{ context = $1->sym;
+events : TRACE		{ 
+	context = $1->sym;
 			  if (eventmap)
 				loger::non_fatal("trace %s redefined", std::string(eventmap));
 			  eventmap = new char[$1->sym->name.length() + 1];

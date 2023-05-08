@@ -7,13 +7,14 @@
 #include "y.tab.h"
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
+#include "lexer/scope.hpp"
 
+extern lexer::ScopeProcessor scope_processor_;
 extern LaunchSettings launch_settings;
 extern lexer::Lexer lexer_;
 extern models::Symbol *Fname;
 extern int nr_errs, lineno;
 extern short has_unless, has_badelse, has_xu;
-extern char CurScope[MAXSCOPESZ];
 
 Element *Al_El = ZE;
 Label *labtab = (Label *)0;
@@ -873,7 +874,7 @@ Lextok *for_index(Lextok *a3, Lextok *a5) {
     z1->val = 0;
     z2 = nn(a5, LEN, a5, ZN);
 
-    sprintf(tmp_nm, "_f0r_t3mp%s", CurScope); /* make sure it's unique */
+    sprintf(tmp_nm, "_f0r_t3mp%s", scope_processor_.GetCurrScope().c_str()); /* make sure it's unique */
     tmp_cnt = lookup(tmp_nm);
     if (z0->val > 255) /* check nr of slots, i.e. max length */
     {

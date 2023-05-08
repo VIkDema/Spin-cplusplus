@@ -1,6 +1,8 @@
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
 #include "../lexer/lexer.hpp"
+#include "../main/launch_settings.hpp"
+#include "../main/main_processor.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "../version/version.hpp"
@@ -10,8 +12,6 @@
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
-#include "../main/main_processor.hpp"
-#include "../main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
 
 #define DELTA 500 /* sets an upperbound on nr of chan names */
@@ -3488,8 +3488,9 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
     s = lookup(s->name); /* must be a global */
 
   if (!s->type) {
-    if (strcmp(pre.c_str(), ".") != 0)
+    if (pre != ".") {
       loger::fatal("undeclared variable '%s'", s->name);
+    }
     s->type = models::kInt;
   }
 
@@ -3508,9 +3509,9 @@ void putname(FILE *fd, const std::string &pre, Lextok *n, int m,
         fprintf(fd, "((P%d *)_this)->", Pid_nr);
       } else {
         bool x = s->name == "_";
-        if (!(s->hidden_flags & 1) && x == true)  
+        if (!(s->hidden_flags & 1) && x == false)
           fprintf(fd, "now.");
-        if (x == false && _isok == 0)
+        if (x == true && _isok == 0)
           loger::fatal("attempt to read value of '_'");
       }
     }

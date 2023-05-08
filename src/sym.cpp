@@ -2,6 +2,7 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "lexer/scope.hpp"
 #include "main/launch_settings.hpp"
 #include "models/symbol.hpp"
 #include "spin.hpp"
@@ -10,12 +11,12 @@
 #include <iostream>
 
 extern LaunchSettings launch_settings;
+extern lexer::ScopeProcessor scope_processor_;
 
 extern models::Symbol *Fname, *owner;
 extern int lineno, depth, verbose, NamesNotAdded;
 extern int has_hidden;
 extern short has_xu;
-extern char CurScope[MAXSCOPESZ];
 
 models::Symbol *context = ZS;
 Ordered *all_names = (Ordered *)0;
@@ -92,10 +93,10 @@ models::Symbol *lookup(const std::string &s) {
   } else { /* added 6.0.0: more traditional, scope rule */
     for (sp = symtab[h]; sp; sp = sp->next) {
       if (sp->name == s && samename(sp->context, context) &&
-          (strcmp((const char *)sp->block_scope.c_str(), CurScope) == 0 ||
-           strncmp((const char *)sp->block_scope.c_str(), CurScope,
-                   sp->block_scope.length() == 0) &&
-               samename(sp->owner_name, owner))) {
+          (sp->block_scope == scope_processor_.GetCurrScope() ||
+           (sp->block_scope.compare(0, sp->block_scope.length(),
+                                    scope_processor_.GetCurrScope()) == 0 &&
+            samename(sp->owner_name, owner)))) {
         if (!samename(sp->owner_name, owner)) {
           printf("spin: different container %s\n", sp->name.c_str());
           printf("    old: %s\n",
@@ -122,7 +123,7 @@ models::Symbol *lookup(const std::string &s) {
   sp->last_depth = depth;
   sp->context = context;
   sp->owner_name = owner; /* if fld in struct */
-  sp->block_scope = std::string(CurScope);
+  sp->block_scope = scope_processor_.GetCurrScope();
 
   if (NamesNotAdded == 0) {
     sp->next = symtab[h];

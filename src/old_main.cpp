@@ -37,7 +37,6 @@ extern models::Symbol *context;
 extern char *claimproc;
 extern void repro_src(void);
 extern void qhide(int);
-extern char CurScope[MAXSCOPESZ];
 extern lexer::Lexer lexer_;
 extern short has_accept;
 extern int realread;

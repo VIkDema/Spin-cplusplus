@@ -52,7 +52,6 @@ extern lexer::Lexer lexer_;
 short has_stack = 0;
 int lineno = 1;
 int scope_seq[256], scope_level = 0;
-char CurScope[MAXSCOPESZ];
 std::string yytext;
 FILE *yyin, *yyout;
 

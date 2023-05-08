@@ -11,6 +11,7 @@ namespace models {
 
 /* val defines width in bits */
 enum SymbolType {
+  kNone = 0,
   kUnsigned = 5,
   kBit = 1,
   kByte = 8,
@@ -29,7 +30,7 @@ struct Symbol {
   std::string name;
   short id; /* unique number for the name OLD id */
 
-  SymbolType type;            /* bit,short,.., chan,struct  */
+  SymbolType type = kNone;            /* bit,short,.., chan,struct  */
   unsigned char hidden_flags; /* bit-flags:
                                    1=hide, 2=show,
                                    4=bit-equiv,   8=byte-equiv,
