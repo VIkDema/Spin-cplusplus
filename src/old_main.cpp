@@ -22,11 +22,13 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+
 #ifdef PC
 #include <io.h>
 #else
 #include <unistd.h>
 #endif
+
 #include "y.tab.h"
 
 extern int DstepStart, lineno;
@@ -41,8 +43,6 @@ extern short has_accept;
 extern int realread;
 extern void ana_src(int, int);
 extern void putprelude(void);
-
-static void add_runtime(char *);
 
 extern models::Symbol *Fname, *oFname;
 

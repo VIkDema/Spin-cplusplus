@@ -1,6 +1,7 @@
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "main/launch_settings.hpp"
+#include "main/main_processor.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"

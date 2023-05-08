@@ -7,7 +7,7 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <sstream>
-#include "main/main_processor.hpp"
+#include "../main/main_processor.hpp"
 
 extern models::Symbol *Fname;
 extern models::Symbol *oFname;
@@ -48,7 +48,7 @@ void fatal(const std::string_view &s1, const std::optional<std::string> &s2) {
   if (!verbose_flags.NeedToPrintVerbose()) {
     std::filesystem::remove("_spin_nvr.tmp");
   }
-  alldone(1);
+  MainProcessor::Exit(1);
 }
 
 std::string explainToString(int n) {

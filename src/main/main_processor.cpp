@@ -597,7 +597,7 @@ void MainProcessor::StringTrim(std::string &t) {
   }
 }
 
-void FinalFiddle() {
+void MainProcessor::FinalFiddle() {
   /* no -a or -l but has_accept: add -a */
   /* no -a or -l in pan_runtime: add -DSAFETY to pan_comptime */
   /* -a or -l but no -f then add -DNOFAIR  pan_processor_*/
