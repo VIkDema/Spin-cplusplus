@@ -46,7 +46,7 @@ struct State_Stack {
 };
 
 struct Guard {
-  Lextok *t;
+  models::Lextok *t;
   Guard *nxt;
 };
 
@@ -149,7 +149,7 @@ more:
   loger::fatal("cannot happen, to_render");
 }
 
-static void wrap_text(char *pre, Lextok *t, char *post) {
+static void wrap_text(char *pre, models::Lextok *t, char *post) {
   std::cout << pre;
   comment(stdout, t, 0);
   std::cout << post;
@@ -193,10 +193,10 @@ static void complete_transition(Succ_List *sl, Guard *g) {
 
   printf("	:: ");
   for (w = g; w; w = w->nxt) {
-    if (w->t->ntyp == CONST && w->t->val == 1) {
+    if (w->t->node_type == CONST && w->t->value == 1) {
       continue;
-    } else if (w->t->ntyp == 'c' && w->t->lft->ntyp == CONST &&
-               w->t->lft->val == 1) {
+    } else if (w->t->node_type == 'c' && w->t->left->node_type == CONST &&
+               w->t->left->value == 1) {
       continue; /* 'true' */
     }
 
@@ -235,8 +235,8 @@ static void state_body(OneState *s, Guard *guard) {
          then pull its target state forward, once
        */
 
-      if (!e || e->n->ntyp == NON_ATOMIC || e->n->ntyp == DO ||
-          e->n->ntyp == IF) {
+      if (!e || e->n->node_type == NON_ATOMIC || e->n->node_type == DO ||
+          e->n->node_type == IF) {
         s = &(sl->s->state);
         y = push_dsts(s->combo);
         if (!y) {
@@ -348,7 +348,7 @@ static void mk_accepting(int n, Element *e) {
   l->s = (models::Symbol *)emalloc(sizeof(models::Symbol));
   l->s->name = "accept00";
   l->c = (models::Symbol *)emalloc(sizeof(models::Symbol));
-  l->uiid = 0; /* this is not in an inline */
+  l->opt_inline_id = 0; /* this is not in an inline */
 
   for (p = ready, i = 0; p; p = p->nxt, i++) /* find claim name */
   {
@@ -679,7 +679,7 @@ static void create_transition(OneState *s, SQueue *it) {
   int *F = s->combo;
   int *T = it->state.combo;
   Succ_List *sl;
-  Lextok *t;
+  models::Lextok *t;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (verbose_flags.NeedToPrintVeryVerbose()) {
@@ -696,8 +696,8 @@ static void create_transition(OneState *s, SQueue *it) {
     if (verbose_flags.NeedToPrintVeryVerbose()) {
       wrap_text("", t, " ");
     }
-    if (t->ntyp == 'c' && t->lft->ntyp == CONST) {
-      if (t->lft->val == 0) /* i.e., false */
+    if (t->node_type == 'c' && t->left->node_type == CONST) {
+      if (t->left->value == 0) /* i.e., false */
       {
         goto done;
       }
@@ -835,29 +835,29 @@ static void t_record(int n, Element *e, Element *g) {
 }
 
 static void get_sub(int n, Element *e) {
-  if (e->n->ntyp == D_STEP || e->n->ntyp == ATOMIC) {
+  if (e->n->node_type == D_STEP || e->n->node_type == ATOMIC) {
     loger::fatal("atomic or d_step in never claim product");
   }
   /* NON_ATOMIC */
-  e->n->sl->this_sequence->last->nxt = e->nxt;
-  get_seq(n, e->n->sl->this_sequence);
+  e->n->seq_list->this_sequence->last->nxt = e->nxt;
+  get_seq(n, e->n->seq_list->this_sequence);
 
-  t_record(n, e, e->n->sl->this_sequence->frst);
+  t_record(n, e, e->n->seq_list->this_sequence->frst);
 }
 
 static void set_el(int n, Element *e) {
   Element *g;
 
-  if (e->n->ntyp == '@') /* change to self-loop */
+  if (e->n->node_type == '@') /* change to self-loop */
   {
-    e->n->ntyp = CONST;
-    e->n->val = 1; /* true */
+    e->n->node_type = CONST;
+    e->n->value = 1; /* true */
     e->nxt = e;
     g = e;
     mk_accepting(n, e);
   } else
 
-      if (e->n->ntyp == GOTO) {
+      if (e->n->node_type == GOTO) {
     g = get_lab(e->n, 1);
     g = huntele(g, e->status, -1);
   } else if (e->nxt) {
@@ -881,32 +881,32 @@ static void get_seq(int n, Sequence *s) {
     }
     e->status |= DONE;
 
-    if (e->n->ntyp == UNLESS) {
+    if (e->n->node_type == UNLESS) {
       loger::fatal("unless stmnt in never claim product");
     }
 
     if (e->sub) /* IF or DO */
     {
-      Lextok *x = NULL;
-      Lextok *y = NULL;
-      Lextok *haselse = NULL;
+      models::Lextok *x = NULL;
+      models::Lextok *y = NULL;
+      models::Lextok *haselse = NULL;
 
       for (h = e->sub; h; h = h->nxt) {
-        Lextok *t = h->this_sequence->frst->n;
-        if (t->ntyp == ELSE) {
+        models::Lextok *t = h->this_sequence->frst->n;
+        if (t->node_type == ELSE) {
           if (verbose_flags.NeedToPrintVeryVerbose())
-            printf("else at line %d\n", t->ln);
+            printf("else at line %d\n", t->line_number);
           haselse = t;
           continue;
         }
-        if (t->ntyp != 'c') {
+        if (t->node_type != 'c') {
           loger::fatal("product, 'else' combined with non-condition");
         }
 
-        if (t->lft->ntyp == CONST /* true */
-            && t->lft->val == 1 && y == NULL) {
+        if (t->left->node_type == CONST /* true */
+            && t->left->value == 1 && y == NULL) {
           y = nn(ZN, CONST, ZN, ZN);
-          y->val = 0;
+          y->value = 0;
         } else {
           if (!x)
             x = t;
@@ -924,8 +924,8 @@ static void get_seq(int n, Sequence *s) {
         if (verbose_flags.NeedToPrintVeryVerbose()) {
           wrap_text(" [else: ", y, "]\n");
         }
-        haselse->ntyp = 'c'; /* replace else */
-        haselse->lft = y;
+        haselse->node_type = 'c'; /* replace else */
+        haselse->left = y;
       }
 
       for (h = e->sub; h; h = h->nxt) {
@@ -933,8 +933,8 @@ static void get_seq(int n, Sequence *s) {
         get_seq(n, h->this_sequence);
       }
     } else {
-      if (e->n->ntyp == ATOMIC || e->n->ntyp == D_STEP ||
-          e->n->ntyp == NON_ATOMIC) {
+      if (e->n->node_type == ATOMIC || e->n->node_type == D_STEP ||
+          e->n->node_type == NON_ATOMIC) {
         get_sub(n, e);
       } else {
         set_el(n, e);

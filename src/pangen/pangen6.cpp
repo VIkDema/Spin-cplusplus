@@ -43,15 +43,15 @@ struct RPN { /* relevant proctype names */
 };
 
 struct ALIAS {         /* channel aliasing info */
-  Lextok *cnm;         /* this chan */
+  models::Lextok *cnm;         /* this chan */
   int origin;          /* debugging - origin of the alias */
   struct ALIAS *alias; /* can be an alias for these other chans */
   struct ALIAS *nxt;   /* linked list */
 };
 
 struct ChanList {
-  Lextok *s;            /* containing stmnt */
-  Lextok *n;            /* point of reference - could be struct */
+  models::Lextok *s;            /* containing stmnt */
+  models::Lextok *n;            /* point of reference - could be struct */
   struct ChanList *nxt; /* linked list */
 };
 
@@ -80,35 +80,35 @@ static int AST_Round;
 static RPN *rpn;
 static int in_recv = 0;
 
-static int AST_mutual(Lextok *, Lextok *, int);
+static int AST_mutual(models::Lextok *, models::Lextok *, int);
 static void AST_dominant(void);
 static void AST_hidden(void);
-static void AST_setcur(Lextok *);
-static void check_slice(Lextok *, int);
+static void AST_setcur(models::Lextok *);
+static void check_slice(models::Lextok *, int);
 static void curtail(AST *);
-static void def_use(Lextok *, int);
-static void name_AST_track(Lextok *, int);
+static void def_use(models::Lextok *, int);
+static void name_AST_track(models::Lextok *, int);
 static void show_expl(void);
 
-static int AST_isini(Lextok *n) /* is this an initialized channel */
+static int AST_isini(models::Lextok *n) /* is this an initialized channel */
 {
   models::Symbol *s;
 
-  if (!n || !n->sym)
+  if (!n || !n->symbol)
     return 0;
 
-  s = n->sym;
+  s = n->symbol;
 
   if (s->type == CHAN)
-    return (s->init_value->ntyp == CHAN); /* freshly instantiated */
+    return (s->init_value->node_type == CHAN); /* freshly instantiated */
 
-  if (s->type == STRUCT && n->rgt)
-    return AST_isini(n->rgt->lft);
+  if (s->type == STRUCT && n->right)
+    return AST_isini(n->right->left);
 
   return 0;
 }
 
-static void AST_var(Lextok *n, models::Symbol *s, int toplevel) {
+static void AST_var(models::Lextok *n, models::Symbol *s, int toplevel) {
   if (!s)
     return;
 
@@ -120,37 +120,37 @@ static void AST_var(Lextok *n, models::Symbol *s, int toplevel) {
   }
   printf("%s", s->name.c_str()); /* array indices ignored */
 
-  if (s->type == STRUCT && n && n->rgt && n->rgt->lft) {
+  if (s->type == STRUCT && n && n->right && n->right->left) {
     printf(":");
-    AST_var(n->rgt->lft, n->rgt->lft->sym, 0);
+    AST_var(n->right->left, n->right->left->symbol, 0);
   }
 }
 
-static void name_def_indices(Lextok *n, int code) {
-  if (!n || !n->sym)
+static void name_def_indices(models::Lextok *n, int code) {
+  if (!n || !n->symbol)
     return;
 
-  if (n->sym->value_type > 1 || n->sym->is_array)
-    def_use(n->lft, code); /* process the index */
+  if (n->symbol->value_type > 1 || n->symbol->is_array)
+    def_use(n->left, code); /* process the index */
 
-  if (n->sym->type == STRUCT /* and possible deeper ones */
-      && n->rgt)
-    name_def_indices(n->rgt->lft, code);
+  if (n->symbol->type == STRUCT /* and possible deeper ones */
+      && n->right)
+    name_def_indices(n->right->left, code);
 }
 
-static void name_def_use(Lextok *n, int code) {
+static void name_def_use(models::Lextok *n, int code) {
   FSM_use *u;
 
   if (!n)
     return;
 
   if ((code & USE) && cur_t->step && cur_t->step->n) {
-    switch (cur_t->step->n->ntyp) {
+    switch (cur_t->step->n->node_type) {
     case 'c':                    /* possible predicate abstraction? */
-      n->sym->color_number |= 2; /* yes */
+      n->symbol->color_number |= 2; /* yes */
       break;
     default:
-      n->sym->color_number |= 1; /* no  */
+      n->symbol->color_number |= 1; /* no  */
       break;
     }
   }
@@ -173,11 +173,11 @@ static void name_def_use(Lextok *n, int code) {
   name_def_indices(n, USE | (code & (~DEF))); /* not def, but perhaps deref */
 }
 
-static void def_use(Lextok *now, int code) {
-  Lextok *v;
+static void def_use(models::Lextok *now, int code) {
+  models::Lextok *v;
 
   if (now)
-    switch (now->ntyp) {
+    switch (now->node_type) {
     case '!':
     case UMIN:
     case '~':
@@ -186,14 +186,14 @@ static void def_use(Lextok *now, int code) {
     case SET_P:
     case GET_P:
     case ASSERT:
-      def_use(now->lft, USE | code);
+      def_use(now->left, USE | code);
       break;
 
     case EVAL:
-      if (now->lft->ntyp == ',') {
-        def_use(now->lft->lft, USE | code);
+      if (now->left->node_type == ',') {
+        def_use(now->left->left, USE | code);
       } else {
-        def_use(now->lft, USE | code);
+        def_use(now->left, USE | code);
       }
       break;
 
@@ -202,7 +202,7 @@ static void def_use(Lextok *now, int code) {
     case EMPTY:
     case NFULL:
     case NEMPTY:
-      def_use(now->lft, DEREF_USE | USE | code);
+      def_use(now->left, DEREF_USE | USE | code);
       break;
 
     case '/':
@@ -223,13 +223,13 @@ static void def_use(Lextok *now, int code) {
     case AND:
     case LSHIFT:
     case RSHIFT:
-      def_use(now->lft, USE | code);
-      def_use(now->rgt, USE | code);
+      def_use(now->left, USE | code);
+      def_use(now->right, USE | code);
       break;
 
     case ASGN:
-      def_use(now->lft, DEF | code);
-      def_use(now->rgt, USE | code);
+      def_use(now->left, DEF | code);
+      def_use(now->right, USE | code);
       break;
 
     case TYPE: /* name in parameter list */
@@ -242,59 +242,59 @@ static void def_use(Lextok *now, int code) {
 
     case RUN:
       name_def_use(now, USE); /* procname - not really needed */
-      for (v = now->lft; v; v = v->rgt)
-        def_use(v->lft, USE); /* params */
+      for (v = now->left; v; v = v->right)
+        def_use(v->left, USE); /* params */
       break;
 
     case 's':
-      def_use(now->lft, DEREF_DEF | DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt)
-        def_use(v->lft, USE | code);
+      def_use(now->left, DEREF_DEF | DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right)
+        def_use(v->left, USE | code);
       break;
 
     case 'r':
-      def_use(now->lft, DEREF_DEF | DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt) {
-        if (v->lft->ntyp == EVAL) {
-          if (v->lft->ntyp == ',') {
-            def_use(v->lft->lft, code); /* will add USE */
+      def_use(now->left, DEREF_DEF | DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right) {
+        if (v->left->node_type == EVAL) {
+          if (v->left->node_type == ',') {
+            def_use(v->left->left, code); /* will add USE */
           } else {
-            def_use(v->lft, code); /* will add USE */
+            def_use(v->left, code); /* will add USE */
           }
-        } else if (v->lft->ntyp != CONST) {
-          def_use(v->lft, DEF | code);
+        } else if (v->left->node_type != CONST) {
+          def_use(v->left, DEF | code);
         }
       }
       break;
 
     case 'R':
-      def_use(now->lft, DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt) {
-        if (v->lft->ntyp == EVAL) {
-          if (v->lft->ntyp == ',') {
-            def_use(v->lft->lft, code); /* will add USE */
+      def_use(now->left, DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right) {
+        if (v->left->node_type == EVAL) {
+          if (v->left->node_type == ',') {
+            def_use(v->left->left, code); /* will add USE */
           } else {
-            def_use(v->lft, code); /* will add USE */
+            def_use(v->left, code); /* will add USE */
           }
         }
       }
       break;
 
     case '?':
-      def_use(now->lft, USE | code);
-      if (now->rgt) {
-        def_use(now->rgt->lft, code);
-        def_use(now->rgt->rgt, code);
+      def_use(now->left, USE | code);
+      if (now->right) {
+        def_use(now->right->left, code);
+        def_use(now->right->right, code);
       }
       break;
 
     case PRINT:
-      for (v = now->lft; v; v = v->rgt)
-        def_use(v->lft, USE | code);
+      for (v = now->left; v; v = v->right)
+        def_use(v->left, USE | code);
       break;
 
     case PRINTM:
-      def_use(now->lft, USE);
+      def_use(now->left, USE);
       break;
 
     case CONST:
@@ -323,7 +323,7 @@ static void def_use(Lextok *now, int code) {
     }
 }
 
-static int AST_add_alias(Lextok *n, int nr) {
+static int AST_add_alias(models::Lextok *n, int nr) {
   ALIAS *ca;
   int res;
 
@@ -342,23 +342,23 @@ static int AST_add_alias(Lextok *n, int nr) {
   return 1;
 }
 
-static void AST_run_alias(const std::string &s, Lextok *t, int parno) {
-  Lextok *v;
+static void AST_run_alias(const std::string &s, models::Lextok *t, int parno) {
+  models::Lextok *v;
   int cnt;
 
   if (!t)
     return;
 
-  if (t->ntyp == RUN) {
-    if (t->sym->name == s)
-      for (v = t->lft, cnt = 1; v; v = v->rgt, cnt++)
+  if (t->node_type == RUN) {
+    if (t->symbol->name == s)
+      for (v = t->left, cnt = 1; v; v = v->right, cnt++)
         if (cnt == parno) {
-          AST_add_alias(v->lft, 1); /* RUN */
+          AST_add_alias(v->left, 1); /* RUN */
           break;
         }
   } else {
-    AST_run_alias(s, t->lft, parno);
-    AST_run_alias(s, t->rgt, parno);
+    AST_run_alias(s, t->left, parno);
+    AST_run_alias(s, t->right, parno);
   }
 }
 
@@ -387,10 +387,10 @@ static void AST_par_chans(
     if (sp && sp->context && sp->context->name == p->n->name &&
         sp->id >= 0 /* not itself a param */
         && sp->type == CHAN &&
-        sp->init_value->ntyp == NAME) /* != CONST and != CHAN */
+        sp->init_value->node_type == NAME) /* != CONST and != CHAN */
     {
-      Lextok *x = nn(ZN, 0, ZN, ZN);
-      x->sym = sp;
+      models::Lextok *x = nn(ZN, 0, ZN, ZN);
+      x->symbol = sp;
       AST_setcur(x);
       AST_add_alias(sp->init_value, 2); /* ASGN */
     }
@@ -398,17 +398,17 @@ static void AST_par_chans(
 }
 
 static void AST_para(ProcList *p) {
-  Lextok *f, *t, *c;
+  models::Lextok *f, *t, *c;
   int cnt = 0;
 
   AST_par_chans(p);
 
-  for (f = p->p; f; f = f->rgt) /* list of types */
-    for (t = f->lft; t; t = t->rgt) {
-      if (t->ntyp != ',')
+  for (f = p->p; f; f = f->right) /* list of types */
+    for (t = f->left; t; t = t->right) {
+      if (t->node_type != ',')
         c = t;
       else
-        c = t->lft; /* expanded struct */
+        c = t->left; /* expanded struct */
 
       cnt++;
       if (Sym_typ(c) == CHAN) {
@@ -422,40 +422,40 @@ static void AST_para(ProcList *p) {
     }
 }
 
-static void AST_haschan(Lextok *c) {
+static void AST_haschan(models::Lextok *c) {
   if (!c)
     return;
   if (Sym_typ(c) == CHAN) {
     AST_add_alias(c, 2); /* ASGN */
   } else {
-    AST_haschan(c->rgt);
-    AST_haschan(c->lft);
+    AST_haschan(c->right);
+    AST_haschan(c->left);
   }
 }
 
-static int AST_nrpar(Lextok *n) /* 's' or 'r' */
+static int AST_nrpar(models::Lextok *n) /* 's' or 'r' */
 {
-  Lextok *m;
+  models::Lextok *m;
   int j = 0;
 
-  for (m = n->rgt; m; m = m->rgt)
+  for (m = n->right; m; m = m->right)
     j++;
   return j;
 }
 
-static int AST_ord(Lextok *n, Lextok *s) {
-  Lextok *m;
+static int AST_ord(models::Lextok *n, models::Lextok *s) {
+  models::Lextok *m;
   int j = 0;
 
-  for (m = n->rgt; m; m = m->rgt) {
+  for (m = n->right; m; m = m->right) {
     j++;
-    if (s->sym == m->lft->sym)
+    if (s->symbol == m->left->symbol)
       return j;
   }
   return 0;
 }
 
-static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
+static int AST_mutual(models::Lextok *a, models::Lextok *b, int toplevel) {
   models::Symbol *as, *bs;
 
   if (!a && !b)
@@ -464,8 +464,8 @@ static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
   if (!a || !b)
     return 0;
 
-  as = a->sym;
-  bs = b->sym;
+  as = a->symbol;
+  bs = b->symbol;
 
   if (!as || !bs)
     return 0;
@@ -479,14 +479,14 @@ static int AST_mutual(Lextok *a, Lextok *b, int toplevel) {
   if (as->name != bs->name)
     return 0;
 
-  if (as->type == STRUCT && a->rgt &&
-      b->rgt) /* we know that a and b are not null */
-    return AST_mutual(a->rgt->lft, b->rgt->lft, 0);
+  if (as->type == STRUCT && a->right &&
+      b->right) /* we know that a and b are not null */
+    return AST_mutual(a->right->left, b->right->left, 0);
 
   return 1;
 }
 
-static void AST_setcur(Lextok *n) /* set chalcur */
+static void AST_setcur(models::Lextok *n) /* set chalcur */
 {
   ALIAS *ca;
 
@@ -516,9 +516,9 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
         if (Sym_typ(u->n) == CHAN && (u->special & DEF)) /* def of chan-name  */
         {
           AST_setcur(u->n);
-          switch (t->step->n->ntyp) {
+          switch (t->step->n->node_type) {
           case ASGN:
-            AST_haschan(t->step->n->rgt);
+            AST_haschan(t->step->n->right);
             break;
           case 'r':
             /* guess sends where name may originate */
@@ -538,7 +538,7 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
             }
             break;
           default:
-            printf("type = %d\n", t->step->n->ntyp);
+            printf("type = %d\n", t->step->n->node_type);
             loger::non_fatal("unexpected chan def type");
             break;
           }
@@ -550,13 +550,13 @@ static void AST_aliases(void) {
 
   for (na = chalias; na; na = na->nxt) {
     printf("\npossible aliases of ");
-    AST_var(na->cnm, na->cnm->sym, 1);
+    AST_var(na->cnm, na->cnm->symbol, 1);
     printf("\n\t");
     for (ca = na->alias; ca; ca = ca->nxt) {
-      if (!ca->cnm->sym)
+      if (!ca->cnm->symbol)
         printf("no valid name ");
       else
-        AST_var(ca->cnm, ca->cnm->sym, 1);
+        AST_var(ca->cnm, ca->cnm->symbol, 1);
       printf("<");
       if (ca->origin & 1)
         printf("RUN ");
@@ -594,7 +594,7 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, const std::string &cause,
     printf("]]\n\t\tfully relevant %s", cause.c_str());
     if (uin) {
       printf(" due to ");
-      AST_var(uin->n, uin->n->sym, 1);
+      AST_var(uin->n, uin->n->symbol, 1);
     }
     printf("\n");
   }
@@ -602,14 +602,14 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, const std::string &cause,
     if (u != uin && (u->special & (USE | DEREF_USE))) {
       if (verbose_flags.NeedToPrintVerbose()) {
         printf("\t\t\tuses(%d): ", u->special);
-        AST_var(u->n, u->n->sym, 1);
+        AST_var(u->n, u->n->symbol, 1);
         printf("\n");
       }
       name_AST_track(u->n, u->special); /* add to slice criteria */
     }
 }
 
-static void def_relevant(const std::string &pn, FSM_trans *t, Lextok *n,
+static void def_relevant(const std::string &pn, FSM_trans *t, models::Lextok *n,
                          int ischan) {
   FSM_use *u;
   ALIAS *na, *ca;
@@ -620,7 +620,7 @@ static void def_relevant(const std::string &pn, FSM_trans *t, Lextok *n,
    *	mark all var USEs in those stmnts as criteria
    */
 
-  if (n->ntyp != ELSE)
+  if (n->node_type != ELSE)
     for (u = t->Val[0]; u; u = u->nxt) {
       chanref = (Sym_typ(u->n) == CHAN);
 
@@ -648,7 +648,7 @@ static void def_relevant(const std::string &pn, FSM_trans *t, Lextok *n,
     }
 }
 
-static void AST_relevant(Lextok *n) {
+static void AST_relevant(models::Lextok *n) {
   AST *a;
   FSM_state *f;
   FSM_trans *t;
@@ -665,8 +665,8 @@ static void AST_relevant(Lextok *n) {
   ischan = (Sym_typ(n) == CHAN);
 
   if (verbose_flags.NeedToPrintVerbose()) {
-    printf("<<ast_relevant (ntyp=%d) ", n->ntyp);
-    AST_var(n, n->sym, 1);
+    printf("<<ast_relevant (node_type=%d) ", n->node_type);
+    AST_var(n, n->symbol, 1);
     printf(">>\n");
   }
 
@@ -701,11 +701,11 @@ static int AST_relpar(const std::string &s) {
     for (t = T; t; t = t->nxt) {
       if (t->relevant & 1)
         for (u = t->Val[0]; u; u = u->nxt) {
-          if (u->n->sym->type && u->n->sym->context &&
-              u->n->sym->context->name == s) {
+          if (u->n->symbol->type && u->n->symbol->context &&
+              u->n->symbol->context->name == s) {
             if (verbose_flags.NeedToPrintVerbose()) {
               printf("proctype %s relevant, due to symbol ", s.c_str());
-              AST_var(u->n, u->n->sym, 1);
+              AST_var(u->n, u->n->symbol, 1);
               printf("\n");
             }
             return 1;
@@ -751,13 +751,13 @@ static int AST_proc_isrel(const std::string &s) {
   return 0;
 }
 
-static int AST_scoutrun(Lextok *t) {
+static int AST_scoutrun(models::Lextok *t) {
   if (!t)
     return 0;
 
-  if (t->ntyp == RUN)
-    return AST_proc_isrel(t->sym->name);
-  return (AST_scoutrun(t->lft) || AST_scoutrun(t->rgt));
+  if (t->node_type == RUN)
+    return AST_proc_isrel(t->symbol->name);
+  return (AST_scoutrun(t->left) || AST_scoutrun(t->right));
 }
 
 static void AST_tagruns(void) {
@@ -805,21 +805,21 @@ static void AST_report(AST *a, Element *e) /* ALSO deduce irrelevant vars */
     printf("spin: redundant in proctype %s (for given property):\n",
            a->p->n->name.c_str());
   }
-  printf("      %s:%d (state %d)", e->n ? e->n->fn->name.c_str() : "-",
-         e->n ? e->n->ln : -1, e->seqno);
+  printf("      %s:%d (state %d)", e->n ? e->n->file_name->name.c_str() : "-",
+         e->n ? e->n->line_number : -1, e->seqno);
   printf("	[");
   comment(stdout, e->n, 0);
   printf("]\n");
 }
 
-static int AST_always(Lextok *n) {
+static int AST_always(models::Lextok *n) {
   if (!n)
     return 0;
 
-  if (n->ntyp == '@'     /* -end */
-      || n->ntyp == 'p') /* remote reference */
+  if (n->node_type == '@'     /* -end */
+      || n->node_type == 'p') /* remote reference */
     return 1;
-  return AST_always(n->lft) || AST_always(n->rgt);
+  return AST_always(n->left) || AST_always(n->right);
 }
 
 static void AST_edge_dump(AST *a, FSM_state *f) {
@@ -859,7 +859,7 @@ static void AST_edge_dump(AST *a, FSM_state *f) {
 
       for (u = t->Val[0]; u; u = u->nxt) {
         printf(" <");
-        AST_var(u->n, u->n->sym, 1);
+        AST_var(u->n, u->n->symbol, 1);
         printf(":%d>", u->special);
       }
       printf("\n");
@@ -868,12 +868,12 @@ static void AST_edge_dump(AST *a, FSM_state *f) {
         continue;
 
       if (t->step)
-        switch (t->step->n->ntyp) {
+        switch (t->step->n->node_type) {
         case ASGN:
         case 's':
         case 'r':
         case 'c':
-          if (t->step->n->lft->ntyp != CONST)
+          if (t->step->n->left->node_type != CONST)
             AST_report(a, t->step);
           break;
 
@@ -929,7 +929,7 @@ static void AST_sends(AST *a) {
   for (f = a->fsm; f; f = f->nxt) /* control states */
     for (t = f->t; t; t = t->nxt) /* transitions    */
     {
-      if (t->step && t->step->n && t->step->n->ntyp == 's')
+      if (t->step && t->step->n && t->step->n->node_type == 's')
         for (u = t->Val[0]; u; u = u->nxt) {
           if (Sym_typ(u->n) == CHAN &&
               ((u->special & USE) && !(u->special & DEREF_USE))) {
@@ -943,7 +943,7 @@ static void AST_sends(AST *a) {
     }
 }
 
-static ALIAS *AST_alfind(Lextok *n) {
+static ALIAS *AST_alfind(models::Lextok *n) {
   ALIAS *na;
 
   for (na = chalias; na; na = na->nxt)
@@ -993,34 +993,34 @@ static void AST_def_use(AST *a) {
   cur_t = (FSM_trans *)0;
 }
 
-static void name_AST_track(Lextok *n, int code) {
+static void name_AST_track(models::Lextok *n, int code) {
   extern int nr_errs;
   if (in_recv && (code & DEF) && (code & USE)) {
     printf("spin: %s:%d, error: DEF and USE of same var in rcv stmnt: ",
-           n->fn->name.c_str(), n->ln);
-    AST_var(n, n->sym, 1);
+           n->file_name->name.c_str(), n->line_number);
+    AST_var(n, n->symbol, 1);
     printf(" -- %d\n", code);
     nr_errs++;
   }
   check_slice(n, code);
 }
 
-void AST_track(Lextok *now, int code) /* called from main.c */
+void AST_track(models::Lextok *now, int code) /* called from main.c */
 {
-  Lextok *v;
+  models::Lextok *v;
 
   extern LaunchSettings launch_settings;
   if (!launch_settings.need_export_ast)
     return;
 
   if (now)
-    switch (now->ntyp) {
+    switch (now->node_type) {
     case LEN:
     case FULL:
     case EMPTY:
     case NFULL:
     case NEMPTY:
-      AST_track(now->lft, DEREF_USE | USE | code);
+      AST_track(now->left, DEREF_USE | USE | code);
       break;
 
     case '/':
@@ -1041,7 +1041,7 @@ void AST_track(Lextok *now, int code) /* called from main.c */
     case AND:
     case LSHIFT:
     case RSHIFT:
-      AST_track(now->rgt, USE | code);
+      AST_track(now->right, USE | code);
       /* fall through */
     case '!':
     case UMIN:
@@ -1051,34 +1051,34 @@ void AST_track(Lextok *now, int code) /* called from main.c */
     case SET_P:
     case GET_P:
     case ASSERT:
-      AST_track(now->lft, USE | code);
+      AST_track(now->left, USE | code);
       break;
 
     case EVAL:
-      if (now->lft->ntyp == ',') {
-        AST_track(now->lft->lft, USE | (code & (~DEF)));
+      if (now->left->node_type == ',') {
+        AST_track(now->left->left, USE | (code & (~DEF)));
       } else {
-        AST_track(now->lft, USE | (code & (~DEF)));
+        AST_track(now->left, USE | (code & (~DEF)));
       }
       break;
 
     case NAME:
       name_AST_track(now, code);
-      if (now->sym->value_type > 1 || now->sym->is_array)
-        AST_track(now->lft, USE); /* index, was USE|code */
+      if (now->symbol->value_type > 1 || now->symbol->is_array)
+        AST_track(now->left, USE); /* index, was USE|code */
       break;
 
     case 'R':
-      AST_track(now->lft, DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt)
-        AST_track(v->lft, code); /* a deeper eval can add USE */
+      AST_track(now->left, DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right)
+        AST_track(v->left, code); /* a deeper eval can add USE */
       break;
 
     case '?':
-      AST_track(now->lft, USE | code);
-      if (now->rgt) {
-        AST_track(now->rgt->lft, code);
-        AST_track(now->rgt->rgt, code);
+      AST_track(now->left, USE | code);
+      if (now->right) {
+        AST_track(now->right->left, code);
+        AST_track(now->right->right, code);
       }
       break;
 
@@ -1087,33 +1087,33 @@ void AST_track(Lextok *now, int code) /* called from main.c */
       name_AST_track(now, code);
       break;
     case ASGN:
-      AST_track(now->lft, DEF | code);
-      AST_track(now->rgt, USE | code);
+      AST_track(now->left, DEF | code);
+      AST_track(now->right, USE | code);
       break;
     case RUN:
       name_AST_track(now, USE);
-      for (v = now->lft; v; v = v->rgt)
-        AST_track(v->lft, USE | code);
+      for (v = now->left; v; v = v->right)
+        AST_track(v->left, USE | code);
       break;
     case 's':
-      AST_track(now->lft, DEREF_DEF | DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt)
-        AST_track(v->lft, USE | code);
+      AST_track(now->left, DEREF_DEF | DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right)
+        AST_track(v->left, USE | code);
       break;
     case 'r':
-      AST_track(now->lft, DEREF_DEF | DEREF_USE | USE | code);
-      for (v = now->rgt; v; v = v->rgt) {
+      AST_track(now->left, DEREF_DEF | DEREF_USE | USE | code);
+      for (v = now->right; v; v = v->right) {
         in_recv++;
-        AST_track(v->lft, DEF | code);
+        AST_track(v->left, DEF | code);
         in_recv--;
       }
       break;
     case PRINT:
-      for (v = now->lft; v; v = v->rgt)
-        AST_track(v->lft, USE | code);
+      for (v = now->left; v; v = v->right)
+        AST_track(v->left, USE | code);
       break;
     case PRINTM:
-      AST_track(now->lft, USE);
+      AST_track(now->left, USE);
       break;
       /* end add */
     case 'p':
@@ -1124,8 +1124,8 @@ void AST_track(Lextok *now, int code) /* called from main.c */
 			 /
 			b (pid expr)
 #endif
-      AST_track(now->lft->lft, USE | code);
-      AST_procisrelevant(now->lft->sym);
+      AST_track(now->left->left, USE | code);
+      AST_procisrelevant(now->left->symbol);
       break;
 
     case CONST:
@@ -1151,7 +1151,7 @@ void AST_track(Lextok *now, int code) /* called from main.c */
       break;
 
     default:
-      printf("AST_track, NOT EXPECTED ntyp: %d\n", now->ntyp);
+      printf("AST_track, NOT EXPECTED node_type: %d\n", now->node_type);
       break;
     }
 }
@@ -1166,18 +1166,18 @@ static int AST_dump_rel(void) {
     printf("Relevant variables:\n");
     for (rv = rel_vars; rv; rv = rv->nxt) {
       printf("\t");
-      AST_var(rv->n, rv->n->sym, 1);
+      AST_var(rv->n, rv->n->symbol, 1);
       printf("\n");
     }
     return 1;
   }
   for (rv = rel_vars; rv; rv = rv->nxt)
-    rv->n->sym->last_depth = 1; /* mark it */
+    rv->n->symbol->last_depth = 1; /* mark it */
 
   for (walk = all_names; walk; walk = walk->next) {
     models::Symbol *s;
     s = walk->entry;
-    if (!s->last_depth && (s->type != MTYPE || s->init_value->ntyp != CONST) &&
+    if (!s->last_depth && (s->type != MTYPE || s->init_value->node_type != CONST) &&
         s->type != STRUCT /* report only fields */
         && s->type != PROCTYPE && !s->owner_name && sputtype(buf, s->type)) {
       if (!banner) {
@@ -1224,7 +1224,7 @@ static void AST_suggestions(void) {
       for (t = f->t; t; t = t->nxt) /* transitions    */
       {
         if (t->step)
-          switch (t->step->n->ntyp) {
+          switch (t->step->n->node_type) {
           case 's':
             banner |= 1;
             break;
@@ -1296,7 +1296,7 @@ static void AST_preserve(void) {
   slicer = sc;
 }
 
-static void check_slice(Lextok *n, int code) {
+static void check_slice(models::Lextok *n, int code) {
   Slicer *sc;
 
   for (sc = slicer; sc; sc = sc->nxt)
@@ -1321,7 +1321,7 @@ static void AST_data_dep(void) {
     sc->used = 1;
     if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: slice criterion ");
-      AST_var(sc->n, sc->n->sym, 1);
+      AST_var(sc->n, sc->n->symbol, 1);
       printf(" type=%d\n", Sym_typ(sc->n));
     }
     AST_relevant(sc->n);
@@ -1340,7 +1340,7 @@ static int AST_blockable(AST *a, int s) {
       return 1;
 
     if (t->step && t->step->n)
-      switch (t->step->n->ntyp) {
+      switch (t->step->n->node_type) {
       case IF:
       case DO:
       case ATOMIC:
@@ -1376,7 +1376,7 @@ static void AST_spread(AST *a, int s) {
       continue;
 
     if (t->step && t->step->n)
-      switch (t->step->n->ntyp) {
+      switch (t->step->n->node_type) {
       case IF:
       case DO:
       case ATOMIC:
@@ -1398,7 +1398,7 @@ static void AST_spread(AST *a, int s) {
   }
 }
 
-static int AST_notrelevant(Lextok *n) {
+static int AST_notrelevant(models::Lextok *n) {
   Slicer *s;
 
   for (s = rel_vars; s; s = s->nxt)
@@ -1410,12 +1410,12 @@ static int AST_notrelevant(Lextok *n) {
   return 1;
 }
 
-static int AST_withchan(Lextok *n) {
+static int AST_withchan(models::Lextok *n) {
   if (!n)
     return 0;
   if (Sym_typ(n) == CHAN)
     return 1;
-  return AST_withchan(n->lft) || AST_withchan(n->rgt);
+  return AST_withchan(n->left) || AST_withchan(n->right);
 }
 
 static int AST_suspect(FSM_trans *t) {
@@ -1436,7 +1436,7 @@ static void AST_shouldconsider(AST *a, int s) {
   f = fsm_tbl[s];
   for (t = f->t; t; t = t->nxt) {
     if (t->step && t->step->n)
-      switch (t->step->n->ntyp) {
+      switch (t->step->n->node_type) {
       case IF:
       case DO:
       case ATOMIC:
@@ -1510,7 +1510,7 @@ static void AST_ctrl(AST *a) {
     if (!(f->scratch & 2)) /* not part of irrelevant subgraph */
       for (t = f->t; t; t = t->nxt) {
         if (t->step && t->step->n)
-          switch (t->step->n->ntyp) {
+          switch (t->step->n->node_type) {
           case 'r':
           case 's':
           case 'c':
@@ -1553,7 +1553,7 @@ static void AST_ctrl(AST *a) {
     hit = 0;
     for (t = f->t; t; t = t->nxt) {
       if (t->step && t->step->n)
-        switch (t->step->n->ntyp) {
+        switch (t->step->n->node_type) {
         case IF:
         case DO:
         case ATOMIC:
@@ -1613,7 +1613,7 @@ static void AST_prelabel(void) {
     if (a->p->b != N_CLAIM && a->p->b != E_TRACE && a->p->b != N_TRACE)
       for (f = a->fsm; f; f = f->nxt)
         for (t = f->t; t; t = t->nxt) {
-          if (t->step && t->step->n && t->step->n->ntyp == ASSERT) {
+          if (t->step && t->step->n && t->step->n->node_type == ASSERT) {
             t->relevant |= 1;
           }
         }
@@ -1714,7 +1714,7 @@ void AST_store(ProcList *p, int start_state) {
   fsmx = (FSM_state *)0; /* hide it from FSM_DEL */
 }
 
-static void AST_add_explicit(Lextok *d, Lextok *u) {
+static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
   FSM_trans *e = (FSM_trans *)emalloc(sizeof(FSM_trans));
 
   e->to = 0;              /* or start_state ? */
@@ -1733,28 +1733,28 @@ static void AST_add_explicit(Lextok *d, Lextok *u) {
   explicit_ = e;
 }
 
-static void AST_fp1(const std::string &s, Lextok *t, Lextok *f, int parno) {
-  Lextok *v;
+static void AST_fp1(const std::string &s, models::Lextok *t, models::Lextok *f, int parno) {
+  models::Lextok *v;
   int cnt;
 
   if (!t)
     return;
 
-  if (t->ntyp == RUN) {
-    if (t->sym->name == s) {
-      for (v = t->lft, cnt = 1; v; v = v->rgt, cnt++)
+  if (t->node_type == RUN) {
+    if (t->symbol->name == s) {
+      for (v = t->left, cnt = 1; v; v = v->right, cnt++)
         if (cnt == parno) {
-          AST_add_explicit(f, v->lft);
+          AST_add_explicit(f, v->left);
           break;
         }
     }
   } else {
-    AST_fp1(s, t->lft, f, parno);
-    AST_fp1(s, t->rgt, f, parno);
+    AST_fp1(s, t->left, f, parno);
+    AST_fp1(s, t->right, f, parno);
   }
 }
 
-static void AST_mk1(const std::string &s, Lextok *c, int parno) {
+static void AST_mk1(const std::string &s, models::Lextok *c, int parno) {
   AST *a;
   FSM_state *f;
   FSM_trans *t;
@@ -1775,7 +1775,7 @@ static void AST_mk1(const std::string &s, Lextok *c, int parno) {
 static void AST_par_init() /* parameter passing -- hidden_flags assignments */
 {
   AST *a;
-  Lextok *f, *t, *c;
+  models::Lextok *f, *t, *c;
   int cnt;
 
   for (a = ast; a; a = a->nxt) {
@@ -1784,11 +1784,11 @@ static void AST_par_init() /* parameter passing -- hidden_flags assignments */
       continue; /* has no params */
     }
     cnt = 0;
-    for (f = a->p->p; f; f = f->rgt)  /* types */
-      for (t = f->lft; t; t = t->rgt) /* formals */
+    for (f = a->p->p; f; f = f->right)  /* types */
+      for (t = f->left; t; t = t->right) /* formals */
       {
         cnt++;                             /* formal par count */
-        c = (t->ntyp != ',') ? t : t->lft; /* the formal parameter */
+        c = (t->node_type != ',') ? t : t->left; /* the formal parameter */
         AST_mk1(a->p->n->name, c, cnt);    /* all matching run statements */
       }
   }
@@ -1798,7 +1798,7 @@ static void
 AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
 {
   Ordered *walk;
-  Lextok *x;
+  models::Lextok *x;
   models::Symbol *sp;
   AST *a;
 
@@ -1807,10 +1807,10 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
     if (sp && !sp->context /* globals */
         && sp->type != PROCTYPE && sp->init_value &&
         (sp->type != MTYPE ||
-         sp->init_value->ntyp != CONST) /* not mtype defs */
-        && sp->init_value->ntyp != CHAN) {
+         sp->init_value->node_type != CONST) /* not mtype defs */
+        && sp->init_value->node_type != CHAN) {
       x = nn(ZN, TYPE, ZN, ZN);
-      x->sym = sp;
+      x->symbol = sp;
       AST_add_explicit(x, sp->init_value);
     }
   }
@@ -1823,9 +1823,9 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
         if (sp && sp->context && sp->context->name == a->p->n->name &&
             sp->id >= 0 /* not a param */
             && sp->type != LABEL && sp->init_value &&
-            sp->init_value->ntyp != CHAN) {
+            sp->init_value->node_type != CHAN) {
           x = nn(ZN, TYPE, ZN, ZN);
-          x->sym = sp;
+          x->symbol = sp;
           AST_add_explicit(x, sp->init_value);
         }
       }
@@ -1845,7 +1845,7 @@ static void show_expl(void) {
       printf("%3d", t->round);
       for (u = t->Val[0]; u; u = u->nxt) {
         printf("\t<");
-        AST_var(u->n, u->n->sym, 1);
+        AST_var(u->n, u->n->symbol, 1);
         printf(":%d>, ", u->special);
       }
       printf("\n");
@@ -2031,7 +2031,7 @@ static int see_else(FSM_state *f) {
 
   for (t = f->t; t; t = t->nxt) {
     if (t->step && t->step->n)
-      switch (t->step->n->ntyp) {
+      switch (t->step->n->node_type) {
       case ELSE:
         return 1;
       case IF:
@@ -2058,7 +2058,7 @@ static int is_guard(FSM_state *f) {
       continue;
 
     if (t->step && t->step->n)
-      switch (t->step->n->ntyp) {
+      switch (t->step->n->node_type) {
       case IF:
       case DO:
         return 1;
@@ -2102,7 +2102,7 @@ static void curtail(AST *a) {
       i += g->seen;
 
       if (t->step && t->step->n) {
-        switch (t->step->n->ntyp) {
+        switch (t->step->n->node_type) {
         case IF:
         case DO:
           haselse |= see_else(g);

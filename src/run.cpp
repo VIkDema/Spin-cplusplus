@@ -8,6 +8,7 @@
 #include "y.tab.h"
 #include <stdlib.h>
 #include "main/main_processor.hpp"
+#include "models/lextok.hpp"
 
 extern RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
@@ -20,9 +21,9 @@ extern LaunchSettings launch_settings;
 static int E_Check = 0, Escape_Check = 0;
 
 static int eval_sync(Element *);
-static int pc_enabled(Lextok *n);
-static int get_priority(Lextok *n);
-static void set_priority(Lextok *n, Lextok *m);
+static int pc_enabled(models::Lextok *n);
+static int get_priority(models::Lextok *n);
+static void set_priority(models::Lextok *n, models::Lextok *m);
 extern void sr_buf(int, int, const std::string &);
 
 long Rand(void) { /* CACM 31(10), Oct 1988 */
@@ -58,11 +59,11 @@ Element *eval_sub(Element *e) {
     return ZE;
 #ifdef DEBUG
   printf("\n\teval_sub(%d %s: line %d) ", e->Seqno, e->esc ? "+esc" : "",
-         e->n ? e->n->ln : 0);
+         e->n ? e->n->line_number : 0);
   comment(stdout, e->n, 0);
   printf("\n");
 #endif
-  if (e->n->ntyp == GOTO) {
+  if (e->n->node_type == GOTO) {
     if (Rvous)
       return ZE;
     LastStep = e;
@@ -74,7 +75,7 @@ Element *eval_sub(Element *e) {
 #endif
     return f;
   }
-  if (e->n->ntyp == UNLESS) { /* escapes were distributed into sequence */
+  if (e->n->node_type == UNLESS) { /* escapes were distributed into sequence */
     return eval_sub(e->sub->this_sequence->frst);
   } else if (e->sub) /* true for IF, DO, and UNLESS */
   {
@@ -103,7 +104,7 @@ Element *eval_sub(Element *e) {
           z->this_sequence->frst &&
           (verbose_flags.NeedToPrintVerbose() ||
            Enabled0(z->this_sequence->frst))) {
-        if (z->this_sequence->frst->n->ntyp == ELSE) {
+        if (z->this_sequence->frst->n->node_type == ELSE) {
           has_else = (Rvous) ? ZE : z->this_sequence->frst->nxt;
           nr_else = j;
           continue;
@@ -159,7 +160,7 @@ Element *eval_sub(Element *e) {
       }
       k--;
     } else {
-      if (e->n && e->n->indstep >= 0)
+      if (e->n && e->n->index_step >= 0)
         k = 0; /* select 1st executable guard */
       else
         k = Rand() % j; /* nondeterminism */
@@ -168,7 +169,7 @@ Element *eval_sub(Element *e) {
     has_else = ZE;
     bas_else = ZE;
     for (i = 0, z = e->sub; i < j + k; i++) {
-      if (z->this_sequence->frst && z->this_sequence->frst->n->ntyp == ELSE) {
+      if (z->this_sequence->frst && z->this_sequence->frst->n->node_type == ELSE) {
         bas_else = z->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
         if (!launch_settings.need_to_run_in_interactive_mode ||
@@ -179,11 +180,11 @@ Element *eval_sub(Element *e) {
         }
       }
       if (z->this_sequence->frst &&
-          ((z->this_sequence->frst->n->ntyp == ATOMIC ||
-            z->this_sequence->frst->n->ntyp == D_STEP) &&
-           z->this_sequence->frst->n->sl->this_sequence->frst->n->ntyp ==
+          ((z->this_sequence->frst->n->node_type == ATOMIC ||
+            z->this_sequence->frst->n->node_type == D_STEP) &&
+           z->this_sequence->frst->n->seq_list->this_sequence->frst->n->node_type ==
                ELSE)) {
-        bas_else = z->this_sequence->frst->n->sl->this_sequence->frst;
+        bas_else = z->this_sequence->frst->n->seq_list->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
         if (!launch_settings.need_to_run_in_interactive_mode ||
             depth < launch_settings.count_of_skipping_steps || Escape_Check ||
@@ -208,19 +209,19 @@ Element *eval_sub(Element *e) {
     LastStep = bas_else;
     return has_else;
   } else {
-    if (e->n->ntyp == ATOMIC || e->n->ntyp == D_STEP) {
-      f = e->n->sl->this_sequence->frst;
-      g = e->n->sl->this_sequence->last;
+    if (e->n->node_type == ATOMIC || e->n->node_type == D_STEP) {
+      f = e->n->seq_list->this_sequence->frst;
+      g = e->n->seq_list->this_sequence->last;
       g->nxt = e->nxt;
       if (!(g = eval_sub(f))) /* atomic guard */
         return ZE;
       return g;
-    } else if (e->n->ntyp == NON_ATOMIC) {
-      f = e->n->sl->this_sequence->frst;
-      g = e->n->sl->this_sequence->last;
+    } else if (e->n->node_type == NON_ATOMIC) {
+      f = e->n->seq_list->this_sequence->frst;
+      g = e->n->seq_list->this_sequence->last;
       g->nxt = e->nxt; /* close it */
       return eval_sub(f);
-    } else if (e->n->ntyp == '.') {
+    } else if (e->n->node_type == '.') {
       if (!Rvous)
         return e->nxt;
       return eval_sub(e->nxt);
@@ -234,8 +235,8 @@ Element *eval_sub(Element *e) {
         for (x = e->esc; x; x = x->nxt) {
           printf("[");
           g = x->this_sequence->frst;
-          if (g->n->ntyp == ATOMIC || g->n->ntyp == NON_ATOMIC)
-            g = g->n->sl->this_sequence->frst;
+          if (g->n->node_type == ATOMIC || g->n->node_type == NON_ATOMIC)
+            g = g->n->seq_list->this_sequence->frst;
           comment(stdout, g->n, 0);
           printf("] ");
         }
@@ -249,8 +250,8 @@ Element *eval_sub(Element *e) {
           if ((g = rev_escape(e->esc)) != ZE) {
             if (verbose_flags.NeedToPrintAllProcessActions()) {
               printf("\tEscape taken (-J) ");
-              if (g->n && g->n->fn)
-                printf("%s:%d", g->n->fn->name.c_str(), g->n->ln);
+              if (g->n && g->n->file_name)
+                printf("%s:%d", g->n->file_name->name.c_str(), g->n->line_number);
               printf("\n");
             }
             Escape_Check--;
@@ -261,8 +262,8 @@ Element *eval_sub(Element *e) {
             if ((g = eval_sub(x->this_sequence->frst)) != ZE) {
               if (verbose_flags.NeedToPrintAllProcessActions()) {
                 printf("\tEscape taken ");
-                if (g->n && g->n->fn)
-                  printf("%s:%d", g->n->fn->name.c_str(), g->n->ln);
+                if (g->n && g->n->file_name)
+                  printf("%s:%d", g->n->file_name->name.c_str(), g->n->line_number);
                 printf("\n");
               }
               Escape_Check--;
@@ -272,7 +273,7 @@ Element *eval_sub(Element *e) {
         }
         Escape_Check--;
       }
-      switch (e->n->ntyp) {
+      switch (e->n->node_type) {
       case ASGN:
         if (check_track(e->n) == STRUCT) {
           break;
@@ -304,9 +305,9 @@ Element *eval_sub(Element *e) {
 
 static int eval_sync(Element *e) { /* allow only synchronous receives
                                       and related node types    */
-  Lextok *now = (e) ? e->n : ZN;
+  models::Lextok *now = (e) ? e->n : ZN;
 
-  if (!now || now->ntyp != 'r' || now->val >= 2 /* no rv with a poll */
+  if (!now || now->node_type != 'r' || now->value >= 2 /* no rv with a poll */
       || !q_is_sync(now)) {
     return 0;
   }
@@ -315,13 +316,13 @@ static int eval_sync(Element *e) { /* allow only synchronous receives
   return eval(now);
 }
 
-static int assign(Lextok *now) {
+static int assign(models::Lextok *now) {
   int t;
 
   if (TstOnly)
     return 1;
 
-  switch (now->rgt->ntyp) {
+  switch (now->right->node_type) {
   case FULL:
   case NFULL:
   case EMPTY:
@@ -331,12 +332,12 @@ static int assign(Lextok *now) {
     t = BYTE;
     break;
   default:
-    t = Sym_typ(now->rgt);
+    t = Sym_typ(now->right);
     break;
   }
-  typ_ck(Sym_typ(now->lft), t, "assignment");
+  typ_ck(Sym_typ(now->left), t, "assignment");
 
-  return setval(now->lft, eval(now->rgt));
+  return setval(now->left, eval(now->right));
 }
 
 static int nonprogress(void) /* np_ */
@@ -350,73 +351,73 @@ static int nonprogress(void) /* np_ */
   return 1;
 }
 
-int eval(Lextok *now) {
+int eval(models::Lextok *now) {
   int temp;
 
   if (now) {
-    lineno = now->ln;
-    Fname = now->fn;
+    lineno = now->line_number;
+    Fname = now->file_name;
 #ifdef DEBUG
     printf("eval ");
     comment(stdout, now, 0);
     printf("\n");
 #endif
-    switch (now->ntyp) {
+    switch (now->node_type) {
     case CONST:
-      return now->val;
+      return now->value;
     case '!':
-      return !eval(now->lft);
+      return !eval(now->left);
     case UMIN:
-      return -eval(now->lft);
+      return -eval(now->left);
     case '~':
-      return ~eval(now->lft);
+      return ~eval(now->left);
 
     case '/':
-      temp = eval(now->rgt);
+      temp = eval(now->right);
       if (temp == 0) {
         loger::fatal("division by zero");
       }
-      return (eval(now->lft) / temp);
+      return (eval(now->left) / temp);
     case '*':
-      return (eval(now->lft) * eval(now->rgt));
+      return (eval(now->left) * eval(now->right));
     case '-':
-      return (eval(now->lft) - eval(now->rgt));
+      return (eval(now->left) - eval(now->right));
     case '+':
-      return (eval(now->lft) + eval(now->rgt));
+      return (eval(now->left) + eval(now->right));
     case '%':
-      temp = eval(now->rgt);
+      temp = eval(now->right);
       if (temp == 0) {
         loger::fatal("taking modulo of zero");
       }
-      return (eval(now->lft) % temp);
+      return (eval(now->left) % temp);
     case LT:
-      return (eval(now->lft) < eval(now->rgt));
+      return (eval(now->left) < eval(now->right));
     case GT:
-      return (eval(now->lft) > eval(now->rgt));
+      return (eval(now->left) > eval(now->right));
     case '&':
-      return (eval(now->lft) & eval(now->rgt));
+      return (eval(now->left) & eval(now->right));
     case '^':
-      return (eval(now->lft) ^ eval(now->rgt));
+      return (eval(now->left) ^ eval(now->right));
     case '|':
-      return (eval(now->lft) | eval(now->rgt));
+      return (eval(now->left) | eval(now->right));
     case LE:
-      return (eval(now->lft) <= eval(now->rgt));
+      return (eval(now->left) <= eval(now->right));
     case GE:
-      return (eval(now->lft) >= eval(now->rgt));
+      return (eval(now->left) >= eval(now->right));
     case NE:
-      return (eval(now->lft) != eval(now->rgt));
+      return (eval(now->left) != eval(now->right));
     case EQ:
-      return (eval(now->lft) == eval(now->rgt));
+      return (eval(now->left) == eval(now->right));
     case OR:
-      return (eval(now->lft) || eval(now->rgt));
+      return (eval(now->left) || eval(now->right));
     case AND:
-      return (eval(now->lft) && eval(now->rgt));
+      return (eval(now->left) && eval(now->right));
     case LSHIFT:
-      return (eval(now->lft) << eval(now->rgt));
+      return (eval(now->left) << eval(now->right));
     case RSHIFT:
-      return (eval(now->lft) >> eval(now->rgt));
+      return (eval(now->left) >> eval(now->right));
     case '?':
-      return (eval(now->lft) ? eval(now->rgt->lft) : eval(now->rgt->rgt));
+      return (eval(now->left) ? eval(now->right->left) : eval(now->right->right));
 
     case 'p':
       return remotevar(now); /* _p for remote reference */
@@ -437,30 +438,30 @@ int eval(Lextok *now) {
     case ENABLED:
       if (launch_settings.need_save_trail)
         return 1;
-      return pc_enabled(now->lft);
+      return pc_enabled(now->left);
 
     case GET_P:
-      return get_priority(now->lft);
+      return get_priority(now->left);
     case SET_P:
-      set_priority(now->lft->lft, now->lft->rgt);
+      set_priority(now->left->left, now->left->right);
       return 1;
 
     case EVAL:
-      if (now->lft->ntyp == ',') {
-        Lextok *fix = now->lft;
+      if (now->left->node_type == ',') {
+        models::Lextok *fix = now->left;
         do {                       /* new */
-          if (eval(fix->lft) == 0) /* usertype6 */
+          if (eval(fix->left) == 0) /* usertype6 */
           {
             return 0;
           }
-          fix = fix->rgt;
-        } while (fix && fix->ntyp == ',');
+          fix = fix->right;
+        } while (fix && fix->node_type == ',');
         return 1;
       }
-      return eval(now->lft);
+      return eval(now->left);
 
     case PC_VAL:
-      return pc_value(now->lft);
+      return pc_value(now->left);
     case NONPROGRESS:
       return nonprogress();
     case NAME:
@@ -476,7 +477,7 @@ int eval(Lextok *now) {
     case 'r':
       return qrecv(now, 1); /* receive or poll */
     case 'c':
-      return eval(now->lft); /* condition    */
+      return eval(now->left); /* condition    */
     case PRINT:
       return TstOnly ? 1 : interprint(stdout, now);
     case PRINTM:
@@ -489,25 +490,25 @@ int eval(Lextok *now) {
 
     case C_CODE:
       if (!launch_settings.need_to_analyze) {
-        printf("%s:\t", now->sym->name.c_str());
-        plunk_inline(stdout, now->sym->name, 0, 1);
+        printf("%s:\t", now->symbol->name.c_str());
+        plunk_inline(stdout, now->symbol->name, 0, 1);
       }
       return 1; /* uninterpreted */
 
     case C_EXPR:
       if (!!launch_settings.need_to_analyze) {
-        printf("%s:\t", now->sym->name.c_str());
-        plunk_expr(stdout, now->sym->name);
+        printf("%s:\t", now->symbol->name.c_str());
+        plunk_expr(stdout, now->symbol->name);
         printf("\n");
       }
       return 1; /* uninterpreted */
 
     case ASSERT:
-      if (TstOnly || eval(now->lft))
+      if (TstOnly || eval(now->left))
         return 1;
       loger::non_fatal("assertion violated");
       printf("spin: text of failed assertion: assert(");
-      comment(stdout, now->lft, 0);
+      comment(stdout, now->left, 0);
       printf(")\n");
       if (launch_settings.need_save_trail)
         return 1;
@@ -529,7 +530,7 @@ int eval(Lextok *now) {
       return 0; /* not great, but safe */
 
     default:
-      printf("spin: bad node type %d (run)\n", now->ntyp);
+      printf("spin: bad node type %d (run)\n", now->node_type);
       if (launch_settings.need_save_trail)
         printf("spin: trail file doesn't match spec?\n");
       loger::fatal("aborting");
@@ -538,7 +539,7 @@ int eval(Lextok *now) {
   return 0;
 }
 
-int printm(FILE *fd, Lextok *n) {
+int printm(FILE *fd, models::Lextok *n) {
   extern char GBuf[];
   std::string s;
   int j;
@@ -547,15 +548,15 @@ int printm(FILE *fd, Lextok *n) {
   if (!launch_settings.need_dont_execute_printfs_in_sumulation) {
     if (!launch_settings.need_save_trail ||
         depth >= launch_settings.count_of_skipping_steps) {
-      if (n->lft->sym && n->lft->sym->mtype_name) {
-        s = n->lft->sym->mtype_name->name;
+      if (n->left->symbol && n->left->symbol->mtype_name) {
+        s = n->left->symbol->mtype_name->name;
       }
 
-      if (n->lft->ismtyp) {
-        j = n->lft->val;
+      if (n->left->is_mtype_token) {
+        j = n->left->value;
       } else /* constant */
       {
-        j = eval(n->lft);
+        j = eval(n->left);
       }
       sr_buf(j, 1, s.c_str());
       dotag(fd, GBuf);
@@ -564,9 +565,9 @@ int printm(FILE *fd, Lextok *n) {
   return 1;
 }
 
-int interprint(FILE *fd, Lextok *n) {
-  Lextok *tmp = n->lft;
-  std::string s = n->sym->name;
+int interprint(FILE *fd, models::Lextok *n) {
+  models::Lextok *tmp = n->left;
+  std::string s = n->symbol->name;
   std::string t;
   int i, j;
   char lbuf[512];     /* matches value in sr_buf() */
@@ -603,14 +604,14 @@ int interprint(FILE *fd, Lextok *n) {
             loger::non_fatal("too few print args %s", s.c_str());
             break;
           }
-          j = eval(tmp->lft);
+          j = eval(tmp->left);
 
-          if (c == 'e' && tmp->lft && tmp->lft->sym &&
-              tmp->lft->sym->mtype_name) {
-            t = tmp->lft->sym->mtype_name->name;
+          if (c == 'e' && tmp->left && tmp->left->symbol &&
+              tmp->left->symbol->mtype_name) {
+            t = tmp->left->symbol->mtype_name->name;
           }
 
-          tmp = tmp->rgt;
+          tmp = tmp->right;
           switch (c) {
           case 'c':
             sprintf(lbuf, "%c", j);
@@ -659,14 +660,14 @@ int interprint(FILE *fd, Lextok *n) {
   return 1;
 }
 
-static int Enabled1(Lextok *n) {
+static int Enabled1(models::Lextok *n) {
   int i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (n)
-    switch (n->ntyp) {
+    switch (n->node_type) {
     case 'c':
-      if (has_typ(n->lft, RUN))
+      if (has_typ(n->left, RUN))
         return 1; /* conservative */
                   /* else fall through */
     default:      /* side-effect free */
@@ -703,12 +704,12 @@ static int Enabled1(Lextok *n) {
     case 'r':
       if (q_is_sync(n))
         return 0; /* it's never a user-choice */
-      n->ntyp = 'R';
+      n->node_type = 'R';
       verbose_flags.Clean();
       E_Check++;
       i = eval(n);
       E_Check--;
-      n->ntyp = 'r';
+      n->node_type = 'r';
       verbose_flags.Activate();
       return i;
     }
@@ -721,7 +722,7 @@ int Enabled0(Element *e) {
   if (!e || !e->n)
     return 0;
 
-  switch (e->n->ntyp) {
+  switch (e->n->node_type) {
   case '@':
     return X_lst->pid == (nproc - nstop - 1);
   case '.':
@@ -736,7 +737,7 @@ int Enabled0(Element *e) {
   case ATOMIC:
   case D_STEP:
   case NON_ATOMIC:
-    return Enabled0(e->n->sl->this_sequence->frst);
+    return Enabled0(e->n->seq_list->this_sequence->frst);
   }
   if (e->sub) /* true for IF, DO, and UNLESS */
   {
@@ -752,7 +753,7 @@ int Enabled0(Element *e) {
   return Enabled1(e->n);
 }
 
-int pc_enabled(Lextok *n) {
+int pc_enabled(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   int result = 0;
@@ -772,7 +773,7 @@ int pc_enabled(Lextok *n) {
   return result;
 }
 
-int pc_highest(Lextok *n) {
+int pc_highest(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   int target = 0, result = 1;
@@ -815,7 +816,7 @@ int pc_highest(Lextok *n) {
   return result;
 }
 
-int get_priority(Lextok *n) {
+int get_priority(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   RunList *Y;
@@ -832,7 +833,7 @@ int get_priority(Lextok *n) {
   return 0;
 }
 
-void set_priority(Lextok *n, Lextok *p) {
+void set_priority(models::Lextok *n, models::Lextok *p) {
   int i = nproc - nstop - Have_claim;
   int pid = eval(n);
   RunList *Y;

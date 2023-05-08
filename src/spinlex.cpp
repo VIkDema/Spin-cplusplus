@@ -12,6 +12,7 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
+#include "models/lextok.hpp"
 extern LaunchSettings launch_settings;
 
 constexpr int kMaxInl = 16;
@@ -20,9 +21,9 @@ constexpr int kMaxLen = 512;
 
 struct IType {
   models::Symbol *nm;        /* name of the type */
-  Lextok *cn;                /* contents */
-  Lextok *params;            /* formal pars if any */
-  Lextok *rval;              /* variable to assign return value, if any */
+  models::Lextok *cn;                /* contents */
+  models::Lextok *params;            /* formal pars if any */
+  models::Lextok *rval;              /* variable to assign return value, if any */
   char **anms;               /* literal text for actual pars */
   char *prec;                /* precondition for c_code or c_expr */
   int uiid;                  /* unique inline id */
@@ -36,8 +37,8 @@ struct C_Added {
   models::Symbol *s;
   models::Symbol *t;
   models::Symbol *ival;
-  models::Symbol *fnm;
-  int lno;
+  models::Symbol *file_name;
+  int opt_line_number;
   struct C_Added *nxt;
 };
 
@@ -63,7 +64,7 @@ static int Inlining = -1;
 static IType *seqnames;
 
 static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
-                       Lextok *nms) {
+                       models::Lextok *nms) {
   IType *tmp;
   int cnt = 0;
   char *nw = (char *)emalloc(strlen(ptr) + 1);
@@ -72,7 +73,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
   for (tmp = seqnames; tmp; cnt++, tmp = tmp->nxt)
     if (s->name != tmp->nm->name) {
       loger::non_fatal("procedure name %s redefined", tmp->nm->name);
-      tmp->cn = (Lextok *)nw;
+      tmp->cn = (models::Lextok *)nw;
       tmp->params = nms;
       tmp->dln = ln;
       tmp->dfn = Fname;
@@ -80,7 +81,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
     }
   tmp = (IType *)emalloc(sizeof(IType));
   tmp->nm = s;
-  tmp->cn = (Lextok *)nw;
+  tmp->cn = (models::Lextok *)nw;
   tmp->params = nms;
   if (strlen(prc) > 0) {
     tmp->prec = (char *)emalloc(strlen(prc) + 1);
@@ -156,11 +157,11 @@ bool IsEqname(const std::string &value) {
   return false;
 }
 
-Lextok *return_statement(Lextok *n) {
+models::Lextok *return_statement(models::Lextok *n) {
   if (Inline_stub[Inlining]->rval) {
-    Lextok *g = nn(ZN, NAME, ZN, ZN);
-    Lextok *h = Inline_stub[Inlining]->rval;
-    g->sym = lookup("rv_");
+    models::Lextok *g = nn(ZN, NAME, ZN, ZN);
+    models::Lextok *h = Inline_stub[Inlining]->rval;
+    g->symbol = lookup("rv_");
     return nn(h, ASGN, h, n);
   } else {
     loger::fatal("return statement outside inline");
@@ -198,8 +199,8 @@ void c_state(models::Symbol *s, models::Symbol *t,
   r->s = s; /* pointer to a data object */
   r->t = t; /* size of object, or "global", or "local proctype_name"  */
   r->ival = ival;
-  r->lno = lineno;
-  r->fnm = Fname;
+  r->opt_line_number = lineno;
+  r->file_name = Fname;
   r->nxt = c_added;
 
   if (strncmp(r->s->name.c_str(), "\"unsigned unsigned", 18) == 0) {
@@ -222,8 +223,8 @@ void c_track(models::Symbol *s, models::Symbol *t,
   r->t = t;
   r->ival = stackonly; /* abuse of name */
   r->nxt = c_tracked;
-  r->fnm = Fname;
-  r->lno = lineno;
+  r->file_name = Fname;
+  r->opt_line_number = lineno;
   c_tracked = r;
 
   if (stackonly != ZS) {
@@ -269,8 +270,8 @@ std::string jump_etc(C_Added *r) {
   models::Symbol *ofnm = Fname;
 
   // Попытка разделить тип от имени
-  lineno = r->lno;
-  Fname = r->fnm;
+  lineno = r->opt_line_number;
+  Fname = r->file_name;
 
   p = skip_white(p);
 
@@ -760,14 +761,14 @@ void plunk_expr(FILE *fd, const std::string &s) {
 }
 
 void preruse(FILE *fd,
-             Lextok *n) /* check a condition for c_expr with preconditions */
+             models::Lextok *n) /* check a condition for c_expr with preconditions */
 {
   IType *tmp;
 
   if (!n)
     return;
-  if (n->ntyp == C_EXPR) {
-    tmp = find_inline(n->sym->name);
+  if (n->node_type == C_EXPR) {
+    tmp = find_inline(n->symbol->name);
     if (tmp->prec) {
       fprintf(fd, "if (!(%s)) { if (!readtrail) { depth++; ", tmp->prec);
       fprintf(fd, "trpt++; trpt->pr = II; trpt->o_t = t; trpt->st = tt; ");
@@ -779,8 +780,8 @@ void preruse(FILE *fd,
       fprintf(fd, "_m = 3; goto P999; } } \n\t\t");
     }
   } else {
-    preruse(fd, n->rgt);
-    preruse(fd, n->lft);
+    preruse(fd, n->right);
+    preruse(fd, n->left);
   }
 }
 
@@ -885,9 +886,9 @@ void no_side_effects(const std::string &s) {
   }
 }
 
-void pickup_inline(models::Symbol *t, Lextok *apars, Lextok *rval) {
+void pickup_inline(models::Symbol *t, models::Lextok *apars, models::Lextok *rval) {
   IType *tmp;
-  Lextok *p, *q;
+  models::Lextok *p, *q;
   int j;
 
   tmp = find_inline(t->name);
@@ -898,13 +899,13 @@ void pickup_inline(models::Symbol *t, Lextok *apars, Lextok *rval) {
   tmp->cfn = Fname;  /* and filename */
   tmp->rval = rval;
 
-  for (p = apars, q = tmp->params, j = 0; p && q; p = p->rgt, q = q->rgt)
+  for (p = apars, q = tmp->params, j = 0; p && q; p = p->right, q = q->right)
     j++; /* count them */
   if (p || q)
     loger::fatal("wrong nr of params on call of '%s'", t->name);
 
   tmp->anms = (char **)emalloc(j * sizeof(char *));
-  for (p = apars, j = 0; p; p = p->rgt, j++) {
+  for (p = apars, j = 0; p; p = p->right, j++) {
     tmp->anms[j] = (char *)emalloc(strlen(IArg_cont[j]) + 1);
     strcpy(tmp->anms[j], IArg_cont[j]);
   }
@@ -947,23 +948,23 @@ void precondition(char *q) {
 #endif
 }
 
-models::Symbol *prep_inline(models::Symbol *s, Lextok *nms) {
+models::Symbol *prep_inline(models::Symbol *s, models::Lextok *nms) {
   return nullptr;
 #if 0
 
   int c, nest = 1, dln, firstchar, cnr;
   char *p;
-  Lextok *t;
+  models::Lextok *t;
   static char Buf1[SOMETHINGBIG], Buf2[RATHERSMALL];
   static int c_code = 1;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
-  for (t = nms; t; t = t->rgt)
-    if (t->lft) {
-      if (t->lft->ntyp != NAME) {
+  for (t = nms; t; t = t->right)
+    if (t->left) {
+      if (t->left->node_type != NAME) {
         char *s_s_name = "--";
         loger::fatal("bad param to inline %s", s ? s->name : s_s_name);
       }
-      t->lft->sym->hidden_flags |= 32;
+      t->left->symbol->hidden_flags |= 32;
     }
 
   if (!s) /* C_Code fragment */

@@ -44,8 +44,8 @@ static Node *tl_factor(void) {
   case NOT:
     ptr = tl_yylval;
     tl_yychar = tl_yylex();
-    ptr->lft = tl_factor();
-    if (!ptr->lft) {
+    ptr->left = tl_factor();
+    if (!ptr->left) {
       loger::fatal("malformed expression");
     }
     ptr = push_negation(ptr);
@@ -58,10 +58,10 @@ static Node *tl_factor(void) {
       break; /* [] false == false */
 
     if (ptr->ntyp == V_OPER) {
-      if (ptr->lft->ntyp == FALSE)
+      if (ptr->left->ntyp == FALSE)
         break; /* [][]p = []p */
 
-      ptr = ptr->rgt; /* [] (p V q) = [] q */
+      ptr = ptr->right; /* [] (p V q) = [] q */
     }
 #endif
     ptr = tl_nn(V_OPER, False, ptr);
@@ -91,11 +91,11 @@ static Node *tl_factor(void) {
     if (ptr->ntyp == TRUE || ptr->ntyp == FALSE)
       break; /* <> true == true */
 
-    if (ptr->ntyp == U_OPER && ptr->lft->ntyp == TRUE)
+    if (ptr->ntyp == U_OPER && ptr->left->ntyp == TRUE)
       break; /* <><>p = <>p */
 
     if (ptr->ntyp == U_OPER) { /* <> (p U q) = <> q */
-      ptr = ptr->rgt;
+      ptr = ptr->right;
       /* fall thru */
     }
 #endif
@@ -124,142 +124,142 @@ static Node *bin_simpler(Node *ptr) {
     switch (ptr->ntyp) {
     case U_OPER:
 #ifndef NO_OPT
-      if (ptr->rgt->ntyp == TRUE || ptr->rgt->ntyp == FALSE ||
-          ptr->lft->ntyp == FALSE) {
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == TRUE || ptr->right->ntyp == FALSE ||
+          ptr->left->ntyp == FALSE) {
+        ptr = ptr->right;
         break;
       }
-      if (isequal(ptr->lft, ptr->rgt)) { /* p U p = p */
-        ptr = ptr->rgt;
+      if (isequal(ptr->left, ptr->right)) { /* p U p = p */
+        ptr = ptr->right;
         break;
       }
-      if (ptr->lft->ntyp == U_OPER &&
-          isequal(ptr->lft->lft, ptr->rgt)) { /* (p U q) U p = (q U p) */
-        ptr->lft = ptr->lft->rgt;
+      if (ptr->left->ntyp == U_OPER &&
+          isequal(ptr->left->left, ptr->right)) { /* (p U q) U p = (q U p) */
+        ptr->left = ptr->left->right;
         break;
       }
-      if (ptr->rgt->ntyp == U_OPER &&
-          ptr->rgt->lft->ntyp == TRUE) { /* p U (T U q)  = (T U q) */
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == U_OPER &&
+          ptr->right->left->ntyp == TRUE) { /* p U (T U q)  = (T U q) */
+        ptr = ptr->right;
         break;
       }
 #ifdef NXT
       /* X p U X q == X (p U q) */
-      if (ptr->rgt->ntyp == NEXT && ptr->lft->ntyp == NEXT) {
-        ptr = tl_nn(NEXT, tl_nn(U_OPER, ptr->lft->lft, ptr->rgt->lft), ZN);
+      if (ptr->right->ntyp == NEXT && ptr->left->ntyp == NEXT) {
+        ptr = tl_nn(NEXT, tl_nn(U_OPER, ptr->left->left, ptr->right->left), ZN);
       }
 #endif
 #endif
       break;
     case V_OPER:
 #ifndef NO_OPT
-      if (ptr->rgt->ntyp == FALSE || ptr->rgt->ntyp == TRUE ||
-          ptr->lft->ntyp == TRUE) {
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == FALSE || ptr->right->ntyp == TRUE ||
+          ptr->left->ntyp == TRUE) {
+        ptr = ptr->right;
         break;
       }
-      if (isequal(ptr->lft, ptr->rgt)) { /* p V p = p */
-        ptr = ptr->rgt;
+      if (isequal(ptr->left, ptr->right)) { /* p V p = p */
+        ptr = ptr->right;
         break;
       }
       /* F V (p V q) == F V q */
-      if (ptr->lft->ntyp == FALSE && ptr->rgt->ntyp == V_OPER) {
-        ptr->rgt = ptr->rgt->rgt;
+      if (ptr->left->ntyp == FALSE && ptr->right->ntyp == V_OPER) {
+        ptr->right = ptr->right->right;
         break;
       }
       /* p V (F V q) == F V q */
-      if (ptr->rgt->ntyp == V_OPER && ptr->rgt->lft->ntyp == FALSE) {
-        ptr->lft = False;
-        ptr->rgt = ptr->rgt->rgt;
+      if (ptr->right->ntyp == V_OPER && ptr->right->left->ntyp == FALSE) {
+        ptr->left = False;
+        ptr->right = ptr->right->right;
         break;
       }
 #endif
       break;
     case IMPLIES:
 #ifndef NO_OPT
-      if (isequal(ptr->lft, ptr->rgt)) {
+      if (isequal(ptr->left, ptr->right)) {
         ptr = True;
         break;
       }
 #endif
-      ptr = tl_nn(OR, Not(ptr->lft), ptr->rgt);
+      ptr = tl_nn(OR, Not(ptr->left), ptr->right);
       ptr = rewrite(ptr);
       break;
     case EQUIV:
 #ifndef NO_OPT
-      if (isequal(ptr->lft, ptr->rgt)) {
+      if (isequal(ptr->left, ptr->right)) {
         ptr = True;
         break;
       }
 #endif
-      a = rewrite(tl_nn(AND, dupnode(ptr->lft), dupnode(ptr->rgt)));
-      b = rewrite(tl_nn(AND, Not(ptr->lft), Not(ptr->rgt)));
+      a = rewrite(tl_nn(AND, dupnode(ptr->left), dupnode(ptr->right)));
+      b = rewrite(tl_nn(AND, Not(ptr->left), Not(ptr->right)));
       ptr = tl_nn(OR, a, b);
       ptr = rewrite(ptr);
       break;
     case AND:
 #ifndef NO_OPT
       /* p && (q U p) = p */
-      if (ptr->rgt->ntyp == U_OPER && isequal(ptr->rgt->rgt, ptr->lft)) {
-        ptr = ptr->lft;
+      if (ptr->right->ntyp == U_OPER && isequal(ptr->right->right, ptr->left)) {
+        ptr = ptr->left;
         break;
       }
-      if (ptr->lft->ntyp == U_OPER && isequal(ptr->lft->rgt, ptr->rgt)) {
-        ptr = ptr->rgt;
+      if (ptr->left->ntyp == U_OPER && isequal(ptr->left->right, ptr->right)) {
+        ptr = ptr->right;
         break;
       }
 
       /* p && (q V p) == q V p */
-      if (ptr->rgt->ntyp == V_OPER && isequal(ptr->rgt->rgt, ptr->lft)) {
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == V_OPER && isequal(ptr->right->right, ptr->left)) {
+        ptr = ptr->right;
         break;
       }
-      if (ptr->lft->ntyp == V_OPER && isequal(ptr->lft->rgt, ptr->rgt)) {
-        ptr = ptr->lft;
+      if (ptr->left->ntyp == V_OPER && isequal(ptr->left->right, ptr->right)) {
+        ptr = ptr->left;
         break;
       }
 
       /* (p U q) && (r U q) = (p && r) U q*/
-      if (ptr->rgt->ntyp == U_OPER && ptr->lft->ntyp == U_OPER &&
-          isequal(ptr->rgt->rgt, ptr->lft->rgt)) {
-        ptr = tl_nn(U_OPER, tl_nn(AND, ptr->lft->lft, ptr->rgt->lft),
-                    ptr->lft->rgt);
+      if (ptr->right->ntyp == U_OPER && ptr->left->ntyp == U_OPER &&
+          isequal(ptr->right->right, ptr->left->right)) {
+        ptr = tl_nn(U_OPER, tl_nn(AND, ptr->left->left, ptr->right->left),
+                    ptr->left->right);
         break;
       }
 
       /* (p V q) && (p V r) = p V (q && r) */
-      if (ptr->rgt->ntyp == V_OPER && ptr->lft->ntyp == V_OPER &&
-          isequal(ptr->rgt->lft, ptr->lft->lft)) {
-        ptr = tl_nn(V_OPER, ptr->rgt->lft,
-                    tl_nn(AND, ptr->lft->rgt, ptr->rgt->rgt));
+      if (ptr->right->ntyp == V_OPER && ptr->left->ntyp == V_OPER &&
+          isequal(ptr->right->left, ptr->left->left)) {
+        ptr = tl_nn(V_OPER, ptr->right->left,
+                    tl_nn(AND, ptr->left->right, ptr->right->right));
         break;
       }
 #ifdef NXT
       /* X p && X q == X (p && q) */
-      if (ptr->rgt->ntyp == NEXT && ptr->lft->ntyp == NEXT) {
-        ptr = tl_nn(NEXT, tl_nn(AND, ptr->rgt->lft, ptr->lft->lft), ZN);
+      if (ptr->right->ntyp == NEXT && ptr->left->ntyp == NEXT) {
+        ptr = tl_nn(NEXT, tl_nn(AND, ptr->right->left, ptr->left->left), ZN);
         break;
       }
 #endif
 
-      if (isequal(ptr->lft, ptr->rgt) /* (p && p) == p */
-          || ptr->rgt->ntyp == FALSE  /* (p && F) == F */
-          || ptr->lft->ntyp == TRUE)  /* (T && p) == p */
+      if (isequal(ptr->left, ptr->right) /* (p && p) == p */
+          || ptr->right->ntyp == FALSE  /* (p && F) == F */
+          || ptr->left->ntyp == TRUE)  /* (T && p) == p */
       {
-        ptr = ptr->rgt;
+        ptr = ptr->right;
         break;
       }
-      if (ptr->rgt->ntyp == TRUE      /* (p && T) == p */
-          || ptr->lft->ntyp == FALSE) /* (F && p) == F */
+      if (ptr->right->ntyp == TRUE      /* (p && T) == p */
+          || ptr->left->ntyp == FALSE) /* (F && p) == F */
       {
-        ptr = ptr->lft;
+        ptr = ptr->left;
         break;
       }
 
       /* (p V q) && (r U q) == p V q */
-      if (ptr->rgt->ntyp == U_OPER && ptr->lft->ntyp == V_OPER &&
-          isequal(ptr->lft->rgt, ptr->rgt->rgt)) {
-        ptr = ptr->lft;
+      if (ptr->right->ntyp == U_OPER && ptr->left->ntyp == V_OPER &&
+          isequal(ptr->left->right, ptr->right->right)) {
+        ptr = ptr->left;
         break;
       }
 #endif
@@ -268,51 +268,51 @@ static Node *bin_simpler(Node *ptr) {
     case OR:
 #ifndef NO_OPT
       /* p || (q U p) == q U p */
-      if (ptr->rgt->ntyp == U_OPER && isequal(ptr->rgt->rgt, ptr->lft)) {
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == U_OPER && isequal(ptr->right->right, ptr->left)) {
+        ptr = ptr->right;
         break;
       }
 
       /* p || (q V p) == p */
-      if (ptr->rgt->ntyp == V_OPER && isequal(ptr->rgt->rgt, ptr->lft)) {
-        ptr = ptr->lft;
+      if (ptr->right->ntyp == V_OPER && isequal(ptr->right->right, ptr->left)) {
+        ptr = ptr->left;
         break;
       }
 
       /* (p U q) || (p U r) = p U (q || r) */
-      if (ptr->rgt->ntyp == U_OPER && ptr->lft->ntyp == U_OPER &&
-          isequal(ptr->rgt->lft, ptr->lft->lft)) {
-        ptr = tl_nn(U_OPER, ptr->rgt->lft,
-                    tl_nn(OR, ptr->lft->rgt, ptr->rgt->rgt));
+      if (ptr->right->ntyp == U_OPER && ptr->left->ntyp == U_OPER &&
+          isequal(ptr->right->left, ptr->left->left)) {
+        ptr = tl_nn(U_OPER, ptr->right->left,
+                    tl_nn(OR, ptr->left->right, ptr->right->right));
         break;
       }
 
-      if (isequal(ptr->lft, ptr->rgt) /* (p || p) == p */
-          || ptr->rgt->ntyp == FALSE  /* (p || F) == p */
-          || ptr->lft->ntyp == TRUE)  /* (T || p) == T */
+      if (isequal(ptr->left, ptr->right) /* (p || p) == p */
+          || ptr->right->ntyp == FALSE  /* (p || F) == p */
+          || ptr->left->ntyp == TRUE)  /* (T || p) == T */
       {
-        ptr = ptr->lft;
+        ptr = ptr->left;
         break;
       }
-      if (ptr->rgt->ntyp == TRUE      /* (p || T) == T */
-          || ptr->lft->ntyp == FALSE) /* (F || p) == p */
+      if (ptr->right->ntyp == TRUE      /* (p || T) == T */
+          || ptr->left->ntyp == FALSE) /* (F || p) == p */
       {
-        ptr = ptr->rgt;
+        ptr = ptr->right;
         break;
       }
 
       /* (p V q) || (r V q) = (p || r) V q */
-      if (ptr->rgt->ntyp == V_OPER && ptr->lft->ntyp == V_OPER &&
-          isequal(ptr->lft->rgt, ptr->rgt->rgt)) {
-        ptr = tl_nn(V_OPER, tl_nn(OR, ptr->lft->lft, ptr->rgt->lft),
-                    ptr->rgt->rgt);
+      if (ptr->right->ntyp == V_OPER && ptr->left->ntyp == V_OPER &&
+          isequal(ptr->left->right, ptr->right->right)) {
+        ptr = tl_nn(V_OPER, tl_nn(OR, ptr->left->left, ptr->right->left),
+                    ptr->right->right);
         break;
       }
 
       /* (p V q) || (r U q) == r U q */
-      if (ptr->rgt->ntyp == U_OPER && ptr->lft->ntyp == V_OPER &&
-          isequal(ptr->lft->rgt, ptr->rgt->rgt)) {
-        ptr = ptr->rgt;
+      if (ptr->right->ntyp == U_OPER && ptr->left->ntyp == V_OPER &&
+          isequal(ptr->left->right, ptr->right->right)) {
+        ptr = ptr->right;
         break;
       }
 #endif

@@ -6,6 +6,7 @@
 #include "main/main_processor.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "models/lextok.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -21,7 +22,7 @@ extern int scope_seq[256], scope_level, has_stdin;
 extern lexer::Lexer lexer_;
 extern LaunchSettings launch_settings;
 
-extern int pc_highest(Lextok *n);
+extern int pc_highest(models::Lextok *n);
 extern void putpostlude(void);
 
 RunList *X_lst = (RunList *)0;
@@ -34,7 +35,7 @@ int Rvous = 0, depth = 0, nrRdy = 0, MadeChoice;
 short Have_claim = 0, Skip_claim = 0;
 
 static void setlocals(RunList *);
-static void setparams(RunList *, ProcList *, Lextok *);
+static void setparams(RunList *, ProcList *, models::Lextok *);
 static void talk(RunList *);
 
 extern std::string which_mtype(const std::string &);
@@ -81,12 +82,12 @@ void runnable(ProcList *p, int weight, int noparams) {
   run_lst = r;
 }
 
-ProcList *mk_rdy(models::Symbol *n, Lextok *p, Sequence *s, int det,
-                 Lextok *prov, enum btypes b)
+ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, Sequence *s, int det,
+                 models::Lextok *prov, enum btypes b)
 /* n=name, p=formals, s=body det=deterministic prov=provided */
 {
   ProcList *r = (ProcList *)emalloc(sizeof(ProcList));
-  Lextok *fp, *fpt;
+  models::Lextok *fp, *fpt;
   int j;
   extern int Npars;
 
@@ -105,8 +106,8 @@ ProcList *mk_rdy(models::Symbol *n, Lextok *p, Sequence *s, int det,
   r->nxt = ready;
   ready = r;
 
-  for (fp = p, j = 0; fp; fp = fp->rgt)
-    for (fpt = fp->lft; fpt; fpt = fpt->rgt) {
+  for (fp = p, j = 0; fp; fp = fp->right)
+    for (fpt = fp->left; fpt; fpt = fpt->right) {
       j++; /* count # of parameters */
     }
   Npars = max(Npars, j);
@@ -114,15 +115,15 @@ ProcList *mk_rdy(models::Symbol *n, Lextok *p, Sequence *s, int det,
   return ready;
 }
 
-void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
+void check_mtypes(models::Lextok *pnm, models::Lextok *args) /* proctype name, actual params */
 {
   ProcList *p = NULL;
-  Lextok *fp, *fpt, *at;
+  models::Lextok *fp, *fpt, *at;
   std::string s, t;
 
-  if (pnm && pnm->sym) {
+  if (pnm && pnm->symbol) {
     for (p = ready; p; p = p->nxt) {
-      if (pnm->sym->name == p->n->name) { /* found */
+      if (pnm->symbol->name == p->n->name) { /* found */
         break;
       }
     }
@@ -131,35 +132,35 @@ void check_mtypes(Lextok *pnm, Lextok *args) /* proctype name, actual params */
   if (!p) {
     std::string pnm_sym_name_default = "?";
     loger::fatal("cannot find proctype '%s'",
-                 (pnm && pnm->sym) ? pnm->sym->name
+                 (pnm && pnm->symbol) ? pnm->symbol->name
                                    : pnm_sym_name_default.c_str());
   }
 
-  for (fp = p->p, at = args; fp; fp = fp->rgt)
-    for (fpt = fp->lft; at && fpt; fpt = fpt->rgt, at = at->rgt) {
-      if (fp->lft->val != MTYPE) {
+  for (fp = p->p, at = args; fp; fp = fp->right)
+    for (fpt = fp->left; at && fpt; fpt = fpt->right, at = at->right) {
+      if (fp->left->value != MTYPE) {
         continue;
       }
-      if (!at->lft->sym) {
-        printf("spin:%d unrecognized mtype value\n", pnm->ln);
+      if (!at->left->symbol) {
+        printf("spin:%d unrecognized mtype value\n", pnm->line_number);
         continue;
       }
       s = "_unnamed_";
-      if (fp->lft->sym->mtype_name) {
-        t = fp->lft->sym->mtype_name->name;
+      if (fp->left->symbol->mtype_name) {
+        t = fp->left->symbol->mtype_name->name;
       } else {
         t = "_unnamed_";
       }
-      if (at->lft->ntyp != CONST) {
-        loger::fatal("wrong arg type '%s'", at->lft->sym->name);
+      if (at->left->node_type != CONST) {
+        loger::fatal("wrong arg type '%s'", at->left->symbol->name);
       }
-      s = which_mtype(at->lft->sym->name);
+      s = which_mtype(at->left->symbol->name);
       if (s != "" && s != t) {
         printf(
             "spin: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
-            pnm->fn->name.c_str(), pnm->ln, at->lft->sym->name.c_str(),
+            pnm->file_name->name.c_str(), pnm->line_number, at->left->symbol->name.c_str(),
             s.c_str(), t.c_str());
-        loger::fatal("wrong arg type '%s'", at->lft->sym->name);
+        loger::fatal("wrong arg type '%s'", at->left->symbol->name);
       }
     }
 }
@@ -178,20 +179,20 @@ int find_maxel(models::Symbol *s) {
 
 static void formdump(void) {
   ProcList *p;
-  Lextok *f, *t;
+  models::Lextok *f, *t;
   int count;
 
   for (p = ready; p; p = p->nxt) {
     if (!p->p)
       continue;
     count = -1;
-    for (f = p->p; f; f = f->rgt)     /* types */
-      for (t = f->lft; t; t = t->rgt) /* formals */
+    for (f = p->p; f; f = f->right)     /* types */
+      for (t = f->left; t; t = t->right) /* formals */
       {
-        if (t->ntyp != ',')
-          t->sym->id = count--; /* overload id */
+        if (t->node_type != ',')
+          t->symbol->id = count--; /* overload id */
         else
-          t->lft->sym->id = count--;
+          t->left->symbol->id = count--;
       }
   }
 }
@@ -236,13 +237,13 @@ void announce(char *w) {
 constexpr int kMaxNrOfProcesses =
     255; /* matches max nr of processes in verifier */
 
-int enable(Lextok *m) {
+int enable(models::Lextok *m) {
   ProcList *p;
-  models::Symbol *s = m->sym; /* proctype name */
-  Lextok *n = m->lft;         /* actual parameters */
+  models::Symbol *s = m->symbol; /* proctype name */
+  models::Lextok *n = m->left;         /* actual parameters */
 
-  if (m->val < 1) {
-    m->val = 1; /* minimum priority */
+  if (m->value < 1) {
+    m->value = 1; /* minimum priority */
   }
   for (p = ready; p; p = p->nxt) {
     if (s->name == p->n->name) {
@@ -250,32 +251,32 @@ int enable(Lextok *m) {
         printf("spin: too many processes (%d max)\n", kMaxNrOfProcesses);
         break;
       }
-      runnable(p, m->val, 0);
+      runnable(p, m->value, 0);
       announce((char *)0);
       setparams(run_lst, p, n);
       setlocals(run_lst); /* after setparams */
-      check_mtypes(m, m->lft);
+      check_mtypes(m, m->left);
       return run_lst->pid - Have_claim + Skip_claim; /* effective simu pid */
     }
   }
   return 0; /* process not found */
 }
 
-void check_param_count(int i, Lextok *m) {
+void check_param_count(int i, models::Lextok *m) {
   ProcList *p;
-  models::Symbol *s = m->sym; /* proctype name */
-  Lextok *f, *t;              /* formal pars */
+  models::Symbol *s = m->symbol; /* proctype name */
+  models::Lextok *f, *t;              /* formal pars */
   int count = 0;
 
   for (p = ready; p; p = p->nxt) {
     if (s->name == p->n->name) {
-      if (m->lft) /* actual param list */
+      if (m->left) /* actual param list */
       {
-        lineno = m->lft->ln;
-        Fname = m->lft->fn;
+        lineno = m->left->line_number;
+        Fname = m->left->file_name;
       }
-      for (f = p->p; f; f = f->rgt)     /* one type at a time */
-        for (t = f->lft; t; t = t->rgt) /* count formal params */
+      for (f = p->p; f; f = f->right)     /* one type at a time */
+        for (t = f->left; t; t = t->right) /* count formal params */
         {
           count++;
         }
@@ -407,7 +408,7 @@ static Element *silent_moves(Element *e) {
   Element *f;
 
   if (e->n)
-    switch (e->n->ntyp) {
+    switch (e->n->node_type) {
     case GOTO:
       if (Rvous)
         break;
@@ -419,8 +420,8 @@ static Element *silent_moves(Element *e) {
     case NON_ATOMIC:
     case ATOMIC:
     case D_STEP:
-      e->n->sl->this_sequence->last->nxt = e->nxt;
-      return silent_moves(e->n->sl->this_sequence->frst);
+      e->n->seq_list->this_sequence->last->nxt = e->nxt;
+      return silent_moves(e->n->seq_list->this_sequence->frst);
     case '.':
       return silent_moves(e->nxt);
     }
@@ -436,8 +437,8 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
   }
   if (lexer_.GetHasPriority() &&
       !launch_settings.need_revert_old_rultes_for_priority) {
-    Lextok *n = nn(ZN, CONST, ZN, ZN);
-    n->val = X_lst->pid;
+    models::Lextok *n = nn(ZN, CONST, ZN, ZN);
+    n->value = X_lst->pid;
     if (0)
       printf("pid %d %s run (priority)\n", X_lst->pid,
              pc_highest(n) ? "can" : "cannot");
@@ -546,7 +547,7 @@ static RunList *pickproc(RunList *Y) {
           if (!y)
             continue;
 
-          if (y->n->ntyp == ELSE) {
+          if (y->n->node_type == ELSE) {
             has_else = (Rvous) ? ZE : y;
             nr_else = k++;
             continue;
@@ -705,8 +706,8 @@ void sched(void) {
   while (X_lst) {
     context = X_lst->n;
     if (X_lst->pc && X_lst->pc->n) {
-      lineno = X_lst->pc->n->ln;
-      Fname = X_lst->pc->n->fn;
+      lineno = X_lst->pc->n->line_number;
+      Fname = X_lst->pc->n->file_name;
     }
     if (launch_settings.count_of_steps > 0 &&
         depth >= launch_settings.count_of_steps) {
@@ -771,7 +772,7 @@ void sched(void) {
       if (oX->pc && (oX->pc->status & D_ATOM)) {
         loger::non_fatal("stmnt in d_step blocks");
       }
-      if (X_lst->pc && X_lst->pc->n && X_lst->pc->n->ntyp == '@' &&
+      if (X_lst->pc && X_lst->pc->n && X_lst->pc->n->node_type == '@' &&
           X_lst->pid == (nproc - nstop - 1)) {
         if (X_lst != run_lst && Y != NULL)
           Y->nxt = X_lst->nxt;
@@ -952,18 +953,18 @@ static void setlocals(RunList *r) {
   X_lst = oX;
 }
 
-static void oneparam(RunList *r, Lextok *t, Lextok *a, ProcList *p) {
+static void oneparam(RunList *r, models::Lextok *t, models::Lextok *a, ProcList *p) {
   int k;
   int at, ft;
   RunList *oX = X_lst;
 
   if (!a)
     loger::fatal("missing actual parameters: '%s'", p->n->name);
-  if (t->sym->value_type > 1 || t->sym->is_array)
-    loger::fatal("array in parameter list, %s", t->sym->name);
-  k = eval(a->lft);
+  if (t->symbol->value_type > 1 || t->symbol->is_array)
+    loger::fatal("array in parameter list, %s", t->symbol->name);
+  k = eval(a->left);
 
-  at = Sym_typ(a->lft);
+  at = Sym_typ(a->left);
   X_lst = r; /* switch context */
   ft = Sym_typ(t);
 
@@ -975,27 +976,27 @@ static void oneparam(RunList *r, Lextok *t, Lextok *a, ProcList *p) {
           tag2 + ")";
     loger::non_fatal("%s", buf);
   }
-  t->ntyp = NAME;
-  addsymbol(r, t->sym);
+  t->node_type = NAME;
+  addsymbol(r, t->symbol);
   (void)setval(t, k);
 
   X_lst = oX;
 }
 
-static void setparams(RunList *r, ProcList *p, Lextok *q) {
-  Lextok *f, *a; /* formal and actual pars */
-  Lextok *t;     /* list of pars of 1 type */
+static void setparams(RunList *r, ProcList *p, models::Lextok *q) {
+  models::Lextok *f, *a; /* formal and actual pars */
+  models::Lextok *t;     /* list of pars of 1 type */
 
   if (q) {
-    lineno = q->ln;
-    Fname = q->fn;
+    lineno = q->line_number;
+    Fname = q->file_name;
   }
-  for (f = p->p, a = q; f; f = f->rgt) /* one type at a time */
-    for (t = f->lft; t; t = t->rgt, a = (a) ? a->rgt : a) {
-      if (t->ntyp != ',')
+  for (f = p->p, a = q; f; f = f->right) /* one type at a time */
+    for (t = f->left; t; t = t->right, a = (a) ? a->right : a) {
+      if (t->node_type != ',')
         oneparam(r, t, a, p); /* plain var */
       else
-        oneparam(r, t->lft, a, p); /* expanded struct */
+        oneparam(r, t->left, a, p); /* expanded struct */
     }
 }
 
@@ -1032,9 +1033,9 @@ int in_bound(models::Symbol *r, int n) {
   return 1;
 }
 
-int getlocal(Lextok *sn) {
-  models::Symbol *r, *s = sn->sym;
-  int n = eval(sn->lft);
+int getlocal(models::Lextok *sn) {
+  models::Symbol *r, *s = sn->symbol;
+  int n = eval(sn->left);
 
   r = findloc(s);
   if (r && r->type == STRUCT)
@@ -1044,9 +1045,9 @@ int getlocal(Lextok *sn) {
   return 0;
 }
 
-int setlocal(Lextok *p, int m) {
-  models::Symbol *r = findloc(p->sym);
-  int n = eval(p->lft);
+int setlocal(models::Lextok *p, int m) {
+  models::Symbol *r = findloc(p->symbol);
+  int n = eval(p->left);
 
   if (in_bound(r, n)) {
     if (r->type == models::SymbolType::kStruct)
@@ -1096,7 +1097,7 @@ void p_talk(Element *e, int lnr) {
   int newnever = -1;
 
   if (e && e->n) {
-    newnever = e->n->ln;
+    newnever = e->n->line_number;
   }
 
   if (Have_claim && X_lst && X_lst->pid == 0 && lastnever != newnever && e) {
@@ -1106,7 +1107,7 @@ void p_talk(Element *e, int lnr) {
   whoruns(lnr);
   if (e) {
     if (e->n) {
-      std::string ptr = e->n->fn->name;
+      std::string ptr = e->n->file_name->name;
       std::string qtr;
       for (char c : ptr) {
         if (c != '"') {
@@ -1117,7 +1118,7 @@ void p_talk(Element *e, int lnr) {
     } else {
       nbuf = "-";
     }
-    printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->ln : -1, e->seqno);
+    printf("%s:%d (state %d)", nbuf.c_str(), e->n ? e->n->line_number : -1, e->seqno);
     if ((e->status & ENDSTATE) || has_lab(e, 2)) /* 2=end */
     {
       printf(" <valid end state>");
@@ -1125,38 +1126,38 @@ void p_talk(Element *e, int lnr) {
   }
 }
 
-int remotelab(Lextok *n) {
+int remotelab(models::Lextok *n) {
   int i;
 
-  lineno = n->ln;
-  Fname = n->fn;
-  if (n->sym->type != 0 && n->sym->type != LABEL) {
-    printf("spin: error, type: %d\n", n->sym->type);
-    loger::fatal("not a labelname: '%s'", n->sym->name);
+  lineno = n->line_number;
+  Fname = n->file_name;
+  if (n->symbol->type != 0 && n->symbol->type != LABEL) {
+    printf("spin: error, type: %d\n", n->symbol->type);
+    loger::fatal("not a labelname: '%s'", n->symbol->name);
   }
-  if (n->indstep >= 0) {
-    loger::fatal("remote ref to label '%s' inside d_step", n->sym->name);
+  if (n->index_step >= 0) {
+    loger::fatal("remote ref to label '%s' inside d_step", n->symbol->name);
   }
-  if ((i = find_lab(n->sym, n->lft->sym, 1)) == 0) /* remotelab */
+  if ((i = find_lab(n->symbol, n->left->symbol, 1)) == 0) /* remotelab */
   {
-    loger::fatal("unknown labelname: %s", n->sym->name);
+    loger::fatal("unknown labelname: %s", n->symbol->name);
   }
   return i;
 }
 
-int remotevar(Lextok *n) {
+int remotevar(models::Lextok *n) {
   int prno, i, added = 0;
   RunList *Y, *oX;
-  Lextok *onl;
+  models::Lextok *onl;
   models::Symbol *os;
 
-  lineno = n->ln;
-  Fname = n->fn;
+  lineno = n->line_number;
+  Fname = n->file_name;
 
-  if (!n->lft->lft)
-    prno = f_pid(n->lft->sym->name);
+  if (!n->left->left)
+    prno = f_pid(n->left->symbol->name);
   else {
-    prno = eval(n->lft->lft); /* pid - can cause recursive call */
+    prno = eval(n->left->left); /* pid - can cause recursive call */
     {
       prno += Have_claim;
       added = Have_claim;
@@ -1169,12 +1170,12 @@ int remotevar(Lextok *n) {
   i = nproc - nstop + Skip_claim; /* 6.0: added Skip_claim */
   for (Y = run_lst; Y; Y = Y->nxt)
     if (--i == prno) {
-      if (Y->n->name != n->lft->sym->name) {
+      if (Y->n->name != n->left->symbol->name) {
         printf("spin: remote reference error on '%s[%d]'\n",
-               n->lft->sym->name.c_str(), prno - added);
+               n->left->symbol->name.c_str(), prno - added);
         loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
-      if (n->sym->name == "_p") {
+      if (n->symbol->name == "_p") {
         if (Y->pc) {
           return Y->pc->seqno;
         }
@@ -1186,32 +1187,32 @@ int remotevar(Lextok *n) {
       oX = X_lst;
       X_lst = Y;
 
-      onl = n->lft;
-      n->lft = n->rgt;
+      onl = n->left;
+      n->left = n->right;
 
-      os = n->sym;
-      if (!n->sym->context) {
-        n->sym->context = Y->n;
+      os = n->symbol;
+      if (!n->symbol->context) {
+        n->symbol->context = Y->n;
       }
       {
         bool rs = launch_settings.need_old_scope_rules;
         launch_settings.need_old_scope_rules = true;
-        n->sym = findloc(n->sym);
+        n->symbol = findloc(n->symbol);
         launch_settings.need_old_scope_rules = rs;
       }
       i = getval(n);
 
-      n->sym = os;
-      n->lft = onl;
+      n->symbol = os;
+      n->left = onl;
       X_lst = oX;
       return i;
     }
-  printf("remote ref: %s[%d] ", n->lft->sym->name.c_str(), prno - added);
-  loger::non_fatal("%s not found", n->sym->name);
+  printf("remote ref: %s[%d] ", n->left->symbol->name.c_str(), prno - added);
+  loger::non_fatal("%s not found", n->symbol->name);
   printf("have only:\n");
   i = nproc - nstop - 1;
   for (Y = run_lst; Y; Y = Y->nxt, i--)
-    if (Y->n->name == n->lft->sym->name) {
+    if (Y->n->name == n->left->symbol->name) {
       printf("\t%d\t%s\n", i, Y->n->name.c_str());
     }
   return 0;

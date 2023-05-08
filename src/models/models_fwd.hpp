@@ -1,8 +1,11 @@
 #pragma once
-struct Lextok;
 struct Access;
-namespace models {
+struct Sequence;
+struct SeqList;
+struct Sequence;
 
+namespace models {
+struct Lextok;
 struct Symbol;
 
 } // namespace models

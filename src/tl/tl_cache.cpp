@@ -81,10 +81,10 @@ void releasenode(int all_levels, Node *n) {
     return;
 
   if (all_levels) {
-    releasenode(1, n->lft);
-    n->lft = ZN;
-    releasenode(1, n->rgt);
-    n->rgt = ZN;
+    releasenode(1, n->left);
+    n->left = ZN;
+    releasenode(1, n->right);
+    n->right = ZN;
   }
   tfree((void *)n);
 }
@@ -93,8 +93,8 @@ Node *tl_nn(int t, Node *ll, Node *rl) {
   Node *n = (Node *)tl_emalloc(sizeof(Node));
 
   n->ntyp = (short)t;
-  n->lft = ll;
-  n->rgt = rl;
+  n->left = ll;
+  n->right = rl;
 
   return n;
 }
@@ -107,9 +107,9 @@ Node *getnode(Node *p) {
 
   n = (Node *)tl_emalloc(sizeof(Node));
   n->ntyp = p->ntyp;
-  n->sym = p->sym; /* same name */
-  n->lft = p->lft;
-  n->rgt = p->rgt;
+  n->symbol = p->symbol; /* same name */
+  n->left = p->left;
+  n->right = p->right;
 
   return n;
 }
@@ -120,8 +120,8 @@ Node *dupnode(Node *n) {
   if (!n)
     return n;
   d = getnode(n);
-  d->lft = dupnode(n->lft);
-  d->rgt = dupnode(n->rgt);
+  d->left = dupnode(n->left);
+  d->right = dupnode(n->right);
   return d;
 }
 
@@ -137,10 +137,10 @@ int one_lft(int ntyp, Node *x, Node *in) {
   if (in->ntyp != ntyp)
     return 0;
 
-  if (one_lft(ntyp, x, in->lft))
+  if (one_lft(ntyp, x, in->left))
     return 1;
 
-  return one_lft(ntyp, x, in->rgt);
+  return one_lft(ntyp, x, in->right);
 }
 
 int all_lfts(int ntyp, Node *from, Node *in) {
@@ -150,10 +150,10 @@ int all_lfts(int ntyp, Node *from, Node *in) {
   if (from->ntyp != ntyp)
     return one_lft(ntyp, from, in);
 
-  if (!one_lft(ntyp, from->lft, in))
+  if (!one_lft(ntyp, from->left, in))
     return 0;
 
-  return all_lfts(ntyp, from->rgt, in);
+  return all_lfts(ntyp, from->right, in);
 }
 
 int sametrees(int ntyp, Node *a, Node *b) { /* toplevel is an AND or OR */
@@ -175,7 +175,7 @@ sameform(Node *a, Node *b) {
   if (a->ntyp != b->ntyp)
     return 0;
 
-  if (a->sym && b->sym && strcmp(a->sym->name, b->sym->name) != 0)
+  if (a->symbol && b->symbol && strcmp(a->symbol->name, b->symbol->name) != 0)
     return 0;
 
   switch (a->ntyp) {
@@ -183,21 +183,21 @@ sameform(Node *a, Node *b) {
   case FALSE:
     return 1;
   case PREDICATE:
-    if (!a->sym || !b->sym)
+    if (!a->symbol || !b->symbol)
       loger::fatal("sameform...");
-    return !strcmp(a->sym->name, b->sym->name);
+    return !strcmp(a->symbol->name, b->symbol->name);
 
   case NOT:
 #ifdef NXT
   case NEXT:
 #endif
   case CEXPR:
-    return sameform(a->lft, b->lft);
+    return sameform(a->left, b->left);
   case U_OPER:
   case V_OPER:
-    if (!sameform(a->lft, b->lft))
+    if (!sameform(a->left, b->left))
       return 0;
-    if (!sameform(a->rgt, b->rgt))
+    if (!sameform(a->right, b->right))
       return 0;
     return 1;
 
@@ -230,10 +230,10 @@ int isequal(Node *a, Node *b) {
   if (a->ntyp != b->ntyp)
     return 0;
 
-  if (a->sym && b->sym && strcmp(a->sym->name, b->sym->name) != 0)
+  if (a->symbol && b->symbol && strcmp(a->symbol->name, b->symbol->name) != 0)
     return 0;
 
-  if (isequal(a->lft, b->lft) && isequal(a->rgt, b->rgt))
+  if (isequal(a->left, b->left) && isequal(a->right, b->right))
     return 1;
 
   return sameform(a, b);
@@ -247,10 +247,10 @@ static int ismatch(Node *a, Node *b) {
   if (a->ntyp != b->ntyp)
     return 0;
 
-  if (a->sym && b->sym && strcmp(a->sym->name, b->sym->name) != 0)
+  if (a->symbol && b->symbol && strcmp(a->symbol->name, b->symbol->name) != 0)
     return 0;
 
-  if (ismatch(a->lft, b->lft) && ismatch(a->rgt, b->rgt))
+  if (ismatch(a->left, b->left) && ismatch(a->right, b->right))
     return 1;
 
   return 0;
@@ -261,7 +261,7 @@ int any_term(Node *srch, Node *in) {
     return 0;
 
   if (in->ntyp == AND)
-    return any_term(srch, in->lft) || any_term(srch, in->rgt);
+    return any_term(srch, in->left) || any_term(srch, in->right);
 
   return isequal(in, srch);
 }
@@ -271,7 +271,7 @@ int any_and(Node *srch, Node *in) {
     return 0;
 
   if (srch->ntyp == AND)
-    return any_and(srch->lft, in) && any_and(srch->rgt, in);
+    return any_and(srch->left, in) && any_and(srch->right, in);
 
   return any_term(srch, in);
 }
@@ -281,7 +281,7 @@ int any_lor(Node *srch, Node *in) {
     return 0;
 
   if (in->ntyp == OR)
-    return any_lor(srch, in->lft) || any_lor(srch, in->rgt);
+    return any_lor(srch, in->left) || any_lor(srch, in->right);
 
   return isequal(in, srch);
 }

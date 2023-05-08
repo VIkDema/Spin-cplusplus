@@ -22,15 +22,15 @@ Node *right_linked(Node *n) {
     return n;
 
   if (n->ntyp == AND || n->ntyp == OR)
-    while (n->lft && n->lft->ntyp == n->ntyp) {
-      Node *tmp = n->lft;
-      n->lft = tmp->rgt;
-      tmp->rgt = n;
+    while (n->left && n->left->ntyp == n->ntyp) {
+      Node *tmp = n->left;
+      n->left = tmp->right;
+      tmp->right = n;
       n = tmp;
     }
 
-  n->lft = right_linked(n->lft);
-  n->rgt = right_linked(n->rgt);
+  n->left = right_linked(n->left);
+  n->right = right_linked(n->right);
 
   return n;
 }
@@ -43,8 +43,8 @@ Node *canonical(Node *n) {
   if ((m = in_cache(n)) != ZN)
     return m;
 
-  n->rgt = canonical(n->rgt);
-  n->lft = canonical(n->lft);
+  n->right = canonical(n->right);
+  n->left = canonical(n->left);
 
   return cached(n);
 }
@@ -54,24 +54,24 @@ Node *push_negation(Node *n) {
 
   Assert(n->ntyp == NOT, n->ntyp);
 
-  switch (n->lft->ntyp) {
+  switch (n->left->ntyp) {
   case TRUE:
     Debug("!true => false\n");
-    releasenode(0, n->lft);
-    n->lft = ZN;
+    releasenode(0, n->left);
+    n->left = ZN;
     n->ntyp = FALSE;
     break;
   case FALSE:
     Debug("!false => true\n");
-    releasenode(0, n->lft);
-    n->lft = ZN;
+    releasenode(0, n->left);
+    n->left = ZN;
     n->ntyp = TRUE;
     break;
   case NOT:
     Debug("!!p => p\n");
-    m = n->lft->lft;
-    releasenode(0, n->lft);
-    n->lft = ZN;
+    m = n->left->left;
+    releasenode(0, n->left);
+    n->left = ZN;
     releasenode(0, n);
     n = m;
     break;
@@ -87,8 +87,8 @@ Node *push_negation(Node *n) {
   case NEXT:
     Debug("!X -> X!\n");
     n->ntyp = NEXT;
-    n->lft->ntyp = NOT;
-    n->lft = push_negation(n->lft);
+    n->left->ntyp = NOT;
+    n->left = push_negation(n->left);
     break;
 #endif
   case AND:
@@ -100,13 +100,13 @@ Node *push_negation(Node *n) {
     n->ntyp = AND;
 
   same:
-    m = n->lft->rgt;
-    n->lft->rgt = ZN;
+    m = n->left->right;
+    n->left->right = ZN;
 
-    n->rgt = Not(m);
-    n->lft->ntyp = NOT;
-    m = n->lft;
-    n->lft = push_negation(m);
+    n->right = Not(m);
+    n->left->ntyp = NOT;
+    m = n->left;
+    n->left = push_negation(m);
     break;
   }
 
@@ -124,8 +124,8 @@ static void addcan(int tok, Node *n) {
     return;
 
   if (n->ntyp == tok) {
-    addcan(tok, n->rgt);
-    addcan(tok, n->lft);
+    addcan(tok, n->right);
+    addcan(tok, n->left);
     return;
   }
 
@@ -147,8 +147,8 @@ static void addcan(int tok, Node *n) {
 
   /* there are at least 2 elements in list */
   prev = ZN;
-  for (m = can; m->ntyp == tok && m->rgt; prev = m, m = m->rgt) {
-    t = DoDump(m->lft);
+  for (m = can; m->ntyp == tok && m->right; prev = m, m = m->right) {
+    t = DoDump(m->left);
     if (t != ZS)
       cmp = strcmp(s->name, t->name);
     else
@@ -160,14 +160,14 @@ static void addcan(int tok, Node *n) {
         can = tl_nn(tok, N, can);
         return;
       } else {
-        ptr = &(prev->rgt);
+        ptr = &(prev->right);
         goto insert;
       }
     }
   }
 
   /* new entry goes at the end of the list */
-  ptr = &(prev->rgt);
+  ptr = &(prev->right);
 insert:
   t = DoDump(*ptr);
   cmp = strcmp(s->name, t->name);
@@ -181,8 +181,8 @@ insert:
 
 static void marknode(int tok, Node *m) {
   if (m->ntyp != tok) {
-    releasenode(0, m->rgt);
-    m->rgt = ZN;
+    releasenode(0, m->right);
+    m->right = ZN;
   }
   m->ntyp = -1;
 }
@@ -204,8 +204,8 @@ Node *Canonical(Node *n) {
 
   /* mark redundant nodes */
   if (tok == AND) {
-    for (m = can; m; m = (m->ntyp == AND) ? m->rgt : ZN) {
-      k1 = (m->ntyp == AND) ? m->lft : m;
+    for (m = can; m; m = (m->ntyp == AND) ? m->right : ZN) {
+      k1 = (m->ntyp == AND) ? m->left : m;
       if (k1->ntyp == TRUE) {
         marknode(AND, m);
         dflt = True;
@@ -217,12 +217,12 @@ Node *Canonical(Node *n) {
         goto out;
       }
     }
-    for (m = can; m; m = (m->ntyp == AND) ? m->rgt : ZN)
-      for (p = can; p; p = (p->ntyp == AND) ? p->rgt : ZN) {
+    for (m = can; m; m = (m->ntyp == AND) ? m->right : ZN)
+      for (p = can; p; p = (p->ntyp == AND) ? p->right : ZN) {
         if (p == m || p->ntyp == -1 || m->ntyp == -1)
           continue;
-        k1 = (m->ntyp == AND) ? m->lft : m;
-        k2 = (p->ntyp == AND) ? p->lft : p;
+        k1 = (m->ntyp == AND) ? m->left : m;
+        k2 = (p->ntyp == AND) ? p->left : p;
 
         if (isequal(k1, k2)) {
           marknode(AND, p);
@@ -235,8 +235,8 @@ Node *Canonical(Node *n) {
       }
   }
   if (tok == OR) {
-    for (m = can; m; m = (m->ntyp == OR) ? m->rgt : ZN) {
-      k1 = (m->ntyp == OR) ? m->lft : m;
+    for (m = can; m; m = (m->ntyp == OR) ? m->right : ZN) {
+      k1 = (m->ntyp == OR) ? m->left : m;
       if (k1->ntyp == FALSE) {
         marknode(OR, m);
         dflt = False;
@@ -248,12 +248,12 @@ Node *Canonical(Node *n) {
         goto out;
       }
     }
-    for (m = can; m; m = (m->ntyp == OR) ? m->rgt : ZN)
-      for (p = can; p; p = (p->ntyp == OR) ? p->rgt : ZN) {
+    for (m = can; m; m = (m->ntyp == OR) ? m->right : ZN)
+      for (p = can; p; p = (p->ntyp == OR) ? p->right : ZN) {
         if (p == m || p->ntyp == -1 || m->ntyp == -1)
           continue;
-        k1 = (m->ntyp == OR) ? m->lft : m;
-        k2 = (p->ntyp == OR) ? p->lft : p;
+        k1 = (m->ntyp == OR) ? m->left : m;
+        k2 = (p->ntyp == OR) ? p->left : p;
 
         if (isequal(k1, k2)) {
           marknode(OR, p);
@@ -268,27 +268,27 @@ Node *Canonical(Node *n) {
   for (m = can, prev = ZN; m;) /* remove marked nodes */
   {
     if (m->ntyp == -1) {
-      k2 = m->rgt;
+      k2 = m->right;
       releasenode(0, m);
       if (!prev) {
-        m = can = can->rgt;
+        m = can = can->right;
       } else {
-        m = prev->rgt = k2;
+        m = prev->right = k2;
         /* if deleted the last node in a chain */
-        if (!prev->rgt && prev->lft &&
+        if (!prev->right && prev->left &&
             (prev->ntyp == AND || prev->ntyp == OR)) {
-          k1 = prev->lft;
-          prev->ntyp = prev->lft->ntyp;
-          prev->sym = prev->lft->sym;
-          prev->rgt = prev->lft->rgt;
-          prev->lft = prev->lft->lft;
+          k1 = prev->left;
+          prev->ntyp = prev->left->ntyp;
+          prev->symbol = prev->left->symbol;
+          prev->right = prev->left->right;
+          prev->left = prev->left->left;
           releasenode(0, k1);
         }
       }
       continue;
     }
     prev = m;
-    m = m->rgt;
+    m = m->right;
   }
 out:
   if (!can) {
