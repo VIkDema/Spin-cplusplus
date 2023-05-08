@@ -9,6 +9,7 @@
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
+#include "models/lextok.hpp"
 
 extern LaunchSettings launch_settings;
 extern lexer::ScopeProcessor scope_processor_;
@@ -23,7 +24,7 @@ Ordered *all_names = (Ordered *)0;
 int Nid_nr = 0;
 
 Mtypes_t *Mtypes;
-Lextok *runstmnts = ZN;
+models::Lextok *runstmnts = ZN;
 
 static Ordered *last_name = (Ordered *)0;
 static models::Symbol *symtab[Nhash + 1];
@@ -141,23 +142,23 @@ models::Symbol *lookup(const std::string &s) {
   return sp;
 }
 
-void trackvar(Lextok *n, Lextok *m) {
-  models::Symbol *sp = n->sym;
+void trackvar(models::Lextok *n, models::Lextok *m) {
+  models::Symbol *sp = n->symbol;
 
   if (!sp)
     return; /* a structure list */
-  switch (m->ntyp) {
+  switch (m->node_type) {
   case NAME:
-    if (m->sym->type != BIT) {
+    if (m->symbol->type != BIT) {
       sp->hidden_flags |= 4;
-      if (m->sym->type != models::SymbolType::kByte)
+      if (m->symbol->type != models::SymbolType::kByte)
         sp->hidden_flags |= 8;
     }
     break;
   case CONST:
-    if (m->val != 0 && m->val != 1)
+    if (m->value != 0 && m->value != 1)
       sp->hidden_flags |= 4;
-    if (m->val < 0 || m->val > 256)
+    if (m->value < 0 || m->value > 256)
       sp->hidden_flags |= 8; /* ditto byte-equiv */
     break;
   default:                       /* unknown */
@@ -165,29 +166,29 @@ void trackvar(Lextok *n, Lextok *m) {
   }
 }
 
-void trackrun(Lextok *n) { runstmnts = nn(ZN, 0, n, runstmnts); }
+void trackrun(models::Lextok *n) { runstmnts = nn(ZN, 0, n, runstmnts); }
 
 void checkrun(models::Symbol *parnm, int posno) {
-  Lextok *n, *now, *v;
+  models::Lextok *n, *now, *v;
   int i, m;
   int res = 0;
   std::string buf, buf2;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
-  for (n = runstmnts; n; n = n->rgt) {
-    now = n->lft;
-    if (now->sym != parnm->context)
+  for (n = runstmnts; n; n = n->right) {
+    now = n->left;
+    if (now->symbol != parnm->context)
       continue;
-    for (v = now->lft, i = 0; v; v = v->rgt, i++)
+    for (v = now->left, i = 0; v; v = v->right, i++)
       if (i == posno) {
-        m = v->lft->ntyp;
+        m = v->left->node_type;
         if (m == CONST) {
-          m = v->lft->val;
+          m = v->left->value;
           if (m != 0 && m != 1)
             res |= 4;
           if (m < 0 || m > 256)
             res |= 8;
         } else if (m == NAME) {
-          m = v->lft->sym->type;
+          m = v->left->symbol->type;
           if (m != BIT) {
             res |= 4;
             if (m != BYTE)
@@ -217,103 +218,103 @@ void checkrun(models::Symbol *parnm, int posno) {
   }
 }
 
-void trackchanuse(Lextok *m, Lextok *w, int t) {
-  Lextok *n = m;
+void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
+  models::Lextok *n = m;
   int count = 1;
   while (n) {
-    if (n->lft && n->lft->sym && n->lft->sym->type == CHAN)
-      setaccess(n->lft->sym, w ? w->sym : ZS, count, t);
-    n = n->rgt;
+    if (n->left && n->left->symbol && n->left->symbol->type == CHAN)
+      setaccess(n->left->symbol, w ? w->symbol : ZS, count, t);
+    n = n->right;
     count++;
   }
 }
 
-void setptype(Lextok *mtype_name, Lextok *n, int t,
-              Lextok *vis) /* predefined types */
+void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
+              models::Lextok *vis) /* predefined types */
 {
   int oln = lineno, cnt = 1;
   extern int Expand_Ok;
 
   while (n) {
-    if (n->sym->type && !(n->sym->hidden_flags & 32)) {
-      lineno = n->ln;
-      Fname = n->fn;
-      loger::fatal("redeclaration of '%s'", n->sym->name);
+    if (n->symbol->type && !(n->symbol->hidden_flags & 32)) {
+      lineno = n->line_number;
+      Fname = n->file_name;
+      loger::fatal("redeclaration of '%s'", n->symbol->name);
       lineno = oln;
     }
-    n->sym->type = (models::SymbolType)t;
+    n->symbol->type = (models::SymbolType)t;
 
     if (mtype_name && t != MTYPE) {
-      lineno = n->ln;
-      Fname = n->fn;
-      loger::fatal("missing semi-colon after '%s'?", mtype_name->sym->name);
+      lineno = n->line_number;
+      Fname = n->file_name;
+      loger::fatal("missing semi-colon after '%s'?", mtype_name->symbol->name);
       lineno = oln;
     }
 
-    if (mtype_name && n->sym->mtype_name &&
-        mtype_name->sym->name != n->sym->mtype_name->name) {
+    if (mtype_name && n->symbol->mtype_name &&
+        mtype_name->symbol->name != n->symbol->mtype_name->name) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
-              n->fn->name.c_str(), n->ln, n->sym->name.c_str(),
-              mtype_name->sym->name.c_str(), n->sym->mtype_name->name.c_str());
+              n->file_name->name.c_str(), n->line_number, n->symbol->name.c_str(),
+              mtype_name->symbol->name.c_str(), n->symbol->mtype_name->name.c_str());
       loger::non_fatal("type error");
     }
 
-    n->sym->mtype_name =
-        mtype_name ? mtype_name->sym : 0; /* if mtype, else 0 */
+    n->symbol->mtype_name =
+        mtype_name ? mtype_name->symbol : 0; /* if mtype, else 0 */
 
     if (Expand_Ok) {
-      n->sym->hidden_flags |= (4 | 8 | 16); /* formal par */
+      n->symbol->hidden_flags |= (4 | 8 | 16); /* formal par */
       if (t == CHAN)
-        setaccess(n->sym, ZS, cnt, 'F');
+        setaccess(n->symbol, ZS, cnt, 'F');
     }
 
     if (t == UNSIGNED) {
-      if (!n->sym->nbits.has_value() || n->sym->nbits.value() >= 32)
-        loger::fatal("(%s) has invalid width-field", n->sym->name);
-      if (n->sym->nbits.has_value() && n->sym->nbits.value() == 0) {
-        n->sym->nbits = 16;
+      if (!n->symbol->nbits.has_value() || n->symbol->nbits.value() >= 32)
+        loger::fatal("(%s) has invalid width-field", n->symbol->name);
+      if (n->symbol->nbits.has_value() && n->symbol->nbits.value() == 0) {
+        n->symbol->nbits = 16;
         loger::non_fatal("unsigned without width-field");
       }
-    } else if (n->sym->nbits.has_value() && n->sym->nbits.value() > 0) {
+    } else if (n->symbol->nbits.has_value() && n->symbol->nbits.value() > 0) {
       loger::non_fatal("(%s) only an unsigned can have width-field",
-                       n->sym->name);
+                       n->symbol->name);
     }
 
     if (vis) {
-      std::string name = vis->sym->name;
+      std::string name = vis->symbol->name;
       if (name.compare(0, 6, ":hide:") == 0) {
-        n->sym->hidden_flags |= 1;
+        n->symbol->hidden_flags |= 1;
         has_hidden++;
         if (t == BIT)
           loger::fatal("bit variable (%s) cannot be hidden_flags",
-                       n->sym->name.c_str());
+                       n->symbol->name.c_str());
       } else if (name.compare(0, 6, ":show:") == 0) {
-        n->sym->hidden_flags |= 2;
+        n->symbol->hidden_flags |= 2;
       } else if (name.compare(0, 7, ":local:") == 0) {
-        n->sym->hidden_flags |= 64;
+        n->symbol->hidden_flags |= 64;
       }
     }
 
     if (t == CHAN) {
-      n->sym->id = ++Nid_nr;
+      n->symbol->id = ++Nid_nr;
     } else {
-      n->sym->id = 0;
-      if (n->sym->init_value && n->sym->init_value->ntyp == CHAN) {
-        Fname = n->fn;
-        lineno = n->ln;
-        loger::fatal("chan initializer for non-channel %s", n->sym->name);
+      n->symbol->id = 0;
+      if (n->symbol->init_value && n->symbol->init_value->node_type == CHAN) {
+        Fname = n->file_name;
+        lineno = n->line_number;
+        loger::fatal("chan initializer for non-channel %s", n->symbol->name);
       }
     }
 
-    if (n->sym->value_type <= 0) {
-      lineno = n->ln;
-      Fname = n->fn;
-      loger::non_fatal("bad array size for '%s'", n->sym->name);
+    if (n->symbol->value_type <= 0) {
+      lineno = n->line_number;
+      Fname = n->file_name;
+      loger::non_fatal("bad array size for '%s'", n->symbol->name);
       lineno = oln;
     }
 
-    n = n->rgt;
+    n = n->right;
     cnt++;
   }
 }
@@ -330,61 +331,61 @@ static void setonexu(models::Symbol *sp, int t) {
   }
 }
 
-static void setallxu(Lextok *n, int t) {
-  Lextok *fp, *tl;
+static void setallxu(models::Lextok *n, int t) {
+  models::Lextok *fp, *tl;
 
-  for (fp = n; fp; fp = fp->rgt)
-    for (tl = fp->lft; tl; tl = tl->rgt) {
-      if (tl->sym->type == STRUCT)
-        setallxu(tl->sym->struct_template, t);
-      else if (tl->sym->type == CHAN)
-        setonexu(tl->sym, t);
+  for (fp = n; fp; fp = fp->right)
+    for (tl = fp->left; tl; tl = tl->right) {
+      if (tl->symbol->type == STRUCT)
+        setallxu(tl->symbol->struct_template, t);
+      else if (tl->symbol->type == CHAN)
+        setonexu(tl->symbol, t);
     }
 }
 
-Lextok *Xu_List = (Lextok *)0;
+models::Lextok *Xu_List = (models::Lextok *)0;
 
-void setxus(Lextok *p, int t) {
-  Lextok *m, *n;
+void setxus(models::Lextok *p, int t) {
+  models::Lextok *m, *n;
 
   has_xu = 1;
 
   if (launch_settings.need_lose_msgs_sent_to_full_queues && t == XS) {
     printf(
         "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
-        (p->fn != NULL) ? p->fn->name.c_str() : "stdin", p->ln);
+        (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin", p->line_number);
   }
 
   if (!context) {
-    lineno = p->ln;
-    Fname = p->fn;
+    lineno = p->line_number;
+    Fname = p->file_name;
     loger::fatal("non-local x[rs] assertion");
   }
-  for (m = p; m; m = m->rgt) {
-    Lextok *Xu_new = (Lextok *)emalloc(sizeof(Lextok));
-    Xu_new->uiid = p->uiid;
-    Xu_new->val = t;
-    Xu_new->lft = m->lft;
-    Xu_new->sym = context;
-    Xu_new->rgt = Xu_List;
+  for (m = p; m; m = m->right) {
+    models::Lextok *Xu_new = (models::Lextok *)emalloc(sizeof(models::Lextok));
+    Xu_new->opt_inline_id = p->opt_inline_id;
+    Xu_new->value = t;
+    Xu_new->left = m->left;
+    Xu_new->symbol = context;
+    Xu_new->right = Xu_List;
     Xu_List = Xu_new;
 
-    n = m->lft;
-    if (n->sym->type == STRUCT)
-      setallxu(n->sym->struct_template, t);
-    else if (n->sym->type == CHAN)
-      setonexu(n->sym, t);
+    n = m->left;
+    if (n->symbol->type == STRUCT)
+      setallxu(n->symbol->struct_template, t);
+    else if (n->symbol->type == CHAN)
+      setonexu(n->symbol, t);
     else {
       int oln = lineno;
-      lineno = n->ln;
-      Fname = n->fn;
-      loger::non_fatal("xr or xs of non-chan '%s'", n->sym->name);
+      lineno = n->line_number;
+      Fname = n->file_name;
+      loger::non_fatal("xr or xs of non-chan '%s'", n->symbol->name);
       lineno = oln;
     }
   }
 }
 
-Lextok **find_mtype_list(const std::string &s) {
+models::Lextok **find_mtype_list(const std::string &s) {
   Mtypes_t *lst;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
@@ -401,19 +402,19 @@ Lextok **find_mtype_list(const std::string &s) {
   return &(lst->mt);
 }
 
-void setmtype(Lextok *mtype_name, Lextok *m) {
-  Lextok **mtl; /* mtype list */
-  Lextok *n, *Mtype;
+void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
+  models::Lextok **mtl; /* mtype list */
+  models::Lextok *n, *Mtype;
   int cnt, oln = lineno;
   std::string s = "_unnamed_";
 
   if (m) {
-    lineno = m->ln;
-    Fname = m->fn;
+    lineno = m->line_number;
+    Fname = m->file_name;
   }
 
-  if (mtype_name && mtype_name->sym) {
-    s = mtype_name->sym->name;
+  if (mtype_name && mtype_name->symbol) {
+    s = mtype_name->symbol->name;
   }
 
   mtl = find_mtype_list(s);
@@ -422,27 +423,27 @@ void setmtype(Lextok *mtype_name, Lextok *m) {
   if (!Mtype) {
     *mtl = Mtype = m;
   } else {
-    for (n = Mtype; n->rgt; n = n->rgt) {
+    for (n = Mtype; n->right; n = n->right) {
       ;
     }
-    n->rgt = m; /* concatenate */
+    n->right = m; /* concatenate */
   }
 
-  for (n = Mtype, cnt = 1; n; n = n->rgt, cnt++) /* syntax check */
+  for (n = Mtype, cnt = 1; n; n = n->right, cnt++) /* syntax check */
   {
-    if (!n->lft || !n->lft->sym || n->lft->ntyp != NAME ||
-        n->lft->lft) /* indexed variable */
+    if (!n->left || !n->left->symbol || n->left->node_type != NAME ||
+        n->left->left) /* indexed variable */
       loger::fatal("bad mtype definition");
 
     /* label the name */
-    if (n->lft->sym->type != models::SymbolType::kMtype) {
-      n->lft->sym->hidden_flags |= 128; /* is used */
-      n->lft->sym->type = models::SymbolType::kMtype;
-      n->lft->sym->init_value = nn(ZN, CONST, ZN, ZN);
-      n->lft->sym->init_value->val = cnt;
-    } else if (n->lft->sym->init_value->val != cnt) {
+    if (n->left->symbol->type != models::SymbolType::kMtype) {
+      n->left->symbol->hidden_flags |= 128; /* is used */
+      n->left->symbol->type = models::SymbolType::kMtype;
+      n->left->symbol->init_value = nn(ZN, CONST, ZN, ZN);
+      n->left->symbol->init_value->value = cnt;
+    } else if (n->left->symbol->init_value->value != cnt) {
       loger::non_fatal("name %s appears twice in mtype declaration",
-                       n->lft->sym->name);
+                       n->left->symbol->name);
     }
   }
 
@@ -456,11 +457,11 @@ std::string which_mtype(
     const std::string &str) /* which mtype is str, 0 if not an mtype at all  */
 {
   Mtypes_t *lst;
-  Lextok *n;
+  models::Lextok *n;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
-    for (n = lst->mt; n; n = n->rgt) {
-      if (str == n->lft->sym->name) {
+    for (n = lst->mt; n; n = n->right) {
+      if (str == n->left->symbol->name) {
         return lst->nm;
       }
     }
@@ -472,13 +473,13 @@ std::string which_mtype(
 int ismtype(const std::string &str) /* name to number */
 {
   Mtypes_t *lst;
-  Lextok *n;
+  models::Lextok *n;
   int count;
 
   for (lst = Mtypes; lst; lst = lst->nxt) {
     count = 1;
-    for (n = lst->mt; n; n = n->rgt) {
-      if (str == std::string(n->lft->sym->name)) {
+    for (n = lst->mt; n; n = n->right) {
+      if (str == std::string(n->left->symbol->name)) {
         return count;
       }
       count++;
@@ -537,7 +538,7 @@ static int puttype(int m) {
 }
 
 void symvar(models::Symbol *sp) {
-  Lextok *m;
+  models::Lextok *m;
 
   if (!puttype(sp->type))
     return;
@@ -550,7 +551,7 @@ void symvar(models::Symbol *sp) {
     printf("[%d]", sp->value_type);
 
   if (sp->type == CHAN)
-    printf("\t%d", (sp->init_value) ? sp->init_value->val : 0);
+    printf("\t%d", (sp->init_value) ? sp->init_value->value : 0);
   else if (sp->type == STRUCT &&
            sp->struct_name != nullptr) /* Frank Weil, 2.9.8 */
     printf("\t%s", sp->struct_name->name.c_str());
@@ -575,15 +576,15 @@ void symvar(models::Symbol *sp) {
 
   if (sp->type == CHAN && sp->init_value) {
     int i;
-    for (m = sp->init_value->rgt, i = 0; m; m = m->rgt)
+    for (m = sp->init_value->right, i = 0; m; m = m->right)
       i++;
     printf("\t%d\t", i);
-    for (m = sp->init_value->rgt; m; m = m->rgt) {
-      if (m->ntyp == STRUCT)
-        printf("struct %s", m->sym->name.c_str());
+    for (m = sp->init_value->right; m; m = m->right) {
+      if (m->node_type == STRUCT)
+        printf("struct %s", m->symbol->name.c_str());
       else
-        (void)puttype(m->ntyp);
-      if (m->rgt)
+        (void)puttype(m->node_type);
+      if (m->right)
         printf("\t");
     }
   }

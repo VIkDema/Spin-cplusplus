@@ -10,8 +10,8 @@ extern FILE *fd_th, *fd_tc;
 extern int eventmapnr, in_settr;
 
 struct SRC {
-  int ln, st;         /* linenr, statenr */
-  models::Symbol *fn; /* filename */
+  int line_number, st;         /* linenr, statenr */
+  models::Symbol *file_name; /* filename */
   struct SRC *nxt;
 };
 
@@ -24,7 +24,7 @@ static SRC *skip = (SRC *)0;
 extern lexer::Lexer lexer_;
 
 extern void sr_mesg(FILE *, int, int, const std::string&);
-extern Lextok **find_mtype_list(const std::string &);
+extern models::Lextok **find_mtype_list(const std::string &);
 
 static void putnr(int n) {
   if (col++ == 8) {
@@ -115,14 +115,14 @@ void putsrc(Element *e) /* match states to source lines */
   if (!e || !e->n)
     return;
 
-  n = e->n->ln;
+  n = e->n->line_number;
   m = e->seqno;
   /* 6.4.0: now an ordered list */
   for (tmp = frst; tmp; lst = tmp, tmp = tmp->nxt) {
     if (tmp->st == m) {
-      if (tmp->ln != n || tmp->fn != e->n->fn)
+      if (tmp->line_number != n || tmp->file_name != e->n->file_name)
         printf("putsrc mismatch seqno %d, line %d - %d, file %s\n", m, n,
-               tmp->ln, tmp->fn->name.c_str());
+               tmp->line_number, tmp->file_name->name.c_str());
       return;
     }
     if (tmp->st > m) /* insert before */
@@ -135,15 +135,15 @@ void putsrc(Element *e) /* match states to source lines */
         tmp = newsrc(m, lst->nxt);
         lst->nxt = tmp;
       }
-      tmp->ln = n;
-      tmp->fn = e->n->fn;
+      tmp->line_number = n;
+      tmp->file_name = e->n->file_name;
       return;
     }
   }
   /* insert at the end */
   tmp = newsrc(m, lst ? lst->nxt : 0);
-  tmp->ln = n;
-  tmp->fn = e->n->fn;
+  tmp->line_number = n;
+  tmp->file_name = e->n->file_name;
   if (lst) {
     lst->nxt = tmp;
   } else {
@@ -199,7 +199,7 @@ void dumpsrc(int n, int m) {
   for (j = 0, col = 0; j <= n; j++) {
     for (; tmp; tmp = tmp->nxt) {
       if (tmp->st == j) {
-        putnr(tmp->ln);
+        putnr(tmp->line_number);
         break;
       }
       if (tmp->st > j) {
@@ -221,7 +221,7 @@ void dumpsrc(int n, int m) {
   for (j = 0, col = 0; j <= n; j++) {
     for (; tmp; lst = tmp, tmp = tmp->nxt) {
       if (tmp->st == j) {
-        putfnm(j, tmp->fn);
+        putfnm(j, tmp->file_name);
         if (lst)
           lst->nxt = tmp->nxt;
         else
@@ -252,9 +252,9 @@ void dumpsrc(int n, int m) {
 }
 
 #define Cat0(x)                                                                \
-  comwork(fd, now->lft, m);                                                    \
+  comwork(fd, now->left, m);                                                    \
   fprintf(fd, x);                                                              \
-  comwork(fd, now->rgt, m)
+  comwork(fd, now->right, m)
 #define Cat1(x)                                                                \
   fprintf(fd, "(");                                                            \
   Cat0(x);                                                                     \
@@ -267,19 +267,19 @@ void dumpsrc(int n, int m) {
   comwork(fd, y, m);                                                           \
   fprintf(fd, z)
 
-static int symbolic(FILE *fd, Lextok *tv) {
-  Lextok *n, *Mtype;
+static int symbolic(FILE *fd, models::Lextok *tv) {
+  models::Lextok *n, *Mtype;
   int cnt = 1;
 
-  if (tv->ismtyp) {
+  if (tv->is_mtype_token) {
     std::string s = "_unnamed_";
-    if (tv->sym && tv->sym->mtype_name) {
-      s = tv->sym->mtype_name->name;
+    if (tv->symbol && tv->symbol->mtype_name) {
+      s = tv->symbol->mtype_name->name;
     }
     Mtype = *find_mtype_list(s);
-    for (n = Mtype; n; n = n->rgt, cnt++) {
-      if (cnt == tv->val) {
-        fprintf(fd, "%s", n->lft->sym->name.c_str());
+    for (n = Mtype; n; n = n->right, cnt++) {
+      if (cnt == tv->value) {
+        fprintf(fd, "%s", n->left->symbol->name.c_str());
         return 1;
       }
     }
@@ -288,8 +288,8 @@ static int symbolic(FILE *fd, Lextok *tv) {
   return 0;
 }
 
-static void comwork(FILE *fd, Lextok *now, int m) {
-  Lextok *v;
+static void comwork(FILE *fd, models::Lextok *now, int m) {
+  models::Lextok *v;
   std::string s;
   int i, j;
 
@@ -299,22 +299,22 @@ static void comwork(FILE *fd, Lextok *now, int m) {
   }
   char *now_val_two = "!!";
   char *now_val_one = "!";
-  switch (now->ntyp) {
+  switch (now->node_type) {
   case CONST:
-    if (now->ismtyp && now->sym && now->sym->mtype_name) {
-      s = now->sym->mtype_name->name;
+    if (now->is_mtype_token && now->symbol && now->symbol->mtype_name) {
+      s = now->symbol->mtype_name->name;
     }
-    sr_mesg(fd, now->val, now->ismtyp, s.c_str());
+    sr_mesg(fd, now->value, now->is_mtype_token, s.c_str());
     break;
 
   case '!':
-    Cat3("!(", now->lft, ")");
+    Cat3("!(", now->left, ")");
     break;
   case UMIN:
-    Cat3("-(", now->lft, ")");
+    Cat3("-(", now->left, ")");
     break;
   case '~':
-    Cat3("~(", now->lft, ")");
+    Cat3("~(", now->left, ")");
     break;
 
   case '/':
@@ -357,20 +357,20 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     Cat1("!=");
     break;
   case EQ:
-    if (lexer_.IsLtlMode() && now->lft->ntyp == 'p' &&
-        now->rgt->ntyp == 'q') /* remote ref */
+    if (lexer_.IsLtlMode() && now->left->node_type == 'p' &&
+        now->right->node_type == 'q') /* remote ref */
     {
-      Lextok *p = now->lft->lft;
+      models::Lextok *p = now->left->left;
 
       fprintf(fd, "(");
-      fprintf(fd, "%s", p->sym->name.c_str());
-      if (p->lft) {
+      fprintf(fd, "%s", p->symbol->name.c_str());
+      if (p->left) {
         fprintf(fd, "[");
-        putstmnt(fd, p->lft, 0); /* pid */
+        putstmnt(fd, p->left, 0); /* pid */
         fprintf(fd, "]");
       }
       fprintf(fd, "@");
-      fprintf(fd, "%s", now->rgt->sym->name.c_str());
+      fprintf(fd, "%s", now->right->symbol->name.c_str());
       fprintf(fd, ")");
       break;
     }
@@ -391,45 +391,45 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case RUN:
-    fprintf(fd, "run %s(", now->sym->name.c_str());
-    for (v = now->lft; v; v = v->rgt)
-      if (v == now->lft) {
-        comwork(fd, v->lft, m);
+    fprintf(fd, "run %s(", now->symbol->name.c_str());
+    for (v = now->left; v; v = v->right)
+      if (v == now->left) {
+        comwork(fd, v->left, m);
       } else {
-        Cat2(",", v->lft);
+        Cat2(",", v->left);
       }
     fprintf(fd, ")");
     break;
 
   case LEN:
-    putname(fd, "len(", now->lft, m, ")");
+    putname(fd, "len(", now->left, m, ")");
     break;
   case FULL:
-    putname(fd, "full(", now->lft, m, ")");
+    putname(fd, "full(", now->left, m, ")");
     break;
   case EMPTY:
-    putname(fd, "empty(", now->lft, m, ")");
+    putname(fd, "empty(", now->left, m, ")");
     break;
   case NFULL:
-    putname(fd, "nfull(", now->lft, m, ")");
+    putname(fd, "nfull(", now->left, m, ")");
     break;
   case NEMPTY:
-    putname(fd, "nempty(", now->lft, m, ")");
+    putname(fd, "nempty(", now->left, m, ")");
     break;
 
   case 's':
 
-    putname(fd, "", now->lft, m, now->val ? now_val_two : now_val_one);
-    for (v = now->rgt, i = 0; v; v = v->rgt, i++) {
-      if (v != now->rgt)
+    putname(fd, "", now->left, m, now->value ? now_val_two : now_val_one);
+    for (v = now->right, i = 0; v; v = v->right, i++) {
+      if (v != now->right)
         fprintf(fd, ",");
-      if (!symbolic(fd, v->lft))
-        comwork(fd, v->lft, m);
+      if (!symbolic(fd, v->left))
+        comwork(fd, v->left, m);
     }
     break;
   case 'r':
-    putname(fd, "", now->lft, m, "?");
-    switch (now->val) {
+    putname(fd, "", now->left, m, "?");
+    switch (now->value) {
     case 0:
       break;
     case 1:
@@ -442,55 +442,55 @@ static void comwork(FILE *fd, Lextok *now, int m) {
       fprintf(fd, "?<");
       break;
     }
-    for (v = now->rgt, i = 0; v; v = v->rgt, i++) {
-      if (v != now->rgt)
+    for (v = now->right, i = 0; v; v = v->right, i++) {
+      if (v != now->right)
         fprintf(fd, ",");
-      if (!symbolic(fd, v->lft))
-        comwork(fd, v->lft, m);
+      if (!symbolic(fd, v->left))
+        comwork(fd, v->left, m);
     }
-    if (now->val >= 2)
+    if (now->value >= 2)
       fprintf(fd, ">");
     break;
   case 'R':
     now_val_two = "??[";
     now_val_one = "?[";
-    putname(fd, "", now->lft, m, now->val ? now_val_two : now_val_one);
-    for (v = now->rgt, i = 0; v; v = v->rgt, i++) {
-      if (v != now->rgt)
+    putname(fd, "", now->left, m, now->value ? now_val_two : now_val_one);
+    for (v = now->right, i = 0; v; v = v->right, i++) {
+      if (v != now->right)
         fprintf(fd, ",");
-      if (!symbolic(fd, v->lft))
-        comwork(fd, v->lft, m);
+      if (!symbolic(fd, v->left))
+        comwork(fd, v->left, m);
     }
     fprintf(fd, "]");
     break;
 
   case ENABLED:
-    Cat3("enabled(", now->lft, ")");
+    Cat3("enabled(", now->left, ")");
     break;
 
   case GET_P:
     if (launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "1");
     } else {
-      Cat3("get_priority(", now->lft, ")");
+      Cat3("get_priority(", now->left, ")");
     }
     break;
 
   case SET_P:
     if (!launch_settings.need_revert_old_rultes_for_priority) {
       fprintf(fd, "set_priority(");
-      comwork(fd, now->lft->lft, m);
+      comwork(fd, now->left->left, m);
       fprintf(fd, ", ");
-      comwork(fd, now->lft->rgt, m);
+      comwork(fd, now->left->right, m);
       fprintf(fd, ")");
     }
     break;
 
   case EVAL:
-    if (now->lft->ntyp == ',') {
-      Cat3("eval(", now->lft->lft, ")");
+    if (now->left->node_type == ',') {
+      Cat3("eval(", now->left->left, ")");
     } else {
-      Cat3("eval(", now->lft, ")");
+      Cat3("eval(", now->left, ")");
     }
     break;
 
@@ -499,20 +499,20 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case PC_VAL:
-    Cat3("pc_value(", now->lft, ")");
+    Cat3("pc_value(", now->left, ")");
     break;
 
   case 'c':
-    Cat3("(", now->lft, ")");
+    Cat3("(", now->left, ")");
     break;
 
   case '?':
-    if (now->lft) {
-      Cat3("( (", now->lft, ") -> ");
+    if (now->left) {
+      Cat3("( (", now->left, ") -> ");
     }
-    if (now->rgt) {
-      Cat3("(", now->rgt->lft, ") : ");
-      Cat3("(", now->rgt->rgt, ") )");
+    if (now->right) {
+      Cat3("(", now->right->left, ") : ");
+      Cat3("(", now->right->right, ") )");
     }
     break;
 
@@ -520,18 +520,18 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     if (check_track(now) == STRUCT) {
       break;
     }
-    comwork(fd, now->lft, m);
+    comwork(fd, now->left, m);
     fprintf(fd, " = ");
-    comwork(fd, now->rgt, m);
+    comwork(fd, now->right, m);
     break;
 
   case PRINT: {
     char c;
     std::string buf;
-    buf = now->sym->name.substr(0, 510);
+    buf = now->symbol->name.substr(0, 510);
 
     for (i = j = 0; i < 510; i++, j++) {
-      c = now->sym->name[i];
+      c = now->symbol->name[i];
       buf[j] = c;
       if (c == '\\')
         buf[++j] = c;
@@ -540,14 +540,14 @@ static void comwork(FILE *fd, Lextok *now, int m) {
       if (c == '\0')
         break;
     }
-    if (now->ntyp == PRINT)
+    if (now->node_type == PRINT)
       fprintf(fd, "printf");
     else
       fprintf(fd, "annotate");
     fprintf(fd, "(%s", buf.c_str());
   }
-    for (v = now->lft; v; v = v->rgt) {
-      Cat2(",", v->lft);
+    for (v = now->left; v; v = v->right) {
+      Cat2(",", v->left);
     }
     fprintf(fd, ")");
     break;
@@ -555,14 +555,14 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     fprintf(fd, "printm(");
     {
       std::string s;
-      if (now->lft->sym && now->lft->sym->mtype_name) {
-        s = now->lft->sym->mtype_name->name;
+      if (now->left->symbol && now->left->symbol->mtype_name) {
+        s = now->left->symbol->mtype_name->name;
       }
 
-      if (now->lft && now->lft->ismtyp) {
-        fprintf(fd, "%d", now->lft->val);
+      if (now->left && now->left->is_mtype_token) {
+        fprintf(fd, "%d", now->left->value);
       } else {
-        comwork(fd, now->lft, m);
+        comwork(fd, now->left, m);
       }
 
       if (!s.empty()) {
@@ -582,33 +582,33 @@ static void comwork(FILE *fd, Lextok *now, int m) {
 
   case 'p':
     if (lexer_.IsLtlMode()) {
-      fprintf(fd, "%s", now->lft->sym->name.c_str()); /* proctype */
-      if (now->lft->lft) {
+      fprintf(fd, "%s", now->left->symbol->name.c_str()); /* proctype */
+      if (now->left->left) {
         fprintf(fd, "[");
-        putstmnt(fd, now->lft->lft, 0); /* pid */
+        putstmnt(fd, now->left->left, 0); /* pid */
         fprintf(fd, "]");
       }
       fprintf(fd, ":");                          /* remote varref */
-      fprintf(fd, "%s", now->sym->name.c_str()); /* varname */
+      fprintf(fd, "%s", now->symbol->name.c_str()); /* varname */
       break;
     }
     putremote(fd, now, m);
     break;
   case 'q':
-    fprintf(fd, "%s", now->sym->name.c_str());
+    fprintf(fd, "%s", now->symbol->name.c_str());
     break;
   case C_EXPR:
   case C_CODE:
-    fprintf(fd, "{%s}", now->sym->name.c_str());
+    fprintf(fd, "{%s}", now->symbol->name.c_str());
     break;
   case ASSERT:
-    Cat3("assert(", now->lft, ")");
+    Cat3("assert(", now->left, ")");
     break;
   case '.':
     fprintf(fd, ".(goto)");
     break;
   case GOTO:
-    fprintf(fd, "goto %s", now->sym->name.c_str());
+    fprintf(fd, "goto %s", now->symbol->name.c_str());
     break;
   case BREAK:
     fprintf(fd, "break");
@@ -621,7 +621,7 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     break;
 
   case D_STEP:
-    fprintf(fd, "D_STEP%d", now->ln);
+    fprintf(fd, "D_STEP%d", now->line_number);
     break;
   case ATOMIC:
     fprintf(fd, "ATOMIC");
@@ -642,15 +642,15 @@ static void comwork(FILE *fd, Lextok *now, int m) {
     fprintf(fd, "timeout");
     break;
   default:
-    if (isprint(now->ntyp))
-      fprintf(fd, "'%c'", now->ntyp);
+    if (isprint(now->node_type))
+      fprintf(fd, "'%c'", now->node_type);
     else
-      fprintf(fd, "%d", now->ntyp);
+      fprintf(fd, "%d", now->node_type);
     break;
   }
 }
 
-void comment(FILE *fd, Lextok *now, int m) {
+void comment(FILE *fd, models::Lextok *now, int m) {
   extern short terse, nocast;
 
   terse = nocast = 1;

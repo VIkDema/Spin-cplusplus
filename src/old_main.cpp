@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include "models/lextok.hpp"
 
 #include "fatal/fatal.hpp"
 #include "spin.hpp"
@@ -51,8 +52,6 @@ int has_remote, has_remvar;
 int limited_vis;
 
 extern LaunchSettings launch_settings;
-int implied_semis = 1;
-int ccache = 0; /* oyvind teig: 5.2.0 case caching off by default */
 
 static char *ltl_claims = (char *)0;
 
@@ -124,21 +123,21 @@ char *emalloc(size_t n) {
   return tmp;
 }
 
-void trapwonly(Lextok *n /* , char *unused */) {
+void trapwonly(models::Lextok *n /* , char *unused */) {
   short i;
 
   if (!n) {
     loger::fatal("unexpected error,");
   }
 
-  i = (n->sym) ? n->sym->type : 0;
+  i = (n->symbol) ? n->symbol->type : 0;
 
-  /* printf("%s	realread %d type %d\n", n->sym?n->sym->name:"--", realread, i);
+  /* printf("%s	realread %d type %d\n", n->symbol?n->symbol->name:"--", realread, i);
    */
 
   if (realread && (i == MTYPE || i == BIT || i == BYTE || i == SHORT ||
                    i == INT || i == UNSIGNED)) {
-    n->sym->hidden_flags |= 128; /* var is read at least once */
+    n->symbol->hidden_flags |= 128; /* var is read at least once */
   }
 }
 
@@ -158,30 +157,30 @@ void setaccess(models::Symbol *sp, models::Symbol *what, int cnt, int t) {
   sp->access = a;
 }
 
-Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
-  Lextok *n = (Lextok *)emalloc(sizeof(Lextok));
+models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll, models::Lextok *rl) {
+  models::Lextok *n = (models::Lextok *)emalloc(sizeof(models::Lextok));
   static int warn_nn = 0;
 
-  n->uiid = is_inline(); /* record origin of the statement */
-  n->ntyp = (unsigned short)t;
-  if (s && s->fn) {
-    n->ln = s->ln;
-    n->fn = s->fn;
-  } else if (rl && rl->fn) {
-    n->ln = rl->ln;
-    n->fn = rl->fn;
-  } else if (ll && ll->fn) {
-    n->ln = ll->ln;
-    n->fn = ll->fn;
+  n->opt_inline_id = is_inline(); /* record origin of the statement */
+  n->node_type = (unsigned short)t;
+  if (s && s->file_name) {
+    n->line_number = s->line_number;
+    n->file_name = s->file_name;
+  } else if (rl && rl->file_name) {
+    n->line_number = rl->line_number;
+    n->file_name = rl->file_name;
+  } else if (ll && ll->file_name) {
+    n->line_number = ll->line_number;
+    n->file_name = ll->file_name;
   } else {
-    n->ln = lineno;
-    n->fn = Fname;
+    n->line_number = lineno;
+    n->file_name = Fname;
   }
   if (s)
-    n->sym = s->sym;
-  n->lft = ll;
-  n->rgt = rl;
-  n->indstep = DstepStart;
+    n->symbol = s->symbol;
+  n->left = ll;
+  n->right = rl;
+  n->index_step = DstepStart;
 
   if (t == TIMEOUT)
     Etimeouts++;
@@ -190,9 +189,9 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
     return n;
 
   if (t == 'r' || t == 's')
-    setaccess(n->sym, ZS, 0, t);
+    setaccess(n->symbol, ZS, 0, t);
   if (t == 'R')
-    setaccess(n->sym, ZS, 0, 'P');
+    setaccess(n->symbol, ZS, 0, 'P');
 
   if (context->name.c_str() == claimproc) {
     int forbidden = launch_settings.separate_version;
@@ -218,12 +217,12 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
     case NFULL:
     case NEMPTY:
       /* status becomes non-exclusive */
-      if (n->sym && !(n->sym->xu & XX)) {
-        n->sym->xu |= XX;
+      if (n->symbol && !(n->symbol->xu & XX)) {
+        n->symbol->xu |= XX;
         if (launch_settings.separate_version == 2) {
           printf("spin: warning, make sure that the S1 model\n");
           printf("      also polls channel '%s' in its claim\n",
-                 n->sym->name.c_str());
+                 n->symbol->name.c_str());
         }
       }
       forbidden = 0;
@@ -251,22 +250,22 @@ Lextok *nn(Lextok *s, int t, Lextok *ll, Lextok *rl) {
   return n;
 }
 
-Lextok *rem_lab(models::Symbol *a, Lextok *b,
+models::Lextok *rem_lab(models::Symbol *a, models::Lextok *b,
                 models::Symbol *c) /* proctype name, pid, label name */
 {
-  Lextok *tmp1, *tmp2, *tmp3;
+  models::Lextok *tmp1, *tmp2, *tmp3;
 
   has_remote++;
   c->type = models::kLabel; /* refered to in global context here */
   fix_dest(c, a);           /* in case target of rem_lab is jump */
   tmp1 = nn(ZN, '?', b, ZN);
-  tmp1->sym = a;
+  tmp1->symbol = a;
   tmp1 = nn(ZN, 'p', tmp1, ZN);
-  tmp1->sym = lookup("_p");
+  tmp1->symbol = lookup("_p");
   tmp2 = nn(ZN, NAME, ZN, ZN);
-  tmp2->sym = a;
+  tmp2->symbol = a;
   tmp3 = nn(ZN, 'q', tmp2, ZN);
-  tmp3->sym = c;
+  tmp3->symbol = c;
   return nn(ZN, EQ, tmp1, tmp3);
 #if 0
 	      .---------------EQ-------.
@@ -279,8 +278,8 @@ Lextok *rem_lab(models::Symbol *a, Lextok *b,
 #endif
 }
 
-Lextok *rem_var(models::Symbol *a, Lextok *b, models::Symbol *c, Lextok *ndx) {
-  Lextok *tmp1;
+models::Lextok *rem_var(models::Symbol *a, models::Lextok *b, models::Symbol *c, models::Lextok *ndx) {
+  models::Lextok *tmp1;
 
   has_remote++;
   has_remvar++;
@@ -288,9 +287,9 @@ Lextok *rem_var(models::Symbol *a, Lextok *b, models::Symbol *c, Lextok *ndx) {
   launch_settings.need_statemate_merging = false;
 
   tmp1 = nn(ZN, '?', b, ZN);
-  tmp1->sym = a;
+  tmp1->symbol = a;
   tmp1 = nn(ZN, 'p', tmp1, ndx);
-  tmp1->sym = c;
+  tmp1->symbol = c;
   return tmp1;
 #if 0
 	cannot refer to struct elements

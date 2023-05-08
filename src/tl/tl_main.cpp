@@ -162,9 +162,9 @@ int tl_main(int argc, char *argv[]) {
 
 #define Binop(a)                                                               \
   fprintf(tl_out, "(");                                                        \
-  dump(n->lft);                                                                \
+  dump(n->left);                                                                \
   fprintf(tl_out, a);                                                          \
-  dump(n->rgt);                                                                \
+  dump(n->right);                                                                \
   fprintf(tl_out, ")")
 
 void dump(Node *n) {
@@ -188,14 +188,14 @@ void dump(Node *n) {
   case NEXT:
     fprintf(tl_out, "X");
     fprintf(tl_out, " (");
-    dump(n->lft);
+    dump(n->left);
     fprintf(tl_out, ")");
     break;
 #endif
   case NOT:
     fprintf(tl_out, "!");
     fprintf(tl_out, " (");
-    dump(n->lft);
+    dump(n->left);
     fprintf(tl_out, ")");
     break;
   case FALSE:
@@ -205,12 +205,12 @@ void dump(Node *n) {
     fprintf(tl_out, "true");
     break;
   case PREDICATE:
-    fprintf(tl_out, "(%s)", n->sym->name);
+    fprintf(tl_out, "(%s)", n->symbol->name);
     break;
   case CEXPR:
     fprintf(tl_out, "c_expr");
     fprintf(tl_out, " {");
-    dump(n->lft);
+    dump(n->left);
     fprintf(tl_out, "}");
     break;
   case -1:

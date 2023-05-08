@@ -472,8 +472,8 @@ static void end_labs(models::Symbol *s, int i) {
         if (j > 0 && (l->e->status & ATOM)) {
           sprintf(foo, "%s label inside atomic", ln[j].s);
         complain:
-          lineno = l->e->n->ln;
-          Fname = l->e->n->fn;
+          lineno = l->e->n->line_number;
+          Fname = l->e->n->file_name;
           printf("spin: %3d:%s, warning, %s - is invisible\n", lineno,
                  Fname ? Fname->name.c_str() : "-", foo);
         }
@@ -498,7 +498,7 @@ void ntimes(FILE *fd, int n, int m, const char *c[]) {
 }
 
 void prehint(models::Symbol *s) {
-  Lextok *n;
+  models::Lextok *n;
 
   printf("spin: warning, ");
   if (!s)
@@ -506,7 +506,7 @@ void prehint(models::Symbol *s) {
 
   n = (s->context != ZS) ? s->context->init_value : s->init_value;
   if (n)
-    printf("line %s:%d, ", n->fn->name.c_str(), n->ln);
+    printf("line %s:%d, ", n->file_name->name.c_str(), n->line_number);
 }
 
 void checktype(models::Symbol *sp, const std::string &s) {
@@ -519,16 +519,16 @@ void checktype(models::Symbol *sp, const std::string &s) {
   if (sp->hidden_flags & 16) /* formal parameter */
   {
     ProcList *p;
-    Lextok *f, *t;
+    models::Lextok *f, *t;
     int posnr = 0;
     for (p = ready; p; p = p->nxt)
       if (!p->n->name.empty() && s == p->n->name) {
         break;
       }
     if (p)
-      for (f = p->p; f; f = f->rgt) /* list of types */
-        for (t = f->lft; t; t = t->rgt, posnr++)
-          if (t->sym && t->sym->name == sp->name) {
+      for (f = p->p; f; f = f->right) /* list of types */
+        for (t = f->left; t; t = t->right, posnr++)
+          if (t->symbol && t->symbol->name == sp->name) {
             checkrun(sp, posnr);
             return;
           }
@@ -783,7 +783,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
   ProcList *p;
   models::Symbol *sp;
   Mtypes_t *lst;
-  Lextok *n;
+  models::Lextok *n;
   int j;
   extern Mtypes_t *Mtypes;
 
@@ -817,9 +817,9 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
   for (lst = Mtypes; lst; lst = lst->nxt) {
     fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n", lst->nm.c_str());
     fprintf(fd, "	switch (x) {\n");
-    for (n = lst->mt, j = 1; n && j; n = n->rgt, j++)
+    for (n = lst->mt, j = 1; n && j; n = n->right, j++)
       fprintf(fd, "\tcase %d: Printf(\"%s\"); return;\n", j,
-              n->lft->sym->name.c_str());
+              n->left->symbol->name.c_str());
     fprintf(fd, "	default: Printf(\"%%d\", x); return;\n");
     fprintf(fd, "	}\n");
   }
@@ -923,7 +923,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
       }
       fprintf(ofd, "%s", ter.c_str());
     } else {
-      if (sp->init_value && sp->init_value->ntyp == CHAN) {
+      if (sp->init_value && sp->init_value->node_type == CHAN) {
         for (i = 0; i < sp->value_type; i++) {
           fprintf(ofd, "\t\t%s%s%s[%d]%s", pre.c_str(), s.c_str(),
                   sp->name.c_str(), i, sep.c_str());
@@ -934,13 +934,13 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
           fprintf(ofd, "%s", ter.c_str());
         }
       } else if (sp->init_value) {
-        if (dowhat != LOGV && sp->is_array && sp->init_value->ntyp == ',') {
-          Lextok *z, *y;
+        if (dowhat != LOGV && sp->is_array && sp->init_value->node_type == ',') {
+          models::Lextok *z, *y;
           z = sp->init_value;
           for (i = 0; i < sp->value_type; i++) {
-            if (z && z->ntyp == ',') {
-              y = z->lft;
-              z = z->rgt;
+            if (z && z->node_type == ',') {
+              y = z->left;
+              z = z->right;
             } else {
               y = z;
             }
@@ -975,7 +975,7 @@ static void do_init(FILE *ofd, models::Symbol *sp) {
   int i;
 
   if (sp->init_value && sp->type == CHAN && ((i = qmake(sp)) > 0)) {
-    if (sp->init_value->ntyp == CHAN) {
+    if (sp->init_value->node_type == CHAN) {
       fprintf(ofd, "addqueue(calling_pid, %d, %d)", i,
               ltab[i - 1]->nslots == 0);
     } else {
@@ -1117,10 +1117,10 @@ static void multi_init(void) {
 }
 
 static void put_pinit(ProcList *P) {
-  Lextok *fp, *fpt, *t;
+  models::Lextok *fp, *fpt, *t;
   Element *e = P->s->frst;
   models::Symbol *s = P->n;
-  Lextok *p = P->p;
+  models::Lextok *p = P->p;
   int i = P->tn;
   int init_value, j, k;
 
@@ -1166,24 +1166,24 @@ static void put_pinit(ProcList *P) {
   }
 
   fprintf(fd_tc, "\t\t/* params: */\n");
-  for (fp = p, j = 0; fp; fp = fp->rgt)
-    for (fpt = fp->lft; fpt; fpt = fpt->rgt, j++) {
-      t = (fpt->ntyp == ',') ? fpt->lft : fpt;
-      if (t->sym->value_type > 1 || t->sym->is_array) {
-        lineno = t->ln;
-        Fname = t->fn;
-        loger::fatal("array in parameter list, %s", t->sym->name.c_str());
+  for (fp = p, j = 0; fp; fp = fp->right)
+    for (fpt = fp->left; fpt; fpt = fpt->right, j++) {
+      t = (fpt->node_type == ',') ? fpt->left : fpt;
+      if (t->symbol->value_type > 1 || t->symbol->is_array) {
+        lineno = t->line_number;
+        Fname = t->file_name;
+        loger::fatal("array in parameter list, %s", t->symbol->name.c_str());
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
-      if (t->sym->type == STRUCT) {
-        if (full_name(fd_tc, t, t->sym, 1)) {
-          lineno = t->ln;
-          Fname = t->fn;
+      if (t->symbol->type == STRUCT) {
+        if (full_name(fd_tc, t, t->symbol, 1)) {
+          lineno = t->line_number;
+          Fname = t->file_name;
           loger::fatal("hidden_flags array in parameter %s",
-                       t->sym->name.c_str());
+                       t->symbol->name.c_str());
         }
       } else
-        fprintf(fd_tc, "%s", t->sym->name.c_str());
+        fprintf(fd_tc, "%s", t->symbol->name.c_str());
       fprintf(fd_tc, " = par%d;\n", j);
     }
   fprintf(fd_tc, "\t\t/* locals: */\n");
@@ -1211,15 +1211,15 @@ Element *huntstart(Element *f) {
   {
     elast = e;
     if (e->n) {
-      if (e->n->ntyp == '.' && e->nxt)
+      if (e->n->node_type == '.' && e->nxt)
         e = e->nxt;
-      else if (e->n->ntyp == UNLESS)
+      else if (e->n->node_type == UNLESS)
         e = e->sub->this_sequence->frst;
     }
   }
 
   if (cnt >= 200 || !e) {
-    lineno = (f && f->n) ? f->n->ln : lineno;
+    lineno = (f && f->n) ? f->n->line_number : lineno;
     loger::fatal("confusing control. structure");
   }
   return e;
@@ -1234,11 +1234,11 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       if (e->seqno == stopat)
         break;
 
-      switch (e->n->ntyp) {
+      switch (e->n->node_type) {
       case GOTO:
         g = get_lab(e->n, 1);
         if (e == g) {
-          lineno = (f && f->n) ? f->n->ln : lineno;
+          lineno = (f && f->n) ? f->n->line_number : lineno;
           loger::fatal("infinite goto loop");
         }
         cross_dsteps(e->n, g->n);
@@ -1266,7 +1266,7 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       e = g;
     }
   if (cnt >= 500 || !e) {
-    lineno = (f && f->n) ? f->n->ln : lineno;
+    lineno = (f && f->n) ? f->n->line_number : lineno;
     loger::fatal("confusing control structure");
   }
   return e;

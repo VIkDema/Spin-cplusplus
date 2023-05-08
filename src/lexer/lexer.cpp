@@ -9,6 +9,7 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <optional>
+#include "../models/lextok.hpp"
 
 extern std::string yytext;
 extern lexer::ScopeProcessor scope_processor_;
@@ -20,7 +21,7 @@ extern YYSTYPE yylval;
     if (in_comment_)                                                           \
       goto again;                                                              \
     yylval = nn(ZN, 0, ZN, ZN);                                                \
-    yylval->val = x;                                                           \
+    yylval->value = x;                                                           \
     last_token_ = y;                                                           \
     return y;                                                                  \
   }
@@ -29,7 +30,7 @@ extern YYSTYPE yylval;
     if (in_comment_)                                                           \
       goto again;                                                              \
     yylval = nn(ZN, 0, ZN, ZN);                                                \
-    yylval->sym = x;                                                           \
+    yylval->symbol = x;                                                           \
     last_token_ = y;                                                           \
     return y;                                                                  \
   }
@@ -76,10 +77,10 @@ int Lexer::CheckName(const std::string &value) {
 
   auto opt_name = ::helpers::ParseNameToken(value);
   if (opt_name.has_value()) {
-    yylval->val = opt_name->value;
+    yylval->value = opt_name->value;
     if (opt_name->symbol.has_value()) {
       std::string symbol_copy{opt_name->symbol.value()};
-      yylval->sym = lookup(symbol_copy.data());
+      yylval->symbol = lookup(symbol_copy.data());
     }
 
     if (!(opt_name->token == IN && !in_for_)) {
@@ -87,11 +88,11 @@ int Lexer::CheckName(const std::string &value) {
     }
   }
 
-  if ((yylval->val = ismtype(value)) != 0) {
-    yylval->ismtyp = 1;
-    yylval->sym = (models::Symbol *)emalloc(sizeof(models::Symbol));
-    yylval->sym->name = (char *)emalloc(value.length() + 1);
-    yylval->sym->name = value;
+  if ((yylval->value = ismtype(value)) != 0) {
+    yylval->is_mtype_token = 1;
+    yylval->symbol = (models::Symbol *)emalloc(sizeof(models::Symbol));
+    yylval->symbol->name = (char *)emalloc(value.length() + 1);
+    yylval->symbol->name = value;
     return CONST;
   }
 
@@ -107,28 +108,28 @@ int Lexer::CheckName(const std::string &value) {
 
     auto inline_stub = stream_.GetInlineStub(stream_.GetInlining());
 
-    Lextok *tt, *t = inline_stub->params;
+    models::Lextok *tt, *t = inline_stub->params;
 
-    for (int i = 0; t; t = t->rgt, i++) /* formal pars */
+    for (int i = 0; t; t = t->right, i++) /* formal pars */
     {
-      if (value == std::string(t->lft->sym->name) &&
+      if (value == std::string(t->left->symbol->name) &&
           value != std::string(inline_stub[stream_.GetInlining()].anms[i])) {
         continue;
       }
-      for (tt = inline_stub[stream_.GetInlining()].params; tt; tt = tt->rgt) {
+      for (tt = inline_stub[stream_.GetInlining()].params; tt; tt = tt->right) {
         if (std::string(inline_stub[stream_.GetInlining()].anms[i]) !=
-            std::string(tt->lft->sym->name)) {
+            std::string(tt->left->symbol->name)) {
           continue;
         }
         std::cout << fmt::format("spin: {}:{} replacement value: {}",
                                  !oFname->name.empty() ? oFname->name : "--",
-                                 stream_.GetLineNumber(), tt->lft->sym->name)
+                                 stream_.GetLineNumber(), tt->left->symbol->name)
                   << std::endl;
 
         loger::fatal("formal par of %s contains replacement value",
                      inline_stub[stream_.GetInlining()].nm->name);
-        yylval->ntyp = tt->lft->ntyp;
-        yylval->sym = lookup(tt->lft->sym->name);
+        yylval->node_type = tt->left->node_type;
+        yylval->symbol = lookup(tt->left->symbol->name);
         return NAME;
       }
 
@@ -150,7 +151,7 @@ int Lexer::CheckName(const std::string &value) {
     }
   }
   std::string value_copy = value;
-  yylval->sym = lookup(value_copy.data()); /* symbol table */
+  yylval->symbol = lookup(value_copy.data()); /* symbol table */
   if (IsUtype(value)) {
     return UNAME;
   }
@@ -185,7 +186,7 @@ int Lexer::pre_proc() {
   }
 
   yylval = nn(ZN, 0, ZN, ZN);
-  yylval->sym = lookup(pre_proc_command.data());
+  yylval->symbol = lookup(pre_proc_command.data());
 
   return PREPROC;
 }

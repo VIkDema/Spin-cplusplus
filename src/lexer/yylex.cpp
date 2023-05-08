@@ -127,12 +127,12 @@ int yylex() {
 
     } else if (temp_token == CONST && yytext[0] == '\'') {
 
-      yytext = fmt::format("\'{}\'", (char)yylval->val);
+      yytext = fmt::format("\'{}\'", (char)yylval->value);
       lexer_.update_inline_argument(yytext);
 
     } else if (temp_token == CONST) {
 
-      yytext = fmt::format("{}", yylval->val);
+      yytext = fmt::format("{}", yylval->value);
       lexer_.update_inline_argument(yytext);
 
     } else {

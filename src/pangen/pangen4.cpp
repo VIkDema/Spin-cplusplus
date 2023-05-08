@@ -16,19 +16,19 @@ extern int lineno, Pid_nr, eventmapnr, multi_oval;
 extern short nocast, has_sorted;
 extern const char *R13_[], *R14_[], *R15_[];
 
-static void check_proc(Lextok *, int);
+static void check_proc(models::Lextok *, int);
 
-void undostmnt(Lextok *now, int m) {
-  Lextok *v;
+void undostmnt(models::Lextok *now, int m) {
+  models::Lextok *v;
   int i, j;
 
   if (!now) {
     fprintf(fd_tb, "0");
     return;
   }
-  lineno = now->ln;
-  Fname = now->fn;
-  switch (now->ntyp) {
+  lineno = now->line_number;
+  Fname = now->file_name;
+  switch (now->node_type) {
   case CONST:
   case '!':
   case UMIN:
@@ -79,26 +79,26 @@ void undostmnt(Lextok *now, int m) {
     if (launch_settings.need_lose_msgs_sent_to_full_queues) {
       fprintf(fd_tb, "if (_m == 2) ");
     }
-    putname(fd_tb, "_m = unsend(", now->lft, m, ")");
+    putname(fd_tb, "_m = unsend(", now->left, m, ")");
     break;
 
   case 'r':
     if (Pid_nr == eventmapnr)
       break;
 
-    for (v = now->rgt, i = j = 0; v; v = v->rgt, i++)
-      if (v->lft->ntyp != CONST && v->lft->ntyp != EVAL)
+    for (v = now->right, i = j = 0; v; v = v->right, i++)
+      if (v->left->node_type != CONST && v->left->node_type != EVAL)
         j++;
-    if (j == 0 && now->val >= 2)
+    if (j == 0 && now->value >= 2)
       break; /* poll without side-effect */
 
     {
       int ii = 0, jj;
 
-      for (v = now->rgt; v; v = v->rgt)
-        if ((v->lft->ntyp != CONST && v->lft->ntyp != EVAL))
+      for (v = now->right; v; v = v->right)
+        if ((v->left->node_type != CONST && v->left->node_type != EVAL))
           ii++; /* nr of things bupped */
-      if (now->val == 1) {
+      if (now->value == 1) {
         ii++;
         jj = multi_oval - ii - 1;
         fprintf(fd_tb, "XX = trpt->bup.oval");
@@ -112,35 +112,35 @@ void undostmnt(Lextok *now, int m) {
         jj = multi_oval - ii - 1;
       }
 
-      if (now->val < 2) /* not for channel poll */
-        for (v = now->rgt, i = 0; v; v = v->rgt, i++) {
-          switch (v->lft->ntyp) {
+      if (now->value < 2) /* not for channel poll */
+        for (v = now->right, i = 0; v; v = v->right, i++) {
+          switch (v->left->node_type) {
           case CONST:
           case EVAL:
             fprintf(fd_tb, "unrecv");
-            putname(fd_tb, "(", now->lft, m, ", XX-1, ");
+            putname(fd_tb, "(", now->left, m, ", XX-1, ");
             fprintf(fd_tb, "%d, ", i);
-            if (v->lft->ntyp == EVAL) {
-              if (v->lft->lft->ntyp == ',') {
-                undostmnt(v->lft->lft->lft, m);
+            if (v->left->node_type == EVAL) {
+              if (v->left->left->node_type == ',') {
+                undostmnt(v->left->left->left, m);
               } else {
-                undostmnt(v->lft->lft, m);
+                undostmnt(v->left->left, m);
               }
             } else {
-              undostmnt(v->lft, m);
+              undostmnt(v->left, m);
             }
             fprintf(fd_tb, ", %d);\n\t\t", (i == 0) ? 1 : 0);
             break;
           default:
             fprintf(fd_tb, "unrecv");
-            putname(fd_tb, "(", now->lft, m, ", XX-1, ");
+            putname(fd_tb, "(", now->left, m, ", XX-1, ");
             fprintf(fd_tb, "%d, ", i);
-            if (v->lft->sym && v->lft->sym->name != "_") {
+            if (v->left->symbol && v->left->symbol->name != "_") {
               fprintf(fd_tb, "trpt->bup.oval");
               if (multi_oval > 0)
                 fprintf(fd_tb, "s[%d]", jj);
             } else
-              putstmnt(fd_tb, v->lft, m);
+              putstmnt(fd_tb, v->left, m);
 
             fprintf(fd_tb, ", %d);\n\t\t", (i == 0) ? 1 : 0);
             if (multi_oval > 0)
@@ -150,18 +150,18 @@ void undostmnt(Lextok *now, int m) {
         }
       jj = multi_oval - ii - 1;
 
-      if (now->val == 1 && multi_oval > 0)
+      if (now->value == 1 && multi_oval > 0)
         jj++; /* new 3.4.0 */
 
-      for (v = now->rgt, i = 0; v; v = v->rgt, i++) {
-        switch (v->lft->ntyp) {
+      for (v = now->right, i = 0; v; v = v->right, i++) {
+        switch (v->left->node_type) {
         case CONST:
         case EVAL:
           break;
         default:
-          if (!v->lft->sym || v->lft->sym->name != "_") {
+          if (!v->left->symbol || v->left->symbol->name != "_") {
             nocast = 1;
-            putstmnt(fd_tb, v->lft, m);
+            putstmnt(fd_tb, v->left, m);
             nocast = 0;
             fprintf(fd_tb, " = trpt->bup.oval");
             if (multi_oval > 0)
@@ -192,18 +192,18 @@ void undostmnt(Lextok *now, int m) {
     }
 
     nocast = 1;
-    putstmnt(fd_tb, now->lft, m);
+    putstmnt(fd_tb, now->left, m);
     nocast = 0;
     fprintf(fd_tb, " = trpt->bup.oval");
     if (multi_oval > 0) {
       multi_oval--;
       fprintf(fd_tb, "s[%d]", multi_oval - 1);
     }
-    check_proc(now->rgt, m);
+    check_proc(now->right, m);
     break;
 
   case 'c':
-    check_proc(now->lft, m);
+    check_proc(now->left, m);
     break;
 
   case '.':
@@ -224,23 +224,23 @@ void undostmnt(Lextok *now, int m) {
     break;
 
   case ',':
-    if (now->lft) /* eval usertype5 */
+    if (now->left) /* eval usertype5 */
     {
-      undostmnt(now->lft, m);
+      undostmnt(now->left, m);
       break;
     } /* else fall thru */
   default:
-    printf("spin: bad node type %d (.b)\n", now->ntyp);
+    printf("spin: bad node type %d (.b)\n", now->node_type);
     MainProcessor::Exit(1);
   }
 }
 
-int any_undo(Lextok *now) { /* is there anything to undo on a return move? */
+int any_undo(models::Lextok *now) { /* is there anything to undo on a return move? */
   if (!now)
     return 1;
-  switch (now->ntyp) {
+  switch (now->node_type) {
   case 'c':
-    return any_oper(now->lft, RUN);
+    return any_oper(now->left, RUN);
   case ASSERT:
   case PRINT:
     return any_oper(now, RUN);
@@ -256,24 +256,24 @@ int any_undo(Lextok *now) { /* is there anything to undo on a return move? */
   }
 }
 
-int any_oper(Lextok *now,
+int any_oper(models::Lextok *now,
              int oper) { /* check if an expression contains oper operator */
   if (!now)
     return 0;
-  if (now->ntyp == oper)
+  if (now->node_type == oper)
     return 1;
-  return (any_oper(now->lft, oper) || any_oper(now->rgt, oper));
+  return (any_oper(now->left, oper) || any_oper(now->right, oper));
 }
 
-static void check_proc(Lextok *now, int m) {
+static void check_proc(models::Lextok *now, int m) {
   if (!now)
     return;
-  if (now->ntyp == '@' || now->ntyp == RUN) {
+  if (now->node_type == '@' || now->node_type == RUN) {
     fprintf(fd_tb, ";\n\t\t");
     undostmnt(now, m);
   }
-  check_proc(now->lft, m);
-  check_proc(now->rgt, m);
+  check_proc(now->left, m);
+  check_proc(now->right, m);
 }
 
 void genunio(void) {
@@ -348,10 +348,10 @@ void genunio(void) {
   ntimes(fd_tc, 0, 1, R15_);
 }
 
-int proper_enabler(Lextok *n) {
+int proper_enabler(models::Lextok *n) {
   if (!n)
     return 1;
-  switch (n->ntyp) {
+  switch (n->node_type) {
   case NEMPTY:
   case FULL:
   case NFULL:
@@ -360,9 +360,9 @@ int proper_enabler(Lextok *n) {
   case 'R':
   case NAME:
     launch_settings.has_provided = true;
-    if (n->sym->name == "_pid" || n->sym->name == "_priority")
+    if (n->symbol->name == "_pid" || n->symbol->name == "_priority")
       return 1;
-    return (!(n->sym->context));
+    return (!(n->symbol->context));
 
   case C_EXPR:
   case CONST:
@@ -373,12 +373,12 @@ int proper_enabler(Lextok *n) {
   case ENABLED:
   case PC_VAL:
   case GET_P: /* not SET_P */
-    return proper_enabler(n->lft);
+    return proper_enabler(n->left);
 
   case '!':
   case UMIN:
   case '~':
-    return proper_enabler(n->lft);
+    return proper_enabler(n->left);
 
   case '/':
   case '*':
@@ -400,13 +400,13 @@ int proper_enabler(Lextok *n) {
   case LSHIFT:
   case RSHIFT:
   case 'c': /* case ',': */
-    return proper_enabler(n->lft) && proper_enabler(n->rgt);
+    return proper_enabler(n->left) && proper_enabler(n->right);
 
   default:
     break;
   }
   printf("spin: saw ");
-  loger::explainToString(n->ntyp);
+  loger::explainToString(n->node_type);
   printf("\n");
   return 0;
 }

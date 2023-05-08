@@ -29,11 +29,11 @@ FSM_state **fsm_tbl;
 FSM_use *use_free;
 
 static void ana_seq(Sequence *);
-static void ana_stmnt(FSM_trans *, Lextok *, int);
+static void ana_stmnt(FSM_trans *, models::Lextok *, int);
 
 extern void AST_slice(void);
 extern void AST_store(ProcList *, int);
-extern int has_global(Lextok *);
+extern int has_global(models::Lextok *);
 extern void exit(int);
 
 static void fsm_table(void) {
@@ -95,11 +95,11 @@ static void new_dfs(void) {
 static int good_dead(Element *e, FSM_use *u) {
   switch (u->special) {
   case 2: /* ok if it's a receive */
-    if (e->n->ntyp == ASGN && e->n->rgt->ntyp == CONST && e->n->rgt->val == 0)
+    if (e->n->node_type == ASGN && e->n->right->node_type == CONST && e->n->right->value == 0)
       return 0;
     break;
   case 1: /* must be able to use oval */
-    if (e->n->ntyp != 'c' && e->n->ntyp != 'r')
+    if (e->n->node_type != 'c' && e->n->node_type != 'r')
       return 0; /* can't really happen */
     break;
   }
@@ -108,7 +108,7 @@ static int good_dead(Element *e, FSM_use *u) {
 
 static int eligible(FSM_trans *v) {
   Element *el = ZE;
-  Lextok *lt = ZN;
+  models::Lextok *lt = ZN;
 
   if (v)
     el = v->step;
@@ -119,16 +119,16 @@ static int eligible(FSM_trans *v) {
       || v->nxt                /* has alternatives */
       || el->esc               /* has an escape */
       || (el->status & CHECK2) /* remotely referenced */
-      || lt->ntyp == ATOMIC ||
-      lt->ntyp ==
+      || lt->node_type == ATOMIC ||
+      lt->node_type ==
           NON_ATOMIC /* used for inlines -- should be able to handle this */
-      || lt->ntyp == IF || lt->ntyp == C_CODE || lt->ntyp == C_EXPR ||
+      || lt->node_type == IF || lt->node_type == C_CODE || lt->node_type == C_EXPR ||
       has_lab(el, 0)       /* any label at all */
-      || lt->ntyp == SET_P /* to prevent multiple set_p merges */
+      || lt->node_type == SET_P /* to prevent multiple set_p merges */
 
-      || lt->ntyp == DO || lt->ntyp == UNLESS || lt->ntyp == D_STEP ||
-      lt->ntyp == ELSE || lt->ntyp == '@' || lt->ntyp == 'c' ||
-      lt->ntyp == 'r' || lt->ntyp == 's')
+      || lt->node_type == DO || lt->node_type == UNLESS || lt->node_type == D_STEP ||
+      lt->node_type == ELSE || lt->node_type == '@' || lt->node_type == 'c' ||
+      lt->node_type == 'r' || lt->node_type == 's')
     return 0;
 
   if (!(el->status & (2 | 4))) /* not atomic */
@@ -143,7 +143,7 @@ static int eligible(FSM_trans *v) {
 
 static int canfill_in(FSM_trans *v) {
   Element *el = v->step;
-  Lextok *lt = v->step->n;
+  models::Lextok *lt = v->step->n;
 
   if (!lt                       /* dead end */
       || v->nxt                 /* has alternatives */
@@ -222,7 +222,7 @@ static void FSM_MERGER(
 {
   FSM_state *f, *g;
   FSM_trans *t;
-  Lextok *lt;
+  models::Lextok *lt;
 
   for (f = fsmx; f; f = f->nxt)   /* all states */
     for (t = f->t; t; t = t->nxt) /* all edges */
@@ -236,8 +236,8 @@ static void FSM_MERGER(
         continue;
       lt = t->step->n;
 
-      if (lt->ntyp == 'c' || lt->ntyp == 'r' ||
-          lt->ntyp == 's') /* blocking stmnts */
+      if (lt->node_type == 'c' || lt->node_type == 'r' ||
+          lt->node_type == 's') /* blocking stmnts */
         continue;          /* handled in 2nd scan */
 
       if (!eligible(t))
@@ -284,9 +284,9 @@ static void FSM_MERGER(
 	merge target
 #endif
 
-      if ((lt->ntyp == 'c' && !any_oper(lt->lft, RUN)) /* 2nd clause 6.2.2 */
-          || lt->ntyp == 'r' ||
-          (lt->ntyp == 's' && u_sync == 0)) /* added !u_sync in 4.1.3 */
+      if ((lt->node_type == 'c' && !any_oper(lt->left, RUN)) /* 2nd clause 6.2.2 */
+          || lt->node_type == 'r' ||
+          (lt->node_type == 's' && u_sync == 0)) /* added !u_sync in 4.1.3 */
       {
         if (!canfill_in(t)) /* atomic, non-global, etc. */
           continue;
@@ -448,22 +448,22 @@ static void FSM_EDGE(int from, int to, Element *e) {
 #define LVAL 1
 #define RVAL 0
 
-static void ana_var(FSM_trans *t, Lextok *now, int usage) {
+static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
   FSM_use *u, *v;
 
-  if (!t || !now || !now->sym)
+  if (!t || !now || !now->symbol)
     return;
-  if (now->sym->name[0] == '_' &&
-      (now->sym->name == "_" || now->sym->name == "_pid" ||
-       now->sym->name == "_priority" || now->sym->name == "_last"))
+  if (now->symbol->name[0] == '_' &&
+      (now->symbol->name == "_" || now->symbol->name == "_pid" ||
+       now->symbol->name == "_priority" || now->symbol->name == "_last"))
     return;
 
   v = t->Val[usage];
   for (u = v; u; u = u->nxt)
-    if (u->var == now->sym)
+    if (u->var == now->symbol)
       return; /* it's already there */
 
-  if (!now->lft) { /* not for array vars -- it's hard to tell statically
+  if (!now->left) { /* not for array vars -- it's hard to tell statically
                       if the index would, at runtime, evaluate to the
                       same values at lval and rval references
                    */
@@ -473,23 +473,23 @@ static void ana_var(FSM_trans *t, Lextok *now, int usage) {
     } else
       u = (FSM_use *)emalloc(sizeof(FSM_use));
 
-    u->var = now->sym;
+    u->var = now->symbol;
     u->nxt = t->Val[usage];
     t->Val[usage] = u;
   } else
-    ana_stmnt(t, now->lft, RVAL); /* index */
+    ana_stmnt(t, now->left, RVAL); /* index */
 
-  if (now->sym->type == STRUCT && now->rgt && now->rgt->lft)
-    ana_var(t, now->rgt->lft, usage);
+  if (now->symbol->type == STRUCT && now->right && now->right->left)
+    ana_var(t, now->right->left, usage);
 }
 
-static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
-  Lextok *v;
+static void ana_stmnt(FSM_trans *t, models::Lextok *now, int usage) {
+  models::Lextok *v;
 
   if (!t || !now)
     return;
 
-  switch (now->ntyp) {
+  switch (now->node_type) {
   case '.':
   case BREAK:
   case GOTO:
@@ -509,8 +509,8 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
     break;
 
   case ',': /* reached with SET_P and array initializers */
-    if (now->lft && now->lft->rgt) {
-      ana_stmnt(t, now->lft->rgt, RVAL);
+    if (now->left && now->left->right) {
+      ana_stmnt(t, now->left->right, RVAL);
     }
     break;
 
@@ -527,12 +527,12 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
   case NEMPTY:
   case ASSERT:
   case 'c':
-    ana_stmnt(t, now->lft, RVAL);
+    ana_stmnt(t, now->left, RVAL);
     break;
 
   case SET_P:
-    ana_stmnt(t, now->lft, RVAL); /* ',' */
-    ana_stmnt(t, now->lft->rgt, RVAL);
+    ana_stmnt(t, now->left, RVAL); /* ',' */
+    ana_stmnt(t, now->left->right, RVAL);
     break;
 
   case '/':
@@ -553,8 +553,8 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
   case AND:
   case LSHIFT:
   case RSHIFT:
-    ana_stmnt(t, now->lft, RVAL);
-    ana_stmnt(t, now->rgt, RVAL);
+    ana_stmnt(t, now->left, RVAL);
+    ana_stmnt(t, now->right, RVAL);
     break;
 
   case ASGN:
@@ -562,52 +562,52 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
       break;
     }
 
-    ana_stmnt(t, now->lft, LVAL);
-    if (now->rgt->ntyp)
-      ana_stmnt(t, now->rgt, RVAL);
+    ana_stmnt(t, now->left, LVAL);
+    if (now->right->node_type)
+      ana_stmnt(t, now->right, RVAL);
     break;
 
   case PRINT:
   case RUN:
-    for (v = now->lft; v; v = v->rgt)
-      ana_stmnt(t, v->lft, RVAL);
+    for (v = now->left; v; v = v->right)
+      ana_stmnt(t, v->left, RVAL);
     break;
 
   case PRINTM:
-    if (now->lft && !now->lft->ismtyp)
-      ana_stmnt(t, now->lft, RVAL);
+    if (now->left && !now->left->is_mtype_token)
+      ana_stmnt(t, now->left, RVAL);
     break;
 
   case 's':
-    ana_stmnt(t, now->lft, RVAL);
-    for (v = now->rgt; v; v = v->rgt)
-      ana_stmnt(t, v->lft, RVAL);
+    ana_stmnt(t, now->left, RVAL);
+    for (v = now->right; v; v = v->right)
+      ana_stmnt(t, v->left, RVAL);
     break;
 
   case 'R':
   case 'r':
-    ana_stmnt(t, now->lft, RVAL);
-    for (v = now->rgt; v; v = v->rgt) {
-      if (v->lft->ntyp == EVAL) {
-        if (v->lft->lft->ntyp == ',') {
-          ana_stmnt(t, v->lft->lft->lft, RVAL);
+    ana_stmnt(t, now->left, RVAL);
+    for (v = now->right; v; v = v->right) {
+      if (v->left->node_type == EVAL) {
+        if (v->left->left->node_type == ',') {
+          ana_stmnt(t, v->left->left->left, RVAL);
         } else {
-          ana_stmnt(t, v->lft->lft, RVAL);
+          ana_stmnt(t, v->left->left, RVAL);
         }
       } else {
-        if (v->lft->ntyp != CONST && now->ntyp != 'R') /* was v->lft->ntyp */
+        if (v->left->node_type != CONST && now->node_type != 'R') /* was v->left->node_type */
         {
-          ana_stmnt(t, v->lft, LVAL);
+          ana_stmnt(t, v->left, LVAL);
         }
       }
     }
     break;
 
   case '?':
-    ana_stmnt(t, now->lft, RVAL);
-    if (now->rgt) {
-      ana_stmnt(t, now->rgt->lft, RVAL);
-      ana_stmnt(t, now->rgt->rgt, RVAL);
+    ana_stmnt(t, now->left, RVAL);
+    if (now->right) {
+      ana_stmnt(t, now->right->left, RVAL);
+      ana_stmnt(t, now->right->right, RVAL);
     }
     break;
 
@@ -616,15 +616,15 @@ static void ana_stmnt(FSM_trans *t, Lextok *now, int usage) {
     break;
 
   case 'p':                            /* remote ref */
-    ana_stmnt(t, now->lft->lft, RVAL); /* process id */
+    ana_stmnt(t, now->left->left, RVAL); /* process id */
     ana_var(t, now, RVAL);
-    ana_var(t, now->rgt, RVAL);
+    ana_var(t, now->right, RVAL);
     break;
 
   default:
     if (0)
       printf("spin: %s:%d, bad node type %d usage %d (ana_stmnt)\n",
-             now->fn->name.c_str(), now->ln, now->ntyp, usage);
+             now->file_name->name.c_str(), now->line_number, now->node_type, usage);
     loger::fatal("aborting (ana_stmnt)");
   }
 }
@@ -654,7 +654,7 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
   for (e = Al_El; e; e = e->Nxt) {
     if (!(e->status & DONE) && verbose_flags.NeedToPrintVerbose()) {
       printf("unreachable code: ");
-      printf("%s:%3d  ", e->n->fn->name.c_str(), e->n->ln);
+      printf("%s:%3d  ", e->n->file_name->name.c_str(), e->n->line_number);
       comment(stdout, e->n, 0);
       printf("\n");
     }
@@ -679,14 +679,14 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
     if (!e->n)
       continue;
 
-    switch (e->n->ntyp) {
+    switch (e->n->node_type) {
     case 'r':
     markit:
       fprintf(f2, "\tIs_Recv[%d] = 1;\n", e->Seqno);
       break;
     case D_STEP:
-      s = e->n->sl->this_sequence;
-      switch (s->frst->n->ntyp) {
+      s = e->n->seq_list->this_sequence;
+      switch (s->frst->n->node_type) {
       case DO:
         loger::fatal("unexpected: do at start of d_step");
       case IF: /* conservative: fall through */
@@ -728,23 +728,23 @@ static void ana_seq(Sequence *s) {
 
     From = e->seqno;
 
-    if (e->n->ntyp == UNLESS)
+    if (e->n->node_type == UNLESS)
       ana_seq(e->sub->this_sequence);
     else if (e->sub) {
       for (h = e->sub; h; h = h->nxt) {
         g = huntstart(h->this_sequence->frst);
         To = g->seqno;
 
-        if (g->n->ntyp != 'c' || g->n->lft->ntyp != CONST ||
-            g->n->lft->val != 0 || g->esc)
+        if (g->n->node_type != 'c' || g->n->left->node_type != CONST ||
+            g->n->left->value != 0 || g->esc)
           FSM_EDGE(From, To, e);
         /* else it's a dead link */
       }
       for (h = e->sub; h; h = h->nxt)
         ana_seq(h->this_sequence);
-    } else if (e->n->ntyp == ATOMIC || e->n->ntyp == D_STEP ||
-               e->n->ntyp == NON_ATOMIC) {
-      t = e->n->sl->this_sequence;
+    } else if (e->n->node_type == ATOMIC || e->n->node_type == D_STEP ||
+               e->n->node_type == NON_ATOMIC) {
+      t = e->n->seq_list->this_sequence;
       g = huntstart(t->frst);
       t->last->nxt = e->nxt;
       To = g->seqno;
@@ -752,7 +752,7 @@ static void ana_seq(Sequence *s) {
 
       ana_seq(t);
     } else {
-      if (e->n->ntyp == GOTO) {
+      if (e->n->node_type == GOTO) {
         g = get_lab(e->n, 1);
         g = huntele(g, e->status, -1);
         if (!g) {
@@ -770,7 +770,7 @@ static void ana_seq(Sequence *s) {
 
       FSM_EDGE(From, To, e);
 
-      if (e->esc && e->n->ntyp != GOTO && e->n->ntyp != '.')
+      if (e->esc && e->n->node_type != GOTO && e->n->node_type != '.')
         for (h = e->esc; h; h = h->nxt) {
           g = huntstart(h->this_sequence->frst);
           To = g->seqno;

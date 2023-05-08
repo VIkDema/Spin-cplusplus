@@ -159,7 +159,7 @@ static int tl_lex(void) {
       if (!tl_yylval) {
         loger::fatal("unexpected error 4");
       }
-      tl_yylval->sym = tl_lookup(yytext);
+      tl_yylval->symbol = tl_lookup(yytext);
       return PREDICATE;
     }
   }
@@ -199,7 +199,7 @@ static int tl_lex(void) {
     if (!tl_yylval) {
       loger::fatal("unexpected error 5");
     }
-    tl_yylval->sym = tl_lookup(yytext);
+    tl_yylval->symbol = tl_lookup(yytext);
     return PREDICATE;
   }
 

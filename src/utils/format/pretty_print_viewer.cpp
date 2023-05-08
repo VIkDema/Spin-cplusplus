@@ -98,8 +98,8 @@ void PrettyPrintViewer::view() {
       int temp_indent = indent;
       start_new_line(buffer);
 
-      assert(yylval->sym->name.length() < sizeof(buffer));
-      buffer = yylval->sym->name;
+      assert(yylval->symbol->name.length() < sizeof(buffer));
+      buffer = yylval->symbol->name;
 
       indent = 0;
       start_new_line(buffer);
@@ -252,7 +252,7 @@ void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
     mtxt << "never";
     break;
   case CONST:
-    mtxt << yylval->val;
+    mtxt << yylval->value;
     break;
   case DECR:
     mtxt << "--";
@@ -342,10 +342,10 @@ void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
     mtxt << "ltl";
     break;
   case NAME:
-    mtxt << yylval->sym->name;
+    mtxt << yylval->symbol->name;
     break;
   case XU:
-    switch (yylval->val) {
+    switch (yylval->value) {
     case XR:
       mtxt << "xr";
       break;
@@ -359,7 +359,7 @@ void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
     break;
 
   case TYPE:
-    switch (yylval->val) {
+    switch (yylval->value) {
     case BIT:
       mtxt << "bit";
       break;
@@ -470,7 +470,7 @@ void PrettyPrintViewer::map_token_to_string(int n, std::string &buf) {
   case UNAME:
   case PNAME:
   case STRING:
-    mtxt << yylval->sym->name;
+    mtxt << yylval->symbol->name;
     break;
   case TRACE:
     mtxt << "trace";

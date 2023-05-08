@@ -61,24 +61,24 @@ static Node *Prune(Node *p) {
     case CEXPR:
       return p;
     case OR:
-      p->lft = Prune(p->lft);
-      if (!p->lft) {
-        releasenode(1, p->rgt);
+      p->left = Prune(p->left);
+      if (!p->left) {
+        releasenode(1, p->right);
         return ZN;
       }
-      p->rgt = Prune(p->rgt);
-      if (!p->rgt) {
-        releasenode(1, p->lft);
+      p->right = Prune(p->right);
+      if (!p->right) {
+        releasenode(1, p->left);
         return ZN;
       }
       return p;
     case AND:
-      p->lft = Prune(p->lft);
-      if (!p->lft)
-        return Prune(p->rgt);
-      p->rgt = Prune(p->rgt);
-      if (!p->rgt)
-        return p->lft;
+      p->left = Prune(p->left);
+      if (!p->left)
+        return Prune(p->right);
+      p->right = Prune(p->right);
+      if (!p->right)
+        return p->left;
       return p;
     }
   releasenode(1, p);
@@ -152,21 +152,21 @@ static Node *nonxt(Node *n) {
   case NEXT:
     return ZN;
   case OR:
-    n->lft = nonxt(n->lft);
-    n->rgt = nonxt(n->rgt);
-    if (!n->lft || !n->rgt)
+    n->left = nonxt(n->left);
+    n->right = nonxt(n->right);
+    if (!n->left || !n->right)
       return True;
     return n;
   case AND:
-    n->lft = nonxt(n->lft);
-    n->rgt = nonxt(n->rgt);
-    if (!n->lft) {
-      if (!n->rgt)
+    n->left = nonxt(n->left);
+    n->right = nonxt(n->right);
+    if (!n->left) {
+      if (!n->right)
         n = ZN;
       else
-        n = n->rgt;
-    } else if (!n->rgt)
-      n = n->lft;
+        n = n->right;
+    } else if (!n->right)
+      n = n->left;
     return n;
   }
   return n;
@@ -207,15 +207,15 @@ Node *unclutter(Node *n, char *snm) {
   Symbol *w;
 
   /* check only simple cases like !q && q */
-  for (t = n; t; t = t->rgt) {
-    if (t->rgt) {
-      if (t->ntyp != AND || !t->lft)
+  for (t = n; t; t = t->right) {
+    if (t->right) {
+      if (t->ntyp != AND || !t->left)
         return n;
-      if (t->lft->ntyp != PREDICATE
+      if (t->left->ntyp != PREDICATE
 #ifdef NXT
-          && t->lft->ntyp != NEXT
+          && t->left->ntyp != NEXT
 #endif
-          && t->lft->ntyp != NOT)
+          && t->left->ntyp != NOT)
         return n;
     } else {
       if (t->ntyp != PREDICATE
@@ -227,21 +227,21 @@ Node *unclutter(Node *n, char *snm) {
     }
   }
 
-  for (t = n; t; t = t->rgt) {
-    if (t->rgt)
-      v = t->lft;
+  for (t = n; t; t = t->right) {
+    if (t->right)
+      v = t->left;
     else
       v = t;
-    if (v->ntyp == NOT && v->lft->ntyp == PREDICATE) {
-      w = v->lft->sym;
-      for (s = n; s; s = s->rgt) {
+    if (v->ntyp == NOT && v->left->ntyp == PREDICATE) {
+      w = v->left->symbol;
+      for (s = n; s; s = s->right) {
         if (s == t)
           continue;
-        if (s->rgt)
-          u = s->lft;
+        if (s->right)
+          u = s->left;
         else
           u = s;
-        if (u->ntyp == PREDICATE && strcmp(u->sym->name, w->name) == 0) {
+        if (u->ntyp == PREDICATE && strcmp(u->symbol->name, w->name) == 0) {
           if (tl_verbose) {
             printf("BINGO %s:\t", snm);
             dump(n);

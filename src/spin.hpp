@@ -1,6 +1,7 @@
 #ifndef SEEN_SPIN_H
 #define SEEN_SPIN_H
 
+#include "models/lextok.hpp"
 #include "models/symbol.hpp"
 #include <ctype.h>
 #include <optional>
@@ -17,22 +18,8 @@
 enum { INIV, PUTV, LOGV }; /* used in pangen1.c */
 enum btypes { NONE, N_CLAIM, I_PROC, A_PROC, P_PROC, E_TRACE, N_TRACE };
 
-struct Lextok {
-  unsigned short ntyp;      /* node type */
-  short ismtyp;             /* CONST derived from MTYP */
-  int val;                  /* value attribute */
-  int ln;                   /* line number */
-  int indstep;              /* part of d_step sequence */
-  int uiid;                 /* inline id, if non-zero */
-  models::Symbol *fn;       /* file name */
-  models::Symbol *sym;      /* symbol reference */
-  struct Sequence *sq;      /* sequence */
-  struct SeqList *sl;       /* sequence list */
-  struct Lextok *lft, *rgt; /* children in parse tree */
-};
-
 struct Slicer {
-  Lextok *n;          /* global var, usable as slice criterion */
+  models::Lextok *n;  /* global var, usable as slice criterion */
   short code;         /* type of use: DEREF_USE or normal USE */
   short used;         /* set when handled */
   struct Slicer *nxt; /* linked list */
@@ -52,7 +39,7 @@ struct Ordered { /* links all names in Symbol table */
 
 struct Mtypes_t {
   std::string nm;       /* name of mtype, or "_unnamed_" */
-  Lextok *mt;           /* the linked list of names */
+  models::Lextok *mt;   /* the linked list of names */
   struct Mtypes_t *nxt; /* linked list of mtypes */
 };
 
@@ -90,17 +77,17 @@ struct FSM_trans { /* used in pangen5.c - dataflow */
 };
 
 struct FSM_use { /* used in pangen5.c - dataflow */
-  Lextok *n;
+  models::Lextok *n;
   models::Symbol *var;
   int special;
   struct FSM_use *nxt;
 };
 
 struct Element {
-  Lextok *n; /* defines the type & contents */
-  int Seqno; /* identifies this el within system */
-  int seqno; /* identifies this el within a proc */
-  int merge; /* set by -O if step can be merged */
+  models::Lextok *n; /* defines the type & contents */
+  int Seqno;         /* identifies this el within system */
+  int seqno;         /* identifies this el within a proc */
+  int merge;         /* set by -O if step can be merged */
   int merge_start;
   int merge_single;
   short merge_in;       /* nr of incoming edges */
@@ -130,8 +117,8 @@ struct Label {
   models::Symbol *s;
   models::Symbol *c;
   Element *e;
-  int uiid;    /* non-zero if label appears in an inline */
-  int visible; /* label referenced in claim (slice relevant) */
+  int opt_inline_id; /* non-zero if label appears in an inline */
+  int visible;       /* label referenced in claim (slice relevant) */
   struct Label *nxt;
 };
 
@@ -141,7 +128,7 @@ struct Lbreak {
 };
 
 struct L_List {
-  Lextok *n;
+  models::Lextok *n;
   struct L_List *nxt;
 };
 
@@ -153,16 +140,16 @@ struct RunList {
   enum btypes b;          /* the type of process */
   Element *pc;            /* current stmnt   */
   struct Sequence *ps;    /* used by analyzer generator */
-  Lextok *prov;           /* provided clause */
+  models::Lextok *prov;   /* provided clause */
   models::Symbol *symtab; /* local variables */
   struct RunList *nxt;    /* linked list */
 };
 
 struct ProcList {
   models::Symbol *n;      /* name       */
-  Lextok *p;              /* parameters */
+  models::Lextok *p;      /* parameters */
   Sequence *s;            /* body       */
-  Lextok *prov;           /* provided clause */
+  models::Lextok *prov;   /* provided clause */
   enum btypes b;          /* e.g., claim, trace, proc */
   short tn;               /* ordinal number */
   unsigned char det;      /* deterministic */
@@ -176,11 +163,11 @@ struct QH {
   struct QH *nxt;
 };
 
-typedef Lextok *Lexptr;
+typedef models::Lextok *Lexptr;
 
 #define YYSTYPE Lexptr
 
-#define ZN (Lextok *)0
+#define ZN (models::Lextok *)0
 #define ZS (models::Symbol *)0
 #define ZE (Element *)0
 
@@ -233,24 +220,25 @@ bool IsEqname(const std::string &value);
 bool IsUtype(const std::string &value);
 /***** prototype definitions *****/
 Element *eval_sub(Element *);
-Element *get_lab(Lextok *, int);
+Element *get_lab(models::Lextok *, int);
 Element *huntele(Element *, unsigned int, int);
 Element *huntstart(Element *);
 Element *mk_skip(void);
 Element *target(Element *);
 
-Lextok *do_unless(Lextok *, Lextok *);
-Lextok *expand(Lextok *, int);
-Lextok *getuname(models::Symbol *);
-Lextok *mk_explicit(Lextok *, int, int);
-Lextok *nn(Lextok *, int, Lextok *, Lextok *);
-Lextok *rem_lab(models::Symbol *, Lextok *, models::Symbol *);
-Lextok *rem_var(models::Symbol *, Lextok *, models::Symbol *, Lextok *);
-Lextok *tail_add(Lextok *, Lextok *);
-Lextok *return_statement(Lextok *);
+models::Lextok *do_unless(models::Lextok *, models::Lextok *);
+models::Lextok *expand(models::Lextok *, int);
+models::Lextok *getuname(models::Symbol *);
+models::Lextok *mk_explicit(models::Lextok *, int, int);
+models::Lextok *nn(models::Lextok *, int, models::Lextok *, models::Lextok *);
+models::Lextok *rem_lab(models::Symbol *, models::Lextok *, models::Symbol *);
+models::Lextok *rem_var(models::Symbol *, models::Lextok *, models::Symbol *,
+                        models::Lextok *);
+models::Lextok *tail_add(models::Lextok *, models::Lextok *);
+models::Lextok *return_statement(models::Lextok *);
 
-ProcList *mk_rdy(models::Symbol *, Lextok *, Sequence *, int, Lextok *,
-                 enum btypes);
+ProcList *mk_rdy(models::Symbol *, models::Lextok *, Sequence *, int,
+                 models::Lextok *, enum btypes);
 
 SeqList *seqlist(Sequence *, SeqList *);
 Sequence *close_seq(int);
@@ -259,63 +247,63 @@ models::Symbol *break_dest(void);
 models::Symbol *findloc(models::Symbol *);
 models::Symbol *has_lab(Element *, int);
 models::Symbol *lookup(const std::string &s);
-models::Symbol *prep_inline(models::Symbol *, Lextok *);
+models::Symbol *prep_inline(models::Symbol *, models::Lextok *);
 
 char *put_inline(FILE *, const std::string &);
 char *emalloc(size_t);
 char *erealloc(void *, size_t, size_t);
 long Rand(void);
 
-int any_oper(Lextok *, int);
-int any_undo(Lextok *);
+int any_oper(models::Lextok *, int);
+int any_undo(models::Lextok *);
 int c_add_sv(FILE *);
 int cast_val(int, int, int);
 int checkvar(models::Symbol *, int);
-int check_track(Lextok *);
-int Cnt_flds(Lextok *);
-int cnt_mpars(Lextok *);
+int check_track(models::Lextok *);
+int Cnt_flds(models::Lextok *);
+int cnt_mpars(models::Lextok *);
 int complete_rendez(void);
-int enable(Lextok *);
+int enable(models::Lextok *);
 int Enabled0(Element *);
-int eval(Lextok *);
+int eval(models::Lextok *);
 int find_lab(models::Symbol *, models::Symbol *, int);
 int find_maxel(models::Symbol *);
-int full_name(FILE *, Lextok *, models::Symbol *, int);
-int getlocal(Lextok *);
-int getval(Lextok *);
+int full_name(FILE *, models::Lextok *, models::Symbol *, int);
+int getlocal(models::Lextok *);
+int getval(models::Lextok *);
 int glob_inline(const std::string &);
-int has_typ(Lextok *, int);
+int has_typ(models::Lextok *, int);
 int in_bound(models::Symbol *, int);
-int interprint(FILE *, Lextok *);
-int printm(FILE *, Lextok *);
+int interprint(FILE *, models::Lextok *);
+int printm(FILE *, models::Lextok *);
 int is_inline(void);
 int ismtype(char *);
 
-int Lval_struct(Lextok *, models::Symbol *, int, int);
+int Lval_struct(models::Lextok *, models::Symbol *, int, int);
 int main(int, char **);
-int pc_value(Lextok *);
+int pc_value(models::Lextok *);
 int pid_is_claim(int);
-int proper_enabler(Lextok *);
+int proper_enabler(models::Lextok *);
 int putcode(FILE *, Sequence *, Element *, int, int, int);
-int q_is_sync(Lextok *);
-int qlen(Lextok *);
-int qfull(Lextok *);
+int q_is_sync(models::Lextok *);
+int qlen(models::Lextok *);
+int qfull(models::Lextok *);
 int qmake(models::Symbol *);
-int qrecv(Lextok *, int);
-int qsend(Lextok *);
-int remotelab(Lextok *);
-int remotevar(Lextok *);
-int Rval_struct(Lextok *, models::Symbol *, int);
-int setlocal(Lextok *, int);
-int setval(Lextok *, int);
+int qrecv(models::Lextok *, int);
+int qsend(models::Lextok *);
+int remotelab(models::Lextok *);
+int remotevar(models::Lextok *);
+int Rval_struct(models::Lextok *, models::Symbol *, int);
+int setlocal(models::Lextok *, int);
+int setval(models::Lextok *, int);
 int sputtype(std::string &, int);
-int Sym_typ(Lextok *);
+int Sym_typ(models::Lextok *);
 int tl_main(int, char *[]);
-int Width_set(int *, int, Lextok *);
+int Width_set(int *, int, models::Lextok *);
 int yyparse(void);
 
-void AST_track(Lextok *, int);
-void add_seq(Lextok *);
+void AST_track(models::Lextok *, int);
+void add_seq(models::Lextok *);
 void announce(char *);
 void c_state(models::Symbol *, models::Symbol *, models::Symbol *);
 void c_add_def(FILE *);
@@ -328,10 +316,10 @@ void c_track(models::Symbol *, models::Symbol *, models::Symbol *);
 void c_var(FILE *, const std::string &, models::Symbol *);
 void c_wrapper(FILE *);
 void chanaccess(void);
-void check_param_count(int, Lextok *);
+void check_param_count(int, models::Lextok *);
 void checkrun(models::Symbol *, int);
-void comment(FILE *, Lextok *, int);
-void cross_dsteps(Lextok *, Lextok *);
+void comment(FILE *, models::Lextok *, int);
+void cross_dsteps(models::Lextok *, models::Lextok *);
 void disambiguate(void);
 void doq(models::Symbol *, int, RunList *);
 void dotag(FILE *, char *);
@@ -358,50 +346,51 @@ void loose_ends(void);
 void make_atomic(Sequence *, int);
 void mark_last(void);
 void match_trail(void);
-void no_side_effects(const std::string& );
-void nochan_manip(Lextok *, Lextok *, int);
+void no_side_effects(const std::string &);
+void nochan_manip(models::Lextok *, models::Lextok *, int);
 void ntimes(FILE *, int, int, const char *c[]);
 void open_seq(int);
 void p_talk(Element *, int);
-void pickup_inline(models::Symbol *, Lextok *, Lextok *);
+void pickup_inline(models::Symbol *, models::Lextok *, models::Lextok *);
 void plunk_c_decls(FILE *);
 void plunk_c_fcts(FILE *);
 void plunk_expr(FILE *, const std::string &);
 void plunk_inline(FILE *, const std::string &, int, int);
 void prehint(models::Symbol *);
-void preruse(FILE *, Lextok *);
-void prune_opts(Lextok *);
+void preruse(FILE *, models::Lextok *);
+void prune_opts(models::Lextok *);
 void pstext(int, char *);
 void pushbreak(void);
-void putname(FILE *, const std::string &, Lextok *, int, const std::string &);
-void putremote(FILE *, Lextok *, int);
+void putname(FILE *, const std::string &, models::Lextok *, int,
+             const std::string &);
+void putremote(FILE *, models::Lextok *, int);
 void putskip(int);
 void putsrc(Element *);
-void putstmnt(FILE *, Lextok *, int);
+void putstmnt(FILE *, models::Lextok *, int);
 void putunames(FILE *);
 void rem_Seq(void);
 void runnable(ProcList *, int, int);
 void sched(void);
 void setaccess(models::Symbol *, models::Symbol *, int, int);
 void set_lab(models::Symbol *, Element *);
-void setmtype(Lextok *, Lextok *);
-void setpname(Lextok *);
-void setptype(Lextok *, Lextok *, int, Lextok *);
-void setuname(Lextok *);
-void setutype(Lextok *, models::Symbol *, Lextok *);
-void setxus(Lextok *, int);
+void setmtype(models::Lextok *, models::Lextok *);
+void setpname(models::Lextok *);
+void setptype(models::Lextok *, models::Lextok *, int, models::Lextok *);
+void setuname(models::Lextok *);
+void setutype(models::Lextok *, models::Symbol *, models::Lextok *);
+void setxus(models::Lextok *, int);
 void start_claim(int);
-void struct_name(Lextok *, models::Symbol *, int, std::string&);
+void struct_name(models::Lextok *, models::Symbol *, int, std::string &);
 void symdump(void);
 void symvar(models::Symbol *);
 void sync_product(void);
-void trackchanuse(Lextok *, Lextok *, int);
-void trackvar(Lextok *, Lextok *);
-void trackrun(Lextok *);
-void trapwonly(Lextok * /* , char * */); /* spin.y and main.c */
+void trackchanuse(models::Lextok *, models::Lextok *, int);
+void trackvar(models::Lextok *, models::Lextok *);
+void trackrun(models::Lextok *);
+void trapwonly(models::Lextok * /* , char * */); /* spin.y and main.c */
 void typ2c(models::Symbol *);
 void typ_ck(int, int, const std::string &);
-void undostmnt(Lextok *, int);
+void undostmnt(models::Lextok *, int);
 void unrem_Seq(void);
 void unskip(int);
 void whoruns(int);

@@ -8,12 +8,14 @@
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
+#include "models/lextok.hpp"
+
 extern LaunchSettings launch_settings;
 
 extern char GBuf[];
 extern int nproc, nstop;
 extern int lineno, depth, verbose, limited_vis, Pid_nr;
-extern Lextok *Xu_List;
+extern models::Lextok *Xu_List;
 extern Ordered *all_names;
 extern RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
@@ -22,12 +24,12 @@ extern models::Symbol *Fname;
 extern void sr_buf(int, int, const std::string &);
 extern void sr_mesg(FILE *, int, int, const std::string &);
 
-static int getglobal(Lextok *);
-static int setglobal(Lextok *, int);
+static int getglobal(models::Lextok *);
+static int setglobal(models::Lextok *, int);
 static int maxcolnr = 1;
 
-int getval(Lextok *sn) {
-  models::Symbol *s = sn->sym;
+int getval(models::Lextok *sn) {
+  models::Symbol *s = sn->symbol;
 
   if (s->name == "_") {
     loger::non_fatal("attempt to read value of '_'");
@@ -64,19 +66,19 @@ int getval(Lextok *sn) {
   if (!s->type) /* not declared locally */
   {
     s = lookup(s->name); /* try global */
-    sn->sym = s;         /* fix it */
+    sn->symbol = s;         /* fix it */
   }
 
   return getglobal(sn);
 }
 
-int setval(Lextok *v, int n) {
-  if (v->sym->name == "_last" || v->sym->name == "_p" ||
-      v->sym->name == "_pid" || v->sym->name == "_nr_qs" ||
-      v->sym->name == "_nr_pr") {
-    loger::non_fatal("illegal assignment to %s", v->sym->name.c_str());
+int setval(models::Lextok *v, int n) {
+  if (v->symbol->name == "_last" || v->symbol->name == "_p" ||
+      v->symbol->name == "_pid" || v->symbol->name == "_nr_qs" ||
+      v->symbol->name == "_nr_pr") {
+    loger::non_fatal("illegal assignment to %s", v->symbol->name.c_str());
   }
-  if (v->sym->name == "_priority") {
+  if (v->symbol->name == "_priority") {
     if (launch_settings.need_revert_old_rultes_for_priority) {
       loger::non_fatal("cannot refer to _priority with -o6");
       return 1;
@@ -88,36 +90,36 @@ int setval(Lextok *v, int n) {
     X_lst->priority = n;
   }
 
-  if (v->sym->context && v->sym->type)
+  if (v->symbol->context && v->symbol->type)
     return setlocal(v, n);
-  if (!v->sym->type)
-    v->sym = lookup(v->sym->name);
+  if (!v->symbol->type)
+    v->symbol = lookup(v->symbol->name);
   return setglobal(v, n);
 }
 
-void rm_selfrefs(models::Symbol *s, Lextok *i) {
+void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
   if (!i)
     return;
 
-  if (i->ntyp == NAME && i->sym->name == s->name &&
-      ((!i->sym->context && !s->context) ||
-       (i->sym->context && s->context &&
-        i->sym->context->name == s->context->name))) {
-    lineno = i->ln;
-    Fname = i->fn;
+  if (i->node_type == NAME && i->symbol->name == s->name &&
+      ((!i->symbol->context && !s->context) ||
+       (i->symbol->context && s->context &&
+        i->symbol->context->name == s->context->name))) {
+    lineno = i->line_number;
+    Fname = i->file_name;
     loger::non_fatal("self-reference initializing '%s'", s->name);
-    i->ntyp = CONST;
-    i->val = 0;
+    i->node_type = CONST;
+    i->value = 0;
   } else {
-    rm_selfrefs(s, i->lft);
-    rm_selfrefs(s, i->rgt);
+    rm_selfrefs(s, i->left);
+    rm_selfrefs(s, i->right);
   }
 }
 
 int checkvar(models::Symbol *s, int n) {
   int i, oln = lineno; /* calls on eval() change it */
   models::Symbol *ofnm = Fname;
-  Lextok *z, *y;
+  models::Lextok *z, *y;
 
   if (!in_bound(s, n))
     return 0;
@@ -132,9 +134,9 @@ int checkvar(models::Symbol *s, int n) {
     s->value.resize(s->value_type);
     z = s->init_value;
     for (i = 0; i < s->value_type; i++) {
-      if (z && z->ntyp == ',') {
-        y = z->lft;
-        z = z->rgt;
+      if (z && z->node_type == ',') {
+        y = z->left;
+        z = z->right;
       } else {
         y = z;
       }
@@ -152,9 +154,9 @@ int checkvar(models::Symbol *s, int n) {
   return 1;
 }
 
-static int getglobal(Lextok *sn) {
-  models::Symbol *s = sn->sym;
-  int i, n = eval(sn->lft);
+static int getglobal(models::Lextok *sn) {
+  models::Symbol *s = sn->symbol;
+  int i, n = eval(sn->left);
 
   if (s->type == 0 && X_lst && (i = find_lab(s, X_lst->n, 0))) /* getglobal */
   {
@@ -199,17 +201,17 @@ int cast_val(int t, int v, int w) {
   return (int)(i + s + (int)u);
 }
 
-static int setglobal(Lextok *v, int m) {
-  if (v->sym->type == STRUCT) {
-    (void)Lval_struct(v, v->sym, 1, m);
+static int setglobal(models::Lextok *v, int m) {
+  if (v->symbol->type == STRUCT) {
+    (void)Lval_struct(v, v->symbol, 1, m);
   } else {
-    int n = eval(v->lft);
-    if (checkvar(v->sym, n)) {
-      int oval = v->sym->value[n];
-      int nval = cast_val((int)v->sym->type, m, v->sym->nbits.value_or(0));
-      v->sym->value[n] = nval;
+    int n = eval(v->left);
+    if (checkvar(v->symbol, n)) {
+      int oval = v->symbol->value[n];
+      int nval = cast_val((int)v->symbol->type, m, v->symbol->nbits.value_or(0));
+      v->symbol->value[n] = nval;
       if (oval != nval) {
-        v->sym->last_depth = depth;
+        v->symbol->last_depth = depth;
       }
     }
   }
@@ -217,12 +219,12 @@ static int setglobal(Lextok *v, int m) {
 }
 
 void dumpclaims(FILE *fd, int pid, const std::string &s) {
-  Lextok *m;
+  models::Lextok *m;
   int cnt = 0;
   int oPid = Pid_nr;
 
-  for (m = Xu_List; m; m = m->rgt)
-    if (m->sym->name == s) {
+  for (m = Xu_List; m; m = m->right)
+    if (m->symbol->name == s) {
       cnt = 1;
       break;
     }
@@ -231,15 +233,15 @@ void dumpclaims(FILE *fd, int pid, const std::string &s) {
 
   Pid_nr = pid;
   fprintf(fd, "#ifndef XUSAFE\n");
-  for (m = Xu_List; m; m = m->rgt) {
-    if (m->sym->name != s)
+  for (m = Xu_List; m; m = m->right) {
+    if (m->symbol->name != s)
       continue;
     no_arrays = 1;
-    putname(fd, "\t\tsetq_claim(", m->lft, 0, "");
+    putname(fd, "\t\tsetq_claim(", m->left, 0, "");
     no_arrays = 0;
-    fprintf(fd, ", %d, ", m->val);
+    fprintf(fd, ", %d, ", m->value);
     terse = 1;
-    putname(fd, "\"", m->lft, 0, "\", h, ");
+    putname(fd, "\"", m->left, 0, "\", h, ");
     terse = 0;
     fprintf(fd, "\"%s\");\n", s.c_str());
   }
@@ -249,7 +251,7 @@ void dumpclaims(FILE *fd, int pid, const std::string &s) {
 
 void dumpglobals(void) {
   Ordered *walk;
-  static Lextok *dummy = ZN;
+  static models::Lextok *dummy = ZN;
   models::Symbol *sp;
   int j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -287,8 +289,8 @@ void dumpglobals(void) {
         continue;
       }
 
-      dummy->sym = sp;
-      dummy->lft->val = j;
+      dummy->symbol = sp;
+      dummy->left->value = j;
       /* in case of cast_val warnings, do this first: */
       prefetch = getglobal(dummy);
       printf("\t\t%s", sp->name.c_str());
@@ -325,7 +327,7 @@ void dumpglobals(void) {
 }
 
 void dumplocal(RunList *r, int final) {
-  static Lextok *dummy = ZN;
+  static models::Lextok *dummy = ZN;
   models::Symbol *z, *s;
   int i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -358,8 +360,8 @@ void dumplocal(RunList *r, int final) {
         continue;
       }
 
-      dummy->sym = z;
-      dummy->lft->val = i;
+      dummy->symbol = z;
+      dummy->left->value = i;
 
       printf("\t\t%s(%d):%s", r->n->name.c_str(), r->pid - Have_claim,
              z->name.c_str());

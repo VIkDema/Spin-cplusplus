@@ -3,6 +3,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch_settings.hpp"
 #include <sys/types.h>
@@ -22,26 +23,26 @@
 
 extern lexer::Lexer lexer_;
 
-static	Lextok *ltl_to_string(Lextok *);
+static	models::Lextok *ltl_to_string(models::Lextok *);
 
 extern  models::Symbol	*context, *owner;
-extern	Lextok *for_body(Lextok *, int);
-extern	void for_setup(Lextok *, Lextok *, Lextok *);
-extern	Lextok *for_index(Lextok *, Lextok *);
-extern	Lextok *sel_index(Lextok *, Lextok *, Lextok *);
-extern  void    keep_track_off(Lextok *);
+extern	models::Lextok *for_body(models::Lextok *, int);
+extern	void for_setup(models::Lextok *, models::Lextok *, models::Lextok *);
+extern	models::Lextok *for_index(models::Lextok *, models::Lextok *);
+extern	models::Lextok *sel_index(models::Lextok *, models::Lextok *, models::Lextok *);
+extern  void    keep_track_off(models::Lextok *);
 extern	void	safe_break(void);
 extern	void	restore_break(void);
 extern  int	u_sync, u_async, scope_level;
 extern	int	initialization_ok;
 extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np;
 extern	short	has_state, has_io;
-extern	void	check_mtypes(Lextok *, Lextok *);
-extern	void	count_runs(Lextok *);
-extern	void	no_internals(Lextok *);
-extern	void	any_runs(Lextok *);
+extern	void	check_mtypes(models::Lextok *, models::Lextok *);
+extern	void	count_runs(models::Lextok *);
+extern	void	no_internals(models::Lextok *);
+extern	void	any_runs(models::Lextok *);
 extern	void	ltl_list(const std::string& , const std::string& );
-extern	void	validref(Lextok *, Lextok *);
+extern	void	validref(models::Lextok *, models::Lextok *);
 extern	std::string yytext;
 extern LaunchSettings launch_settings;
 
@@ -127,7 +128,7 @@ proc	: inst		/* optional instantiator */
 	  proctype NAME	{ 
 			  setptype(ZN, $3, PROCTYPE, ZN);
 			  setpname($3);
-			  context = $3->sym;
+			  context = $3->symbol;
 			  context->init_value = $2; /* linenr and file */
 			  Expand_Ok++; /* expand struct names in decl */
 			  has_ini = 0;
@@ -139,22 +140,22 @@ proc	: inst		/* optional instantiator */
 	  Opt_priority
 	  Opt_enabler
 	  body		{ ProcList *rl;
-			  if ($1 != ZN && $1->val > 0)
+			  if ($1 != ZN && $1->value > 0)
 			  {	int j;
-				rl = mk_rdy($3->sym, $6, $11->sq, $2->val, $10, A_PROC);
-			  	for (j = 0; j < $1->val; j++)
-				{	runnable(rl, $9?$9->val:1, 1);
+				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, A_PROC);
+			  	for (j = 0; j < $1->value; j++)
+				{	runnable(rl, $9?$9->value:1, 1);
 					announce(":root:");
 				}
 				if (launch_settings.need_produce_symbol_table_information) {
-					$3->sym->init_value = $1;
+					$3->symbol->init_value = $1;
 				}
 			  } else
-			  {	rl = mk_rdy($3->sym, $6, $11->sq, $2->val, $10, P_PROC);
+			  {	rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, P_PROC);
 			  }
 			  if (rl && has_ini == 1) /* global initializations, unsafe */
 			  {	/* printf("proctype %s has initialized data\n",
-					$3->sym->name);
+					$3->symbol->name);
 				 */
 				rl->unsafe = 1;
 			  }
@@ -162,38 +163,38 @@ proc	: inst		/* optional instantiator */
 			}
 	;
 
-proctype: PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->val = 0; }
-	| D_PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->val = 1; }
+proctype: PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 0; }
+	| D_PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 1; }
 	;
 
 inst	: /* empty */	{ $$ = ZN; }
-	| ACTIVE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->val = 1; }
+	| ACTIVE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 1; }
 	| ACTIVE '[' const_expr ']' {
-			  $$ = nn(ZN,CONST,ZN,ZN); $$->val = $3->val;
-			  if ($3->val > 255)
+			  $$ = nn(ZN,CONST,ZN,ZN); $$->value = $3->value;
+			  if ($3->value > 255)
 				loger::non_fatal("max nr of processes is 255\n");
 			}
 	| ACTIVE '[' NAME ']' {
 			  $$ = nn(ZN,CONST,ZN,ZN);
-			  $$->val = 0;
-			  if (!$3->sym->type)
+			  $$->value = 0;
+			  if (!$3->symbol->type)
 				loger::fatal("undeclared variable %s",
-					$3->sym->name);
-			  else if ($3->sym->init_value->ntyp != CONST)
+					$3->symbol->name);
+			  else if ($3->symbol->init_value->node_type != CONST)
 				loger::fatal("need constant initializer for %s\n",
-					$3->sym->name);
+					$3->symbol->name);
 			  else
-				$$->val = $3->sym->init_value->val;
+				$$->value = $3->symbol->init_value->value;
 			}
 	;
 
 init	: INIT		{ 
-	context = $1->sym;
+	context = $1->symbol;
 	 }
 	  Opt_priority
 	  body		{ ProcList *rl;
-			  rl = mk_rdy(context, ZN, $4->sq, 0, ZN, I_PROC);
-			  runnable(rl, $3?$3->val:1, 1);
+			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN, I_PROC);
+			  runnable(rl, $3?$3->value:1, 1);
 			  announce(":root:");
 			  context = ZS;
         		}
@@ -201,10 +202,10 @@ init	: INIT		{
 
 ltl	: LTL optname2	{ 
 	lexer_.SetLtlMode(true);  
-ltl_name = new char[$2->sym->name.length() + 1];
-strcpy(ltl_name, $2->sym->name.c_str());
+ltl_name = new char[$2->symbol->name.length() + 1];
+strcpy(ltl_name, $2->symbol->name.c_str());
 }
-	  ltl_body	{ if ($4) ltl_list($2->sym->name, $4->sym->name);
+	  ltl_body	{ if ($4) ltl_list($2->symbol->name, $4->symbol->name);
 			  lexer_.SetLtlMode(false);
 			}
 	;
@@ -214,17 +215,17 @@ ltl_body: '{' full_expr OS '}' { $$ = ltl_to_string($2); }
 	;
 
 claim	: CLAIM	optname	{ if ($2 != ZN)
-			  {	$1->sym = $2->sym;	/* new 5.3.0 */
+			  {	$1->symbol = $2->symbol;	/* new 5.3.0 */
 			  }
 			  nclaims++;
-			  context = $1->sym;
-			  if (claimproc && !strcmp(claimproc, $1->sym->name.c_str()))
+			  context = $1->symbol;
+			  if (claimproc && !strcmp(claimproc, $1->symbol->name.c_str()))
 			  {	loger::fatal("claim %s redefined", claimproc);
 			  }
-			  claimproc = new char[$1->sym->name.length() + 1];
-			  strcpy(claimproc, $1->sym->name.c_str());
+			  claimproc = new char[$1->symbol->name.length() + 1];
+			  strcpy(claimproc, $1->symbol->name.c_str());
 			}
-	  body		{ (void) mk_rdy($1->sym, ZN, $4->sq, 0, ZN, N_CLAIM);
+	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, N_CLAIM);
         		  context = ZS;
         		}
 	;
@@ -233,7 +234,7 @@ optname : /* empty */	{ char tb[32];
 			  memset(tb, 0, 32);
 			  sprintf(tb, "never_%d", nclaims);
 			  $$ = nn(ZN, NAME, ZN, ZN);
-			  $$->sym = lookup(tb);
+			  $$->symbol = lookup(tb);
 			}
 	| NAME		{ $$ = $1; }
 	;
@@ -242,24 +243,24 @@ optname2 : /* empty */ { char tb[32]; static int nltl = 0;
 			  memset(tb, 0, 32);
 			  sprintf(tb, "ltl_%d", nltl++);
 			  $$ = nn(ZN, NAME, ZN, ZN);
-			  $$->sym = lookup(tb);
+			  $$->symbol = lookup(tb);
 			}
 	| NAME		{ $$ = $1; }
 	;
 
 events : TRACE		{ 
-	context = $1->sym;
+	context = $1->symbol;
 			  if (eventmap)
 				loger::non_fatal("trace %s redefined", std::string(eventmap));
-			  eventmap = new char[$1->sym->name.length() + 1];
-			  strcpy(eventmap, $1->sym->name.c_str());
+			  eventmap = new char[$1->symbol->name.length() + 1];
+			  strcpy(eventmap, $1->symbol->name.c_str());
 			  inEventMap++;
 			}
 	  body		{
-			  if ($1->sym->name ==  ":trace:")
-			  {	(void) mk_rdy($1->sym, ZN, $3->sq, 0, ZN, E_TRACE);
+			  if ($1->symbol->name ==  ":trace:")
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, E_TRACE);
 			  } else
-			  {	(void) mk_rdy($1->sym, ZN, $3->sq, 0, ZN, N_TRACE);
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, N_TRACE);
 			  }
         		  context = ZS;
 			  inEventMap--;
@@ -268,10 +269,10 @@ events : TRACE		{
 
 utype	: TYPEDEF NAME '{' 	{  if (context)
 				   { loger::fatal("typedef %s must be global",
-					$2->sym->name);
+					$2->symbol->name);
 				   }
-				   owner = $2->sym;
-				   lexer_.SetInSeq($1->ln);
+				   owner = $2->symbol;
+				   lexer_.SetInSeq($1->line_number);
 				}
 	  decl_lst '}'		{ setuname($5);
 				  owner = ZS;
@@ -282,12 +283,12 @@ utype	: TYPEDEF NAME '{' 	{  if (context)
 nm	: NAME			{ $$ = $1; }
 	| INAME			{ $$ = $1;
 				  if (need_arguments)
-				  loger::fatal("invalid use of '%s'", $1->sym->name);
+				  loger::fatal("invalid use of '%s'", $1->symbol->name);
 				}
 	;
 
 ns	: INLINE nm l_par		{ NamesNotAdded++; }
-	  args r_par		{ prep_inline($2->sym, $5);
+	  args r_par		{ prep_inline($2->symbol, $5);
 				  NamesNotAdded--;
 				}
 	;
@@ -300,22 +301,22 @@ c_fcts	: ccode			{ /* leaves pseudo-inlines with sym of
 	;
 
 cstate	: C_STATE STRING STRING	{
-				  c_state($2->sym, $3->sym, ZS);
+				  c_state($2->symbol, $3->symbol, ZS);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_TRACK STRING STRING {
-				  c_track($2->sym, $3->sym, ZS);
+				  c_track($2->symbol, $3->symbol, ZS);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_STATE STRING STRING	STRING {
-				  c_state($2->sym, $3->sym, $4->sym);
+				  c_state($2->symbol, $3->symbol, $4->symbol);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_TRACK STRING STRING STRING {
-				  c_track($2->sym, $3->sym, $4->sym);
+				  c_track($2->symbol, $3->symbol, $4->symbol);
 				   lexer_.SetHasCode(1);
 				   has_state = 1;
 				}
@@ -326,9 +327,9 @@ ccode	: C_CODE		{ models::Symbol *s;
 				  s = prep_inline(ZS, ZN);
 				  NamesNotAdded--;
 				  $$ = nn(ZN, C_CODE, ZN, ZN);
-				  $$->sym = s;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+				  $$->symbol = s;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				  lexer_.SetHasCode(1);
 				}
 	| C_DECL		{ models::Symbol *s;
@@ -337,9 +338,9 @@ ccode	: C_CODE		{ models::Symbol *s;
 				  NamesNotAdded--;
 				  s->type = models::SymbolType::kCodeDecl;
 				  $$ = nn(ZN, C_CODE, ZN, ZN);
-				  $$->sym = s;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+				  $$->symbol = s;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				  lexer_.SetHasCode(1);
 				}
 	;
@@ -353,17 +354,17 @@ cexpr	: C_EXPR		{ models::Symbol *s;
 				  }
 				  NamesNotAdded--;
 				  $$ = nn(ZN, C_EXPR, ZN, ZN);
-				  $$->sym = s;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+				  $$->symbol = s;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				  no_side_effects(s->name);
 				  lexer_.SetHasCode(1);
 				}
 	;
 
-body	: '{'			{ open_seq(1); lexer_.SetInSeq($1->ln); }
+body	: '{'			{ open_seq(1); lexer_.SetInSeq($1->line_number); }
           sequence OS		{ add_seq(Stop); }
-          '}'			{ $$->sq = close_seq(0); lexer_.SetInSeq(0);
+          '}'			{ $$->sequence = close_seq(0); lexer_.SetInSeq(0);
 				  if (scope_level != 0)
 				  {	loger::non_fatal("missing '}' ?");
 					scope_level = 0;
@@ -376,12 +377,12 @@ sequence: step			{ if ($1) add_seq($1); }
 	;
 
 step    : one_decl		{ $$ = ZN; }
-	| XU vref_lst		{ setxus($2, $1->val); $$ = ZN; }
+	| XU vref_lst		{ setxus($2, $1->value); $$ = ZN; }
 	| NAME ':' one_decl	{ loger::fatal("label preceding declaration,"); }
 	| NAME ':' XU		{ loger::fatal("label preceding xr/xs claim,"); }
 	| stmnt			{ $$ = $1; }
-	| stmnt UNLESS		{ if ($1->ntyp == DO) { safe_break(); } }
-	  stmnt			{ if ($1->ntyp == DO) { restore_break(); }
+	| stmnt UNLESS		{ if ($1->node_type == DO) { safe_break(); } }
+	  stmnt			{ if ($1->node_type == DO) { restore_break(); }
 				  $$ = do_unless($1, $4);
 				}
 	| error
@@ -403,20 +404,20 @@ osubt	: /* empty */		{ $$ = ZN; }
 	;
 
 one_decl: vis TYPE osubt var_list {
-				  setptype($3, $4, $2->val, $1);
-				  $4->val = $2->val;
+				  setptype($3, $4, $2->value, $1);
+				  $4->value = $2->value;
 				  $$ = $4;
 				}
-	| vis UNAME var_list	{ setutype($3, $2->sym, $1);
+	| vis UNAME var_list	{ setutype($3, $2->symbol, $1);
 				  $$ = expand($3, Expand_Ok);
 				}
 	| vis TYPE asgn '{' nlst '}' {
-				  if ($2->val != MTYPE)
+				  if ($2->value != MTYPE)
 					loger::fatal("malformed declaration");
 				  setmtype($3, $5);
 				  if ($1)
 					loger::non_fatal("cannot %s mtype (ignored)",
-						$1->sym->name);
+						$1->symbol->name);
 				  if (context != ZS)
 					loger::fatal("mtype declaration must be global");
 				}
@@ -439,40 +440,40 @@ var_list: ivar           	{ $$ = nn($1, TYPE, ZN, ZN); }
 	| ivar ',' var_list	{ $$ = nn($1, TYPE, ZN, $3); }
 	;
 
-c_list	: CONST			{ $1->ntyp = CONST; $$ = $1; }
-	| CONST ',' c_list	{ $1->ntyp = CONST; $$ = nn($1, ',', $1, $3); }
+c_list	: CONST			{ $1->node_type = CONST; $$ = $1; }
+	| CONST ',' c_list	{ $1->node_type = CONST; $$ = nn($1, ',', $1, $3); }
 	;
 
 ivar    : vardcl           	{ $$ = $1;
-				  $1->sym->init_value = nn(ZN,CONST,ZN,ZN);
-				  $1->sym->init_value->val = 0;
+				  $1->symbol->init_value = nn(ZN,CONST,ZN,ZN);
+				  $1->symbol->init_value->value = 0;
 				  if (!initialization_ok)
-				  {	Lextok *zx, *xz;
+				  {	models::Lextok *zx, *xz;
 					zx = nn(ZN, NAME, ZN, ZN);
-					zx->sym = $1->sym;
-					xz = nn(zx, ASGN, zx, $1->sym->init_value);
+					zx->symbol = $1->symbol;
+					xz = nn(zx, ASGN, zx, $1->symbol->init_value);
 					keep_track_off(xz);
 					/* make sure zx doesnt turn out to be a STRUCT later */
 					add_seq(xz);
 				  }
 				}
 	| vardcl ASGN '{' c_list '}'	{	/* array initialization */
-				  if (!$1->sym->is_array)
-					loger::fatal("%s must be an array", $1->sym->name);
+				  if (!$1->symbol->is_array)
+					loger::fatal("%s must be an array", $1->symbol->name);
 				  $$ = $1;
-				  $1->sym->init_value = $4;
+				  $1->symbol->init_value = $4;
 				  has_ini = 1;
-				  $1->sym->hidden_flags |= (4|8);	/* conservative */
+				  $1->symbol->hidden_flags |= (4|8);	/* conservative */
 				  if (!initialization_ok)
-				  {	Lextok *zx = nn(ZN, NAME, ZN, ZN);
-					zx->sym = $1->sym;
+				  {	models::Lextok *zx = nn(ZN, NAME, ZN, ZN);
+					zx->symbol = $1->symbol;
 					add_seq(nn(zx, ASGN, zx, $4));
 				  }
 				}
 	| vardcl ASGN expr   	{ $$ = $1;	/* initialized scalar */
-				  $1->sym->init_value = $3;
-				  if ($3->ntyp == CONST
-				  || ($3->ntyp == NAME && $3->sym->context))
+				  $1->symbol->init_value = $3;
+				  if ($3->node_type == CONST
+				  || ($3->node_type == NAME && $3->symbol->context))
 				  {	has_ini = 2; /* local init */
 				  } else
 				  {	has_ini = 1; /* possibly global */
@@ -484,29 +485,29 @@ ivar    : vardcl           	{ $$ = $1;
 				  nochan_manip($1, $3, 0);
 				  no_internals($1);
 				  if (!initialization_ok)
-				  {	if ($1->sym->is_array)
+				  {	if ($1->symbol->is_array)
 					{	fprintf(stderr, "warning: %s:%d initialization of %s[] ",
-							$1->fn->name.c_str(), $1->ln,
-							$1->sym->name.c_str());
+							$1->file_name->name.c_str(), $1->line_number,
+							$1->symbol->name.c_str());
 						fprintf(stderr, "could fail if placed here\n");
 					} else
-					{	Lextok *zx = nn(ZN, NAME, ZN, ZN);
-						zx->sym = $1->sym;
+					{	models::Lextok *zx = nn(ZN, NAME, ZN, ZN);
+						zx->symbol = $1->symbol;
 						add_seq(nn(zx, ASGN, zx, $3));
-						$1->sym->init_value = 0;	/* Patrick Trentlin */
+						$1->symbol->init_value = 0;	/* Patrick Trentlin */
 				  }	}
 				}
-	| vardcl ASGN ch_init	{ $1->sym->init_value = $3;	/* channel declaration */
+	| vardcl ASGN ch_init	{ $1->symbol->init_value = $3;	/* channel declaration */
 				  $$ = $1; has_ini = 1;
 				  if (!initialization_ok)
-				  {	loger::non_fatal(PART1 "'%s'" PART2, $1->sym->name);
+				  {	loger::non_fatal(PART1 "'%s'" PART2, $1->symbol->name);
 				  }
 				}
 	;
 
 ch_init : '[' const_expr ']' OF
 	  '{' typ_list '}'	{ 
-				  if ($2->val){
+				  if ($2->value){
 					u_async++;
 				  }else{
 					u_sync++;
@@ -516,36 +517,36 @@ ch_init : '[' const_expr ']' OF
 					Mpars = max(Mpars, i);
 				}
 				  $$ = nn(ZN, CHAN, ZN, $6);
-				  $$->val = $2->val;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+				  $$->value = $2->value;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
         			}
 	;
 
-vardcl  : NAME  		{ $1->sym->value_type = 1; $$ = $1; }
-	| NAME ':' CONST	{ $1->sym->nbits = $3->val;
-				  if ($3->val >= 8*sizeof(long))
+vardcl  : NAME  		{ $1->symbol->value_type = 1; $$ = $1; }
+	| NAME ':' CONST	{ $1->symbol->nbits = $3->value;
+				  if ($3->value >= 8*sizeof(long))
 				  {	loger::non_fatal("width-field %s too large",
-						$1->sym->name);
-					$3->val = 8*sizeof(long)-1;
+						$1->symbol->name);
+					$3->value = 8*sizeof(long)-1;
 				  }
-				  $1->sym->value_type = 1; $$ = $1;
+				  $1->symbol->value_type = 1; $$ = $1;
 				}
-	| NAME '[' const_expr ']'	{ $1->sym->value_type = $3->val; $1->sym->is_array = 1; $$ = $1; }
+	| NAME '[' const_expr ']'	{ $1->symbol->value_type = $3->value; $1->symbol->is_array = 1; $$ = $1; }
 	| NAME '[' NAME ']'	{	/* make an exception for an initialized scalars */
 					$$ = nn(ZN, CONST, ZN, ZN);
 					fprintf(stderr, "spin: %s:%d, warning: '%s' in array bound ",
-						$1->fn->name.c_str(), $1->ln, $3->sym->name.c_str());
-					if ($3->sym->init_value
-					&&  $3->sym->init_value->val > 0)
-					{	fprintf(stderr, "evaluated as %d\n", $3->sym->init_value->val);
-						$$->val = $3->sym->init_value->val;
+						$1->file_name->name.c_str(), $1->line_number, $3->symbol->name.c_str());
+					if ($3->symbol->init_value
+					&&  $3->symbol->init_value->value > 0)
+					{	fprintf(stderr, "evaluated as %d\n", $3->symbol->init_value->value);
+						$$->value = $3->symbol->init_value->value;
 					} else
 					{	fprintf(stderr, "evaluated as 1 by default (to avoid zero)\n");
-						$$->val = 1;
+						$$->value = 1;
 					}
-					$1->sym->value_type = $$->val;
-					$1->sym->is_array = 1;
+					$1->symbol->value_type = $$->value;
+					$1->symbol->is_array = 1;
 					$$ = $1;
 				}
 	;
@@ -554,9 +555,9 @@ varref	: cmpnd			{ $$ = mk_explicit($1, Expand_Ok, NAME); }
 	;
 
 pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
-				  if ($1->sym->is_array && !lexer_.GetInFor() && !need_arguments)
+				  if ($1->symbol->is_array && !lexer_.GetInFor() && !need_arguments)
 				  {	loger::non_fatal("missing array index for '%s'",
-						$1->sym->name);
+						$1->symbol->name);
 				  }
 				}
 	| NAME			{ owner = ZS; }
@@ -564,18 +565,18 @@ pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
 	;
 
 cmpnd	: pfld			{ Embedded++;
-				  if ($1->sym->type ==  models::SymbolType::kStruct)
-					owner = $1->sym->struct_name;
+				  if ($1->symbol->type ==  models::SymbolType::kStruct)
+					owner = $1->symbol->struct_name;
 				}
-	  sfld			{ $$ = $1; $$->rgt = $3;
-				  if ($3 && $1->sym->type !=  models::SymbolType::kStruct)
-					$1->sym->type = models::SymbolType::kStruct;
+	  sfld			{ $$ = $1; $$->right = $3;
+				  if ($3 && $1->symbol->type !=  models::SymbolType::kStruct)
+					$1->symbol->type = models::SymbolType::kStruct;
 				  Embedded--;
 				  if (!Embedded && !NamesNotAdded
-				  &&  !$1->sym->type)
+				  &&  !$1->symbol->type)
 				   loger::fatal("undeclared variable: %s",
-						$1->sym->name);
-				  if ($3) validref($1, $3->lft);
+						$1->symbol->name);
+				  if ($3) validref($1, $3->left);
 				  owner = ZS;
 				}
 	;
@@ -608,7 +609,7 @@ Special : varref RCV		{ Expand_Ok++; }
 	| varref SND		{ Expand_Ok++; }
 	  margs			{ Expand_Ok--; has_io++;
 				  $$ = nn($1, 's', $1, $4);
-				  $$->val=0; trackchanuse($4, ZN, 'S');
+				  $$->value=0; trackchanuse($4, ZN, 'S');
 				  any_runs($4);
 				}
 	| for_pre ':' expr DOTDOT expr r_par	{
@@ -625,49 +626,49 @@ Special : varref RCV		{ Expand_Ok++; }
 				  $$ = sel_index($3, $5, $7);
 				}
 	| IF options FI 	{ $$ = nn($1, IF, ZN, ZN);
-        			  $$->sl = $2->sl;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+        			  $$->seq_list = $2->seq_list;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				  prune_opts($$);
         			}
 	| DO    		{ pushbreak(); }
           options OD    	{ $$ = nn($1, DO, ZN, ZN);
-        			  $$->sl = $3->sl;
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+        			  $$->seq_list = $3->seq_list;
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				  prune_opts($$);
         			}
 	| BREAK  		{ $$ = nn(ZN, GOTO, ZN, ZN);
-				  $$->sym = break_dest();
+				  $$->symbol = break_dest();
 				}
 	| GOTO NAME		{ $$ = nn($2, GOTO, ZN, ZN);
-				  if ($2->sym->type != 0
-				  &&  $2->sym->type != models::SymbolType::kLabel) {
+				  if ($2->symbol->type != 0
+				  &&  $2->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
-					$2->sym->name);
+					$2->symbol->name);
 				  }
-				  $2->sym->type = models::SymbolType::kLabel;
+				  $2->symbol->type = models::SymbolType::kLabel;
 				}
 	| NAME ':' stmnt	{ $$ = nn($1, ':',$3, ZN);
-				  if ($1->sym->type != 0
-				  &&  $1->sym->type != models::SymbolType::kLabel) {
+				  if ($1->symbol->type != 0
+				  &&  $1->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
-					$1->sym->name);
+					$1->symbol->name);
 				  }
-				  $1->sym->type = models::SymbolType::kLabel;
+				  $1->symbol->type = models::SymbolType::kLabel;
 				}
 	| NAME ':'		{ $$ = nn($1, ':',ZN,ZN);
-				  if ($1->sym->type != 0
-				  &&  $1->sym->type != models::SymbolType::kLabel) {
+				  if ($1->symbol->type != 0
+				  &&  $1->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
-					$1->sym->name);
+					$1->symbol->name);
 				  }
-				  $$->lft = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
-				  $$->lft->lft->val = 1; /* skip */
-				  $1->sym->type = models::SymbolType::kLabel;
+				  $$->left = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
+				  $$->left->left->value = 1; /* skip */
+				  $1->symbol->type = models::SymbolType::kLabel;
 				}
 	| error			{ $$ = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
-				  $$->lft->val = 1; /* skip */
+				  $$->left->value = 1; /* skip */
 				}
 	;
 
@@ -676,20 +677,20 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				  nochan_manip($1, $3, 0);
 				  no_internals($1);
 				}
-	| varref INCR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->val = 1;
+	| varref INCR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->value = 1;
 				  $$ = nn(ZN,  '+', $1, $$);
 				  $$ = nn($1, ASGN, $1, $$);
 				  trackvar($1, $1);
 				  no_internals($1);
-				  if ($1->sym->type == CHAN)
+				  if ($1->symbol->type == CHAN)
 				   loger::fatal("arithmetic on chan");
 				}
-	| varref DECR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->val = 1;
+	| varref DECR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->value = 1;
 				  $$ = nn(ZN,  '-', $1, $$);
 				  $$ = nn($1, ASGN, $1, $$);
 				  trackvar($1, $1);
 				  no_internals($1);
-				  if ($1->sym->type == CHAN)
+				  if ($1->symbol->type == CHAN)
 				   loger::fatal("arithmetic on chan id's");
 				}
 	| SET_P l_par two_args r_par	{ $$ = nn(ZN, SET_P, $3, ZN); lexer_.IncHasPriority(); }
@@ -702,25 +703,25 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 	| varref R_RCV		{ Expand_Ok++; }
 	  rargs			{ Expand_Ok--; has_io++;
 				  $$ = nn($1,  'r', $1, $4);
-				  $$->val = has_random = 1;
+				  $$->value = has_random = 1;
 				  trackchanuse($4, ZN, 'R');
 				}
 	| varref RCV		{ Expand_Ok++; }
 	  LT rargs GT		{ Expand_Ok--; has_io++;
 				  $$ = nn($1, 'r', $1, $5);
-				  $$->val = 2;	/* fifo poll */
+				  $$->value = 2;	/* fifo poll */
 				  trackchanuse($5, ZN, 'R');
 				}
 	| varref R_RCV		{ Expand_Ok++; }
 	  LT rargs GT		{ Expand_Ok--; has_io++;	/* rrcv poll */
 				  $$ = nn($1, 'r', $1, $5);
-				  $$->val = 3; has_random = 1;
+				  $$->value = 3; has_random = 1;
 				  trackchanuse($5, ZN, 'R');
 				}
 	| varref O_SND		{ Expand_Ok++; }
 	  margs			{ Expand_Ok--; has_io++;
 				  $$ = nn($1, 's', $1, $4);
-				  $$->val = has_sorted = 1;
+				  $$->value = has_sorted = 1;
 				  trackchanuse($4, ZN, 'S');
 				  any_runs($4);
 				}
@@ -729,52 +730,52 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				}
 	| ATOMIC   '{'   	{ open_seq(0); }
           sequence OS '}'   	{ $$ = nn($1, ATOMIC, ZN, ZN);
-        			  $$->sl = seqlist(close_seq(3), 0);
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
-				  make_atomic($$->sl->this_sequence, 0);
+        			  $$->seq_list = seqlist(close_seq(3), 0);
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
+				  make_atomic($$->seq_list->this_sequence, 0);
         			}
 	| D_STEP '{'		{ open_seq(0);
 				  rem_Seq();
 				}
           sequence OS '}'   	{ $$ = nn($1, D_STEP, ZN, ZN);
-        			  $$->sl = seqlist(close_seq(4), 0);
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
-        			  make_atomic($$->sl->this_sequence, D_ATOM);
+        			  $$->seq_list = seqlist(close_seq(4), 0);
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
+        			  make_atomic($$->seq_list->this_sequence, D_ATOM);
 				  unrem_Seq();
         			}
 	| '{'			{ open_seq(0); }
 	  sequence OS '}'	{ $$ = nn(ZN, NON_ATOMIC, ZN, ZN);
-        			  $$->sl = seqlist(close_seq(5), 0);
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+        			  $$->seq_list = seqlist(close_seq(5), 0);
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
         			}
 	| INAME			{ need_arguments++; }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($1->sym, $4, ZN);
+				  pickup_inline($1->symbol, $4, ZN);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $7; }
 
 	| varref ASGN INAME	{ need_arguments++; /* inline call */ }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($3->sym, $6, $1);
+				  pickup_inline($3->symbol, $6, $1);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $9; }
 	| RETURN full_expr	{ $$ = return_statement($2); }	
 	;
 
-options : option		{ $$->sl = seqlist($1->sq, 0); }
-	| option options	{ $$->sl = seqlist($1->sq, $2->sl); }
+options : option		{ $$->seq_list = seqlist($1->sequence, 0); }
+	| option options	{ $$->seq_list = seqlist($1->sequence, $2->seq_list); }
 	;
 
 option  : SEP   		{ open_seq(0); }
           sequence OS		{ $$ = nn(ZN,0,ZN,ZN);
-				  $$->sq = close_seq(6);
-				  $$->ln = $1->ln;
-				  $$->fn = $1->fn;
+				  $$->sequence = close_seq(6);
+				  $$->line_number = $1->line_number;
+				  $$->file_name = $1->file_name;
 				}
 	;
 
@@ -795,22 +796,22 @@ aname	: NAME			{ $$ = $1; }
 	;
 
 const_expr:	CONST			{ $$ = $1; }
-	| '-' const_expr %prec UMIN	{ $$ = $2; $$->val = -($2->val); }
+	| '-' const_expr %prec UMIN	{ $$ = $2; $$->value = -($2->value); }
 	| l_par const_expr r_par		{ $$ = $2; }
-	| const_expr '+' const_expr	{ $$ = $1; $$->val = $1->val + $3->val; }
-	| const_expr '-' const_expr	{ $$ = $1; $$->val = $1->val - $3->val; }
-	| const_expr '*' const_expr	{ $$ = $1; $$->val = $1->val * $3->val; }
+	| const_expr '+' const_expr	{ $$ = $1; $$->value = $1->value + $3->value; }
+	| const_expr '-' const_expr	{ $$ = $1; $$->value = $1->value - $3->value; }
+	| const_expr '*' const_expr	{ $$ = $1; $$->value = $1->value * $3->value; }
 	| const_expr '/' const_expr	{ $$ = $1;
-					  if ($3->val == 0)
+					  if ($3->value == 0)
 					  { loger::fatal("division by zero" );
 					  }
-					  $$->val = $1->val / $3->val;
+					  $$->value = $1->value / $3->value;
 					}
 	| const_expr '%' const_expr	{ $$ = $1;
-					  if ($3->val == 0)
+					  if ($3->value == 0)
 					  { loger::fatal("attempt to take modulo of zero" );
 					  }
-					  $$->val = $1->val % $3->val;
+					  $$->value = $1->value % $3->value;
 					}
 	;
 
@@ -847,7 +848,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 	  l_par args r_par
 	  Opt_priority		{ Expand_Ok--;
 				  $$ = nn($2, RUN, $5, ZN);
-				  $$->val = ($7) ? $7->val : 0;
+				  $$->value = ($7) ? $7->value : 0;
 				  trackchanuse($5, $2, 'A'); trackrun($$);
 				}
 	| LEN l_par varref r_par	{ $$ = nn($3, LEN, $3, ZN); }
@@ -860,14 +861,14 @@ expr    : l_par expr r_par		{ $$ = $2; }
 	| varref R_RCV		{ Expand_Ok++; }
 	  '[' rargs ']'		{ Expand_Ok--; has_io++;
 				  $$ = nn($1, 'R', $1, $5);
-				  $$->val = has_random = 1;
+				  $$->value = has_random = 1;
 				}
 	| varref		{ $$ = $1; trapwonly($1 /*, "varref" */); }
 	| cexpr			{ $$ = $1; }
 	| CONST 		{ $$ = nn(ZN,CONST,ZN,ZN);
-				  $$->ismtyp = $1->ismtyp;
-				  $$->sym = $1->sym;
-				  $$->val = $1->val;
+				  $$->is_mtype_token = $1->is_mtype_token;
+				  $$->symbol = $1->symbol;
+				  $$->value = $1->value;
 				}
 	| TIMEOUT		{ $$ = nn(ZN,TIMEOUT, ZN, ZN); }
 	| NONPROGRESS		{ $$ = nn(ZN,NONPROGRESS, ZN, ZN);
@@ -877,11 +878,11 @@ expr    : l_par expr r_par		{ $$ = $2; }
 				  has_pcvalue++;
 				}
 	| PNAME '[' expr ']' '@' NAME
-	  			{ $$ = rem_lab($1->sym, $3, $6->sym); }
+	  			{ $$ = rem_lab($1->symbol, $3, $6->symbol); }
 	| PNAME '[' expr ']' ':' pfld
-	  			{ $$ = rem_var($1->sym, $3, $6->sym, $6->lft); }
-	| PNAME '@' NAME	{ $$ = rem_lab($1->sym, ZN, $3->sym); }
-	| PNAME ':' pfld	{ $$ = rem_var($1->sym, ZN, $3->sym, $3->lft); }
+	  			{ $$ = rem_var($1->symbol, $3, $6->symbol, $6->left); }
+	| PNAME '@' NAME	{ $$ = rem_lab($1->symbol, ZN, $3->symbol); }
+	| PNAME ':' pfld	{ $$ = rem_var($1->symbol, ZN, $3->symbol, $3->left); }
 	| ltl_expr		{ $$ = $1; }
 	;
 
@@ -942,24 +943,24 @@ oname	: /* empty */		{ $$ = ZN; }
 	;
 
 basetype: TYPE oname		{ if ($2)
-				  {	if ($1->val != MTYPE)
+				  {	if ($1->value != MTYPE)
 					{	
-						std::cout << loger::explainToString($1->val);
+						std::cout << loger::explainToString($1->value);
 						loger::fatal("unexpected type" );
 				  }	}
-				  $$->sym = $2 ? $2->sym : ZS;
-				  $$->val = $1->val;
-				  if ($$->val == UNSIGNED)
+				  $$->symbol = $2 ? $2->symbol : ZS;
+				  $$->value = $1->value;
+				  if ($$->value == UNSIGNED)
 				  loger::fatal("unsigned cannot be used as mesg type");
 				}
-	| UNAME			{ $$->sym = $1->sym;
-				  $$->val = STRUCT;
+	| UNAME			{ $$->symbol = $1->symbol;
+				  $$->value = STRUCT;
 				}
 	| error			/* e.g., unsigned ':' const */
 	;
 
-typ_list: basetype		{ $$ = nn($1, $1->val, ZN, ZN); }
-	| basetype ',' typ_list	{ $$ = nn($1, $1->val, ZN, $3); }
+typ_list: basetype		{ $$ = nn($1, $1->value, ZN, ZN); }
+	| basetype ',' typ_list	{ $$ = nn($1, $1->value, ZN, $3); }
 	;
 
 two_args:	expr ',' expr	{ $$ = nn(ZN, ',', $1, $3); }
@@ -974,19 +975,19 @@ prargs  : /* empty */		{ $$ = ZN; }
 	;
 
 margs   : arg			{ $$ = $1; }
-	| expr l_par arg r_par	{ if ($1->ntyp == ',')
+	| expr l_par arg r_par	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
 				  	$$ = nn(ZN, ',', $1, $3);
 				}
 	;
 
-arg     : expr			{ if ($1->ntyp == ',')
+arg     : expr			{ if ($1->node_type == ',')
 					$$ = $1;
 				  else
 				  	$$ = nn(ZN, ',', $1, ZN);
 				}
-	| expr ',' arg		{ if ($1->ntyp == ',')
+	| expr ',' arg		{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
 				  	$$ = nn(ZN, ',', $1, $3);
@@ -998,26 +999,26 @@ rarg	: varref		{ $$ = $1; trackvar($1, $1);
 	| EVAL l_par expr r_par	{ $$ = nn(ZN,EVAL,$3,ZN);
 				  trapwonly($1 /*, "eval rarg" */); }
 	| CONST 		{ $$ = nn(ZN,CONST,ZN,ZN);
-				  $$->ismtyp = $1->ismtyp;
-				  $$->sym = $1->sym;
-				  $$->val = $1->val;
+				  $$->is_mtype_token = $1->is_mtype_token;
+				  $$->symbol = $1->symbol;
+				  $$->value = $1->value;
 				}
 	| '-' CONST %prec UMIN	{ $$ = nn(ZN,CONST,ZN,ZN);
-				  $$->val = - ($2->val);
+				  $$->value = - ($2->value);
 				}
 	;
 
-rargs	: rarg			{ if ($1->ntyp == ',')
+rargs	: rarg			{ if ($1->node_type == ',')
 					$$ = $1;
 				  else
 				  	$$ = nn(ZN, ',', $1, ZN);
 				}
-	| rarg ',' rargs	{ if ($1->ntyp == ',')
+	| rarg ',' rargs	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
 				  	$$ = nn(ZN, ',', $1, $3);
 				}
-	| rarg l_par rargs r_par	{ if ($1->ntyp == ',')
+	| rarg l_par rargs r_par	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
 				  	$$ = nn(ZN, ',', $1, $3);
@@ -1034,17 +1035,17 @@ nlst	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
 	;
 %%
 
-#define binop(n, sop)	fprintf(fd, "("); recursive(fd, n->lft); \
-			fprintf(fd, ") %s (", sop); recursive(fd, n->rgt); \
+#define binop(n, sop)	fprintf(fd, "("); recursive(fd, n->left); \
+			fprintf(fd, ") %s (", sop); recursive(fd, n->right); \
 			fprintf(fd, ")");
-#define unop(n, sop)	fprintf(fd, "%s (", sop); recursive(fd, n->lft); \
+#define unop(n, sop)	fprintf(fd, "%s (", sop); recursive(fd, n->left); \
 			fprintf(fd, ")");
 
 static void
-recursive(FILE *fd, Lextok *n)
+recursive(FILE *fd, models::Lextok *n)
 {
 	if (n)
-	switch (n->ntyp) {
+	switch (n->node_type) {
 	case NEXT:
 		unop(n, "X");
 		break;
@@ -1079,7 +1080,7 @@ recursive(FILE *fd, Lextok *n)
 		binop(n, "<->");
 		break;
 	case C_EXPR:
-		fprintf(fd, "c_expr { %s }", put_inline(fd, n->sym->name));
+		fprintf(fd, "c_expr { %s }", put_inline(fd, n->symbol->name));
 		break;
 	default:
 		comment(fd, n, 0);
@@ -1091,9 +1092,9 @@ recursive(FILE *fd, Lextok *n)
 extern ssize_t getline(char **, size_t *, FILE *); /* see main.c */
 #endif
 
-static Lextok *
-ltl_to_string(Lextok *n)
-{	Lextok *m = nn(ZN, 0, ZN, ZN);
+static models::Lextok *
+ltl_to_string(models::Lextok *n)
+{	models::Lextok *m = nn(ZN, 0, ZN, ZN);
 	ssize_t retval;
 	char *ltl_formula = NULL;
 	FILE *tf = fopen(TMP_FILE1, "w+"); /* tmpfile() fails on Windows 7 */
@@ -1127,7 +1128,7 @@ ltl_to_string(Lextok *n)
 
 	if (1) printf("ltl %s: %s\n", ltl_name, ltl_formula);
 
-	m->sym = lookup(ltl_formula);
+	m->symbol = lookup(ltl_formula);
 #ifndef __MINGW32__
 	free(ltl_formula);
 #endif

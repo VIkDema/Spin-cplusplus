@@ -150,9 +150,9 @@ static int has_clause(int tok, Graph *p, Node *n) {
 
   switch (n->ntyp) {
   case AND:
-    return has_clause(tok, p, n->lft) && has_clause(tok, p, n->rgt);
+    return has_clause(tok, p, n->left) && has_clause(tok, p, n->right);
   case OR:
-    return has_clause(tok, p, n->lft) || has_clause(tok, p, n->rgt);
+    return has_clause(tok, p, n->left) || has_clause(tok, p, n->right);
   }
 
   for (q = p->Other; q; q = q->nxt) {
@@ -179,7 +179,7 @@ more:
 
   if (n->ntyp == U_OPER) /* 3.4.0 */
   {
-    n = n->rgt;
+    n = n->right;
     goto more;
   }
 }
@@ -207,19 +207,19 @@ static void liveness(Node *n) {
     switch (n->ntyp) {
 #ifdef NXT
     case NEXT:
-      liveness(n->lft);
+      liveness(n->left);
       break;
 #endif
     case U_OPER:
       Red_cnt++;
       mk_red(n);
-      mk_grn(n->rgt);
+      mk_grn(n->right);
       /* fall through */
     case V_OPER:
     case OR:
     case AND:
-      liveness(n->lft);
-      liveness(n->rgt);
+      liveness(n->left);
+      liveness(n->right);
       break;
     }
 }
@@ -257,7 +257,7 @@ int only_nxt(Node *n) {
     return 1;
   case OR:
   case AND:
-    return only_nxt(n->rgt) && only_nxt(n->lft);
+    return only_nxt(n->right) && only_nxt(n->left);
   default:
     return 0;
   }
@@ -278,7 +278,7 @@ int dump_cond(Node *pp, Node *r, int first) {
     if (!frst)
       fprintf(tl_out, " && ");
     fprintf(tl_out, "c_expr { ");
-    dump_cond(q->lft, r, 1);
+    dump_cond(q->left, r, 1);
     fprintf(tl_out, " } ");
     frst = 0;
     return frst;
@@ -298,21 +298,21 @@ int dump_cond(Node *pp, Node *r, int first) {
     if (!frst)
       fprintf(tl_out, " && ");
     fprintf(tl_out, "((");
-    frst = dump_cond(q->lft, r, 1);
+    frst = dump_cond(q->left, r, 1);
 
     if (!frst)
       fprintf(tl_out, ") || (");
     else {
-      if (only_nxt(q->lft)) {
+      if (only_nxt(q->left)) {
         fprintf(tl_out, "1))");
         return 0;
       }
     }
 
-    frst = dump_cond(q->rgt, r, 1);
+    frst = dump_cond(q->right, r, 1);
 
     if (frst) {
-      if (only_nxt(q->rgt))
+      if (only_nxt(q->right))
         fprintf(tl_out, "1");
       else
         fprintf(tl_out, "0");
@@ -321,11 +321,11 @@ int dump_cond(Node *pp, Node *r, int first) {
 
     fprintf(tl_out, "))");
 #endif
-  } else if (q->ntyp == V_OPER && !anywhere(AND, q->rgt, r)) {
-    frst = dump_cond(q->rgt, r, frst);
+  } else if (q->ntyp == V_OPER && !anywhere(AND, q->right, r)) {
+    frst = dump_cond(q->right, r, frst);
   } else if (q->ntyp == AND) {
-    frst = dump_cond(q->lft, r, frst);
-    frst = dump_cond(q->rgt, r, frst);
+    frst = dump_cond(q->left, r, frst);
+    frst = dump_cond(q->right, r, frst);
   }
 
   return frst;
@@ -562,7 +562,7 @@ static void ng(Symbol *s, Symbol *in, Node *isnew, Node *isold, Node *next) {
 static void sdump(Node *n) {
   switch (n->ntyp) {
   case PREDICATE:
-    append_to_dumpbuf(n->sym->name);
+    append_to_dumpbuf(n->symbol->name);
     break;
   case U_OPER:
     append_to_dumpbuf("U");
@@ -576,9 +576,9 @@ static void sdump(Node *n) {
   case AND:
     append_to_dumpbuf("&");
   common2:
-    sdump(n->rgt);
+    sdump(n->right);
   common1:
-    sdump(n->lft);
+    sdump(n->left);
     break;
 #ifdef NXT
   case NEXT:
@@ -587,7 +587,7 @@ static void sdump(Node *n) {
 #endif
   case CEXPR:
     append_to_dumpbuf("c_expr {");
-    sdump(n->lft);
+    sdump(n->left);
     append_to_dumpbuf("}");
     break;
   case NOT:
@@ -610,7 +610,7 @@ Symbol *DoDump(Node *n) {
     return ZS;
 
   if (n->ntyp == PREDICATE)
-    return n->sym;
+    return n->symbol;
 
   if (dumpbuf) {
     dumpbuf[0] = '\0';
@@ -750,15 +750,15 @@ static void expand_g(Graph *g) {
 
   if (g->New->ntyp == AND) {
     if (g->New->nxt) {
-      n2 = g->New->rgt;
+      n2 = g->New->right;
       while (n2->nxt)
         n2 = n2->nxt;
       n2->nxt = g->New->nxt;
     }
-    n1 = n2 = g->New->lft;
+    n1 = n2 = g->New->left;
     while (n2->nxt)
       n2 = n2->nxt;
-    n2->nxt = g->New->rgt;
+    n2->nxt = g->New->right;
 
     releasenode(0, g->New);
 
@@ -800,11 +800,11 @@ out:
     push_stack(g);
     break;
   case V_OPER:
-    Assert(now->rgt != ZN, now->ntyp);
-    Assert(now->lft != ZN, now->ntyp);
-    Assert(now->rgt->nxt == ZN, now->ntyp);
-    Assert(now->lft->nxt == ZN, now->ntyp);
-    n1 = now->rgt;
+    Assert(now->right != ZN, now->ntyp);
+    Assert(now->left != ZN, now->ntyp);
+    Assert(now->right->nxt == ZN, now->ntyp);
+    Assert(now->left->nxt == ZN, now->ntyp);
+    n1 = now->right;
     n1->nxt = g->New;
 
     if (can_release)
@@ -813,8 +813,8 @@ out:
       nx = getnode(now); /* now also appears in Old */
     nx->nxt = g->Next;
 
-    n2 = now->lft;
-    n2->nxt = getnode(now->rgt);
+    n2 = now->left;
+    n2->nxt = getnode(now->right);
     n2->nxt->nxt = g->New;
     g->New = flatten(n2);
     push_stack(g);
@@ -822,9 +822,9 @@ out:
     break;
 
   case U_OPER:
-    Assert(now->rgt->nxt == ZN, now->ntyp);
-    Assert(now->lft->nxt == ZN, now->ntyp);
-    n1 = now->lft;
+    Assert(now->right->nxt == ZN, now->ntyp);
+    Assert(now->left->nxt == ZN, now->ntyp);
+    n1 = now->left;
 
     if (can_release)
       nx = now;
@@ -832,15 +832,15 @@ out:
       nx = getnode(now); /* now also appears in Old */
     nx->nxt = g->Next;
 
-    n2 = now->rgt;
+    n2 = now->right;
     n2->nxt = g->New;
 
     goto common;
 
 #ifdef NXT
   case NEXT:
-    Assert(now->lft != ZN, now->ntyp);
-    nx = dupnode(now->lft);
+    Assert(now->left != ZN, now->ntyp);
+    nx = dupnode(now->left);
     nx->nxt = g->Next;
     g->Next = nx;
     if (can_release)
@@ -850,12 +850,12 @@ out:
 #endif
 
   case OR:
-    Assert(now->rgt->nxt == ZN, now->ntyp);
-    Assert(now->lft->nxt == ZN, now->ntyp);
-    n1 = now->lft;
+    Assert(now->right->nxt == ZN, now->ntyp);
+    Assert(now->left->nxt == ZN, now->ntyp);
+    n1 = now->left;
     nx = g->Next;
 
-    n2 = now->rgt;
+    n2 = now->right;
     n2->nxt = g->New;
   common:
     n1->nxt = g->New;
@@ -884,27 +884,27 @@ Node *twocases(Node *p) {
   case OR:
   case U_OPER:
   case V_OPER:
-    p->lft = twocases(p->lft);
-    p->rgt = twocases(p->rgt);
+    p->left = twocases(p->left);
+    p->right = twocases(p->right);
     break;
 #ifdef NXT
   case NEXT:
 #endif
   case NOT:
-    p->lft = twocases(p->lft);
+    p->left = twocases(p->left);
     break;
 
   default:
     break;
   }
   if (p->ntyp == AND /* 1 */
-      && p->lft->ntyp == V_OPER && p->lft->lft->ntyp == FALSE &&
-      p->rgt->ntyp == V_OPER && p->rgt->lft->ntyp == FALSE) {
-    q = tl_nn(V_OPER, False, tl_nn(AND, p->lft->rgt, p->rgt->rgt));
+      && p->left->ntyp == V_OPER && p->left->left->ntyp == FALSE &&
+      p->right->ntyp == V_OPER && p->right->left->ntyp == FALSE) {
+    q = tl_nn(V_OPER, False, tl_nn(AND, p->left->right, p->right->right));
   } else if (p->ntyp == OR /* 2 */
-             && p->lft->ntyp == U_OPER && p->lft->lft->ntyp == TRUE &&
-             p->rgt->ntyp == U_OPER && p->rgt->lft->ntyp == TRUE) {
-    q = tl_nn(U_OPER, True, tl_nn(OR, p->lft->rgt, p->rgt->rgt));
+             && p->left->ntyp == U_OPER && p->left->left->ntyp == TRUE &&
+             p->right->ntyp == U_OPER && p->right->left->ntyp == TRUE) {
+    q = tl_nn(U_OPER, True, tl_nn(OR, p->left->right, p->right->right));
   } else
     q = p;
   return q;

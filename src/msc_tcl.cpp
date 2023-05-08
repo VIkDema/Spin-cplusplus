@@ -10,11 +10,11 @@
 #include "main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
 
-#define MW 500 /* page width */
-#define RH 100 /* right margin */
-#define WW 80  /* distance between process lines */
-#define HH 12  /* vertical distance between steps */
-#define LW 2   /* line width of message arrows */
+constexpr int kPageWidth = 500;
+constexpr int kRightMargin = 100;                // было 512
+constexpr int kDistanceBetweenProcessLines = 80; // было 512
+constexpr int kVDistanceBetweenSteps = 12;       // было 512
+constexpr int kLineWidthOfMessageArrows = 2;     // было 512
 
 const std::string RVC = "darkred";   // rendezvous arrows
 const std::string MPC = "darkblue";  // asynchronous message passing arrow
@@ -53,30 +53,35 @@ static void psline(int x0, int y0, int x1, int y1, const std::string &color) {
   if (x0 == x1) /* gridline */
   {
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags grid -width 1 \n",
-            xscale * (x0 + 1) * WW - 20, yscale * y0 + 20,
-            xscale * (x1 + 1) * WW - 20, yscale * y1 + 20, color.c_str());
+            xscale * (x0 + 1) * kDistanceBetweenProcessLines - 20,
+            yscale * y0 + 20,
+            xscale * (x1 + 1) * kDistanceBetweenProcessLines - 20,
+            yscale * y1 + 20, color.c_str());
     fprintf(pfd, ".c lower grid\n");
   } else {
-    int xm =
-        xscale * (x0 + 1) * WW + (xscale * (x1 - x0) * WW) / 2 - 20; /* mid x */
+    int xm = xscale * (x0 + 1) * kDistanceBetweenProcessLines +
+             (xscale * (x1 - x0) * kDistanceBetweenProcessLines) / 2 -
+             20; /* mid x */
 
-    if (y1 - y0 <= HH + 20) {
+    if (y1 - y0 <= kVDistanceBetweenSteps + 20) {
       y1 = y0 + 20; /* close enough to horizontal - looks better */
     }
 
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags mesg -width %d\n",
-            xscale * (x0 + 1) * WW - 20, yscale * y0 + 20 + 10, xm,
-            yscale * y0 + 20 + 10, color.c_str(), LW);
+            xscale * (x0 + 1) * kDistanceBetweenProcessLines - 20,
+            yscale * y0 + 20 + 10, xm, yscale * y0 + 20 + 10, color.c_str(),
+            kLineWidthOfMessageArrows);
 
     if (y1 != y0 + 20) {
       fprintf(pfd, ".c create line %d %d %d %d -fill %s -tags mesg -width %d\n",
               xm, yscale * y0 + 20 + 10, xm, yscale * y1 + 20 - 10,
-              color.c_str(), LW);
+              color.c_str(), kLineWidthOfMessageArrows);
     }
 
     fprintf(pfd, ".c create line %d %d %d %d -fill %s -width %d ", xm,
-            yscale * y1 + 20 - 10, xscale * (x1 + 1) * WW - 20,
-            yscale * y1 + 20 - 10, color.c_str(), LW);
+            yscale * y1 + 20 - 10,
+            xscale * (x1 + 1) * kDistanceBetweenProcessLines - 20,
+            yscale * y1 + 20 - 10, color.c_str(), kLineWidthOfMessageArrows);
 
     if (color == RVC) {
       side = "both";
@@ -88,8 +93,8 @@ static void psline(int x0, int y0, int x1, int y1, const std::string &color) {
 
 static void colbox(int ix, int iy, int w, int h_unused,
                    const std::string &color) {
-  int x = ix * WW;
-  int y = iy * HH;
+  int x = ix * kDistanceBetweenProcessLines;
+  int y = iy * kVDistanceBetweenSteps;
 
   if (ix < 0 || ix > 255) {
     fprintf(stderr, "saw ix=%d\n", ix);
@@ -97,7 +102,11 @@ static void colbox(int ix, int iy, int w, int h_unused,
   }
 
   if (ProcLine[ix] < iy) { /* if (ProcLine[ix] > 0) */
-    { psline(ix - 1, ProcLine[ix] * HH + HH + 4, ix - 1, iy * HH - HH, GRC); }
+    {
+      psline(ix - 1,
+             ProcLine[ix] * kVDistanceBetweenSteps + kVDistanceBetweenSteps + 4,
+             ix - 1, iy * kVDistanceBetweenSteps - kVDistanceBetweenSteps, GRC);
+    }
     fprintf(pfd, "# ProcLine[%d] from %d to %d (Used %d nobox %d)\n", ix,
             ProcLine[ix], iy, UsedLine[ix], no_box);
     ProcLine[ix] = iy;
@@ -139,14 +148,15 @@ static void colbox(int ix, int iy, int w, int h_unused,
 }
 
 static void stepnumber(int i) {
-  int y = (yscale * i * HH) + 20;
+  int y = (yscale * i * kVDistanceBetweenSteps) + 20;
 
   fprintf(pfd, ".c create text %d %d -fill #eef -text \"%d\"\n",
-          -10 + (xscale * WW) / 2, y, i);
+          -10 + (xscale * kDistanceBetweenProcessLines) / 2, y, i);
 
   /* horizontal dashed grid line */
   fprintf(pfd, ".c create line %d %d %d %d -fill #eef -dash {6 4}\n",
-          -20 + WW * xscale, y, (maxx + 1) * WW * xscale - 20, y);
+          -20 + kDistanceBetweenProcessLines * xscale, y,
+          (maxx + 1) * kDistanceBetweenProcessLines * xscale - 20, y);
 }
 
 static void spitbox(int ix, int y, char *s) {
@@ -203,16 +213,19 @@ static void spitbox(int ix, int y, char *s) {
     *t++ = s[i];
   }
 
-  fprintf(pfd, ".c create text %d %d -text \"%s\"\n", xscale * x * WW - 20,
-          yscale * y * HH + 20, z);
+  fprintf(pfd, ".c create text %d %d -text \"%s\"\n",
+          xscale * x * kDistanceBetweenProcessLines - 20,
+          yscale * y * kVDistanceBetweenSteps + 20, z);
 }
 
 static void putpages(void) {
   int i, lasti = 0;
   float nmh;
 
-  if (maxx * xscale * WW > MW - RH / 2) {
-    Scaler = (float)(MW - RH / 2) / (float)(maxx * xscale * WW);
+  if (maxx * xscale * kDistanceBetweenProcessLines >
+      kPageWidth - kRightMargin / 2) {
+    Scaler = (float)(kPageWidth - kRightMargin / 2) /
+             (float)(maxx * xscale * kDistanceBetweenProcessLines);
     nmh = (float)MH;
     nmh /= Scaler;
     MH = (int)nmh;
@@ -222,10 +235,11 @@ static void putpages(void) {
     ldepth = TotSteps - 1;
   }
 
-  /* W: (maxx+2)*xscale*WW  */
-  /* H: ldepth*HH*yscale+50 */
+  /* W: (maxx+2)*xscale*kDistanceBetweenProcessLines  */
+  /* H: ldepth*kVDistanceBetweenSteps*yscale+50 */
   fprintf(pfd, "wm title . \"scenario\"\n");
-  fprintf(pfd, "wm geometry . %dx600+650+100\n", (maxx + 2) * xscale * WW);
+  fprintf(pfd, "wm geometry . %dx600+650+100\n",
+          (maxx + 2) * xscale * kDistanceBetweenProcessLines);
 
   fprintf(pfd, "canvas .c -width 800 -height 800 \\\n");
   fprintf(pfd, "	-scrollregion {0c -1c 30c 100c} \\\n");
@@ -259,9 +273,11 @@ static void putpages(void) {
     {
       if (T[i] == i) /* rv handshake */
       {
-        psline(M[lasti], lasti * HH, M[i], i * HH, RVC);
+        psline(M[lasti], lasti * kVDistanceBetweenSteps, M[i],
+               i * kVDistanceBetweenSteps, RVC);
       } else {
-        psline(M[i], i * HH, M[T[i]], T[i] * HH, MPC);
+        psline(M[i], i * kVDistanceBetweenSteps, M[T[i]],
+               T[i] * kVDistanceBetweenSteps, MPC);
       }
     }
     if (L[i]) {

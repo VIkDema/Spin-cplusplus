@@ -9,6 +9,8 @@
 #include <limits.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include "models/lextok.hpp"
+
 extern LaunchSettings launch_settings;
 
 extern RunList *run_lst, *X_lst;
@@ -55,8 +57,8 @@ void hookup(void) {
   Element *e;
 
   for (e = Al_El; e; e = e->Nxt)
-    if (e->n && (e->n->ntyp == ATOMIC || e->n->ntyp == NON_ATOMIC ||
-                 e->n->ntyp == D_STEP))
+    if (e->n && (e->n->node_type == ATOMIC || e->n->node_type == NON_ATOMIC ||
+                 e->n->node_type == D_STEP))
       (void)huntstart(e);
 }
 
@@ -77,9 +79,9 @@ int find_min(Sequence *s) {
       }
       e->status |= 512;
 
-      if (e->n->ntyp == ATOMIC || e->n->ntyp == NON_ATOMIC ||
-          e->n->ntyp == D_STEP) {
-        int n = find_min(e->n->sl->this_sequence);
+      if (e->n->node_type == ATOMIC || e->n->node_type == NON_ATOMIC ||
+          e->n->node_type == D_STEP) {
+        int n = find_min(e->n->seq_list->this_sequence);
         if (n < s->minel) {
           s->minel = n;
         }
@@ -245,7 +247,7 @@ okay:
 
     i = nproc - nstop + Skip_claim;
 
-    if (dothis->n->ntyp == '@') {
+    if (dothis->n->node_type == '@') {
       if (prno == i - 1) {
         run_lst = run_lst->nxt;
         nstop++;
@@ -265,7 +267,7 @@ okay:
         continue; /* init dies before never */
       printf("%3d: stop error, ", depth);
       printf("proc %d (i=%d) trans %d, %c\n", prno - Have_claim, i, nst,
-             dothis->n->ntyp);
+             dothis->n->node_type);
       lost_trail();
     }
 
@@ -309,10 +311,10 @@ okay:
       X_lst->pc = dothis;
     }
 
-    lineno = dothis->n->ln;
-    Fname = dothis->n->fn;
+    lineno = dothis->n->line_number;
+    Fname = dothis->n->file_name;
 
-    if (dothis->n->ntyp == D_STEP) {
+    if (dothis->n->node_type == D_STEP) {
       Element *g, *og = dothis;
       do {
         g = eval_sub(og);
@@ -322,8 +324,8 @@ okay:
           if (!launch_settings.need_generate_mas_flow_tcl_tk) {
             p_talk(og, 1);
 
-            if (og->n->ntyp == D_STEP)
-              og = og->n->sl->this_sequence->frst;
+            if (og->n->node_type == D_STEP)
+              og = og->n->seq_list->this_sequence->frst;
 
             printf("\t[");
             comment(stdout, og->n, 0);
@@ -360,8 +362,8 @@ okay:
         if (!launch_settings.need_generate_mas_flow_tcl_tk) {
           p_talk(dothis, 1);
 
-          if (dothis->n->ntyp == D_STEP)
-            dothis = dothis->n->sl->this_sequence->frst;
+          if (dothis->n->node_type == D_STEP)
+            dothis = dothis->n->seq_list->this_sequence->frst;
 
           printf("\t[");
           comment(stdout, dothis->n, 0);
@@ -390,8 +392,8 @@ okay:
     }
 
     if (Have_claim && X_lst && X_lst->pid == 0 && dothis->n &&
-        lastclaim != dothis->n->ln) {
-      lastclaim = dothis->n->ln;
+        lastclaim != dothis->n->line_number) {
+      lastclaim = dothis->n->line_number;
       if (launch_settings.need_generate_mas_flow_tcl_tk) {
         char t[128];
         sprintf(t, "#%d", lastclaim);
@@ -418,7 +420,7 @@ static void lost_trail(void) {
   wrapup(1); /* no return */
 }
 
-int pc_value(Lextok *n) {
+int pc_value(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   RunList *Y;

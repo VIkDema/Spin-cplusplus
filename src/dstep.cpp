@@ -1,19 +1,19 @@
 #include "fatal/fatal.hpp"
+#include "main/launch_settings.hpp"
 #include "spin.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
-#include "main/launch_settings.hpp"
 extern LaunchSettings launch_settings;
-#define MAXDSTEP 2048 /* was 512 */
+constexpr int kMaxDstep = 2048; // было 512
 
 std::string NextLab[64]; /* must match value in pangen2.c:41 */
 
 int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
-static int Tojump[MAXDSTEP], Jumpto[MAXDSTEP], Special[MAXDSTEP];
+static int Tojump[kMaxDstep], Jumpto[kMaxDstep], Special[kMaxDstep];
 static void putCode(FILE *, Element *, Element *, Element *, int);
 
 extern int Pid_nr, OkBreak;
@@ -23,7 +23,7 @@ static void Sourced(int n, int special) {
   for (i = 0; i < Tj; i++)
     if (Tojump[i] == n)
       return;
-  if (Tj >= MAXDSTEP)
+  if (Tj >= kMaxDstep)
     loger::fatal("d_step sequence too long");
   Special[Tj] = special;
   Tojump[Tj++] = n;
@@ -37,7 +37,7 @@ static void Dested(int n) {
   for (i = 0; i < Jt; i++)
     if (Jumpto[i] == n)
       return;
-  if (Jt >= MAXDSTEP)
+  if (Jt >= kMaxDstep)
     loger::fatal("d_step sequence too long");
   Jumpto[Jt++] = n;
   LastGoto = 1;
@@ -72,7 +72,7 @@ static void Mopup(FILE *fd) {
   }
   for (j = i = 0; j < Tj; j++)
     if (Special[j]) {
-      if (i >= MAXDSTEP) {
+      if (i >= kMaxDstep) {
         loger::fatal("cannot happen (dstep.c)");
       }
       Tojump[i] = Tojump[j];
@@ -99,14 +99,14 @@ static void illegal(Element *e, char *str) {
 }
 
 static void filterbad(Element *e) {
-  switch (e->n->ntyp) {
+  switch (e->n->node_type) {
   case ASSERT:
   case PRINT:
   case 'c':
     /* run cannot be completely undone
      * with sv_save-sv_restor
      */
-    if (any_oper(e->n->lft, RUN))
+    if (any_oper(e->n->left, RUN))
       illegal(e, "run operator in d_step");
 
     /* remote refs inside d_step sequences
@@ -115,7 +115,7 @@ static void filterbad(Element *e) {
      * same as by the verifier (e.g., for an
      * error trail)
      */
-    if (any_oper(e->n->lft, 'p'))
+    if (any_oper(e->n->left, 'p'))
       illegal(e, "remote reference in d_step");
     break;
   case '@':
@@ -139,15 +139,15 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
   for (h = e->sub; h; h = h->nxt) {
     ee = huntstart(h->this_sequence->frst);
     filterbad(ee);
-    switch (ee->n->ntyp) {
+    switch (ee->n->node_type) {
     case NON_ATOMIC:
-      inh += CollectGuards(fd, ee->n->sl->this_sequence->frst, inh);
+      inh += CollectGuards(fd, ee->n->seq_list->this_sequence->frst, inh);
       break;
     case IF:
       inh += CollectGuards(fd, ee, inh);
       break;
     case '.':
-      if (ee->nxt->n->ntyp == DO)
+      if (ee->nxt->n->node_type == DO)
         inh += CollectGuards(fd, ee->nxt, inh);
       break;
     case ELSE:
@@ -194,7 +194,7 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
       TestOnly = 1;
       if (!pid_is_claim(Pid_nr))
         fprintf(fd, "(boq == -1 && ");
-      putstmnt(fd, ee->n->lft, e->seqno);
+      putstmnt(fd, ee->n->left, e->seqno);
       if (!pid_is_claim(Pid_nr))
         fprintf(fd, ")");
       fprintf(fd, ")");
@@ -213,12 +213,12 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   NextLab[0] = "continue";
   filterbad(s->frst);
 
-  switch (s->frst->n->ntyp) {
+  switch (s->frst->n->node_type) {
   case UNLESS:
     loger::non_fatal("'unless' inside d_step - ignored");
-    return putcode(fd, s->frst->n->sl->this_sequence, nxt, 0, ln, seqno);
+    return putcode(fd, s->frst->n->seq_list->this_sequence, nxt, 0, ln, seqno);
   case NON_ATOMIC:
-    (void)putcode(fd, s->frst->n->sl->this_sequence, ZE, 1, ln, seqno);
+    (void)putcode(fd, s->frst->n->seq_list->this_sequence, ZE, 1, ln, seqno);
     if (justguards)
       return 0; /* 6.2.5 */
     break;
@@ -230,7 +230,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     isg = 1;
     break;
   case '.':
-    if (s->frst->nxt->n->ntyp == DO) {
+    if (s->frst->nxt->n->node_type == DO) {
       fprintf(fd, "if (!(");
       if (!CollectGuards(fd, s->frst->nxt, 0))
         fprintf(fd, "1");
@@ -270,7 +270,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     if (!pid_is_claim(Pid_nr))
       fprintf(fd, "boq == -1 && ");
     TestOnly = 1;
-    putstmnt(fd, s->frst->n->lft, s->frst->seqno);
+    putstmnt(fd, s->frst->n->left, s->frst->seqno);
     fprintf(fd, "))\n\t\t\tcontinue;");
     TestOnly = 0;
     break;
@@ -290,7 +290,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     fprintf(fd, "IfNotBlocked");
     break;
   default:
-    fprintf(fd, "/ default %d */\n\t\t", s->frst->n->ntyp);
+    fprintf(fd, "/ default %d */\n\t\t", s->frst->n->node_type);
   }
 
   /* 6.2.5 : before TstOnly */
@@ -299,7 +299,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   fprintf(fd, "reached[%d][tt] = 1;\n", Pid_nr);        /* current state */
 
   /* 6.2.5 : before sv_save() */
-  if (s->frst->n->ntyp != NON_ATOMIC) {
+  if (s->frst->n->node_type != NON_ATOMIC) {
     fprintf(fd,
             "\n\t\tif (TstOnly) return 1;\n"); /* if called from enabled() */
   }
@@ -323,7 +323,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     }
     Sourced(nxt->Seqno, 1);
     lineno = ln;
-    Fname = nxt->n->fn;
+    Fname = nxt->n->file_name;
     Mopup(fd);
   }
   unskip(s->frst->seqno);
@@ -356,9 +356,9 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
 
     if (!e->sub) {
       filterbad(e);
-      switch (e->n->ntyp) {
+      switch (e->n->node_type) {
       case NON_ATOMIC:
-        h = e->n->sl;
+        h = e->n->seq_list;
         putCode(fd, h->this_sequence->frst, h->this_sequence->extent, e->nxt,
                 0);
         break;
@@ -421,7 +421,7 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
             << i;
         NextOpt = oss.str();
         NextLab[++Level] = NextOpt;
-        N = (e->n && e->n->ntyp == DO) ? e : e->nxt;
+        N = (e->n && e->n->node_type == DO) ? e : e->nxt;
         putCode(fd, h->this_sequence->frst, h->this_sequence->extent, N, 1);
         Level--;
         fprintf(fd, "%s: /* 3 */\n", &NextOpt[5]);
@@ -430,7 +430,7 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
       if (!LastGoto) {
         fprintf(fd, "\t\tUerror(\"blocking sel ");
         fprintf(fd, "in d_step (nr.%d, near line %d)\");\n", bno++,
-                (e->n) ? e->n->ln : 0);
+                (e->n) ? e->n->line_number : 0);
         LastGoto = 0;
       }
     }

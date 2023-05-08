@@ -24,9 +24,9 @@ struct Symbol {
 
 struct Node {
   short ntyp; /* node type */
-  struct Symbol *sym;
-  struct Node *lft; /* tree */
-  struct Node *rgt; /* tree */
+  struct Symbol *symbol;
+  struct Node *left; /* tree */
+  struct Node *right; /* tree */
   struct Node *nxt; /* if linked list */
 };
 

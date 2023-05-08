@@ -31,17 +31,17 @@ void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
       std::cout << fmt::format("{}:", v->name) << std::endl;
     }
 
-    if (element->n->ntyp == UNLESS) {
+    if (element->n->node_type == UNLESS) {
       std::cout << "/* normal */{" << std::endl;
-      recursive_view_sequence(element->n->sl->this_sequence);
+      recursive_view_sequence(element->n->seq_list->this_sequence);
       doindent();
       std::cout << "} unless {" << std::endl;
-      recursive_view_sequence(element->n->sl->nxt->this_sequence);
+      recursive_view_sequence(element->n->seq_list->nxt->this_sequence);
       doindent();
       std::cout << "}; /* end unless */" << std::endl;
     } else if (element->sub) {
 
-      switch (element->n->ntyp) {
+      switch (element->n->node_type) {
       case DO:
         doindent();
         std::cout << "do" << std::endl;
@@ -63,7 +63,7 @@ void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
         std::cout << std::endl;
       }
 
-      switch (element->n->ntyp) {
+      switch (element->n->node_type) {
       case DO:
         decrease_indentation();
         doindent();
@@ -76,18 +76,18 @@ void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
         break;
       }
     } else {
-      if (element->n->ntyp == ATOMIC || element->n->ntyp == D_STEP ||
-          element->n->ntyp == NON_ATOMIC) {
+      if (element->n->node_type == ATOMIC || element->n->node_type == D_STEP ||
+          element->n->node_type == NON_ATOMIC) {
         recursive_view_element(element);
-      } else if (element->n->ntyp != '.' && element->n->ntyp != '@' &&
-                 element->n->ntyp != BREAK) {
+      } else if (element->n->node_type != '.' && element->n->node_type != '@' &&
+                 element->n->node_type != BREAK) {
         doindent();
-        if (element->n->ntyp == C_CODE) {
+        if (element->n->node_type == C_CODE) {
           std::cout << "c_code ";
-          plunk_inline(stdout, element->n->sym->name, 1, 1);
-        } else if (element->n->ntyp == 'c' && element->n->lft->ntyp == C_EXPR) {
+          plunk_inline(stdout, element->n->symbol->name, 1, 1);
+        } else if (element->n->node_type == 'c' && element->n->left->node_type == C_EXPR) {
           std::cout << "c_expr { ";
-          plunk_expr(stdout, element->n->lft->sym->name);
+          plunk_expr(stdout, element->n->left->symbol->name);
           std::cout << "} ->" << std::endl;
         } else {
           comment(stdout, element->n, 0);
@@ -126,7 +126,7 @@ void PreprocessedFileViewer::recursive_view(ProcList *node) {
 
 void PreprocessedFileViewer::recursive_view_element(Element *element) {
   doindent();
-  switch (element->n->ntyp) {
+  switch (element->n->node_type) {
   case D_STEP:
     std::cout << "d_step {" << std::endl;
     break;
@@ -138,7 +138,7 @@ void PreprocessedFileViewer::recursive_view_element(Element *element) {
     break;
   }
   increase_indentation();
-  recursive_view_sequence(element->n->sl->this_sequence);
+  recursive_view_sequence(element->n->seq_list->this_sequence);
   decrease_indentation();
 
   doindent();
