@@ -393,6 +393,7 @@ void c_add_locinit(FILE *fd, int tpnr, const std::string &pnm) {
                 r->ival->name.c_str());
       }
     }
+  fprintf(fd, "}\n");
 }
 
 /* tracking:

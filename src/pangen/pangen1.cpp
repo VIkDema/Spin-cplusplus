@@ -153,7 +153,7 @@ here:
     fprintf(fd_th, "	#define VERI	%d\n", nrRdy + 1);
     fprintf(fd_th, " #endif\n");
     fprintf(fd_th, "	#define Pclaim	P%d\n\n", nrRdy + 1);
-    fprintf(fd_th, "struct P%d {\n", nrRdy + 1);
+    fprintf(fd_th, "typedef struct P%d {\n", nrRdy + 1);
     fprintf(fd_th, "	unsigned _pid : 8; /* always zero */\n");
     fprintf(fd_th, "	unsigned _t   : %d; /* active-claim type  */\n",
             blog(nrRdy + 1));
@@ -232,7 +232,7 @@ here:
   fprintf(fd_th, ";\n\n");
 
   fprintf(fd_th, "#ifdef TRIX\n");
-  fprintf(fd_th, "struct TRIX_v6 {\n");
+  fprintf(fd_th, "typedef struct TRIX_v6 {\n");
   fprintf(fd_th, "	uchar *body; /* aligned */\n");
   fprintf(fd_th, "#ifndef BFS\n");
   fprintf(fd_th, "	short modified;\n");
@@ -995,7 +995,7 @@ static void put_ptype(const std::string &s, int i, int m0, int m1,
     fprintf(fd_th, "#define P%s	((P%d *)_this)\n", s.c_str(), i);
   }
 
-  fprintf(fd_th, "struct P%d { /* %s */\n", i, s.c_str());
+  fprintf(fd_th, "typedef struct P%d { /* %s */\n", i, s.c_str());
   fprintf(fd_th, "	unsigned _pid : 8;  /* 0..255 */\n");
   fprintf(fd_th, "	unsigned _t   : %d; /* proctype */\n", blog(m1));
   fprintf(fd_th, "	unsigned _p   : %d; /* state    */\n", blog(m0));
@@ -1379,7 +1379,7 @@ void genaddqueue(void) {
     fprintf(fd_tc, " q_max[%d] = %d;", j, max(1, q->nslots));
     fprintf(fd_tc, " break;\n");
 
-    fprintf(fd_th, "struct Q%d {\n", j);
+    fprintf(fd_th, "typedef struct Q%d {\n", j);
     qlen_type(qmax); /* 4.2.2 */
     fprintf(fd_th, "	uchar _t;	/* q_type */\n");
     fprintf(fd_th, "	struct {\n");
@@ -1411,7 +1411,7 @@ void genaddqueue(void) {
     fprintf(fd_th, "} Q%d;\n", q->qid);
   }
 
-  fprintf(fd_th, "struct Q0 {\t/* generic q */\n");
+  fprintf(fd_th, "typedef struct Q0 {\t/* generic q */\n");
   qlen_type(qmax); /* 4.2.2 */
   fprintf(fd_th, "	uchar _t;\n");
   fprintf(fd_th, "} Q0;\n");

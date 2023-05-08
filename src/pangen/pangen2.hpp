@@ -1177,7 +1177,7 @@ static const char *Tail[] = {
     "#ifdef VAR_RANGES",
     "#define BYTESIZE	32	/* 2^8 : 2^3 = 256:8 = 32 */",
     "",
-    "struct Vr_Ptr {",
+    "typedef struct Vr_Ptr {",
     "	char	*nm;",
     "	uchar	vals[BYTESIZE];",
     "	struct Vr_Ptr *nxt;",

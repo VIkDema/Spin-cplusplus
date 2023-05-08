@@ -478,7 +478,7 @@ doless:
       fprintf(fd_th, "#define NEGATED_TRACE	1\n");
   }
 
-  fprintf(fd_th, "\nstruct S_F_MAP {\n");
+  fprintf(fd_th, "\ntypedef struct S_F_MAP {\n");
   fprintf(fd_th, "	char *fnm;\n\tint from;\n\tint upto;\n");
   fprintf(fd_th, "} S_F_MAP;\n");
 

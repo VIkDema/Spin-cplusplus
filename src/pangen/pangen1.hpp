@@ -7030,7 +7030,7 @@ static const char *Code2d[] = {
     "	stack = stack->lst;",
     "}",
 
-    "struct IntChunks {",
+    "typedef struct IntChunks {",
     "	int	*ptr;",
     "	struct	IntChunks *nxt;",
     "} IntChunks;",
