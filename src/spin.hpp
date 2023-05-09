@@ -4,6 +4,7 @@
 #include "models/lextok.hpp"
 #include "models/models_fwd.hpp"
 #include "models/symbol.hpp"
+#include "models/slicer.hpp"
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
@@ -15,13 +16,6 @@
 #ifndef PC
 #include <memory.h>
 #endif
-
-struct Slicer {
-  models::Lextok *n;  /* global var, usable as slice criterion */
-  short code;         /* type of use: DEREF_USE or normal USE */
-  short used;         /* set when handled */
-  struct Slicer *nxt; /* linked list */
-};
 
 struct Access {
   models::Symbol *who;  /* proctype name of accessor */

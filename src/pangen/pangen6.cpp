@@ -73,8 +73,8 @@ static AST *ast;
 static ALIAS *chalcur;
 static ALIAS *chalias;
 static ChanList *chanlist;
-static Slicer *slicer;
-static Slicer *rel_vars; /* all relevant variables */
+static models::Slicer *slicer;
+static models::Slicer *rel_vars; /* all relevant variables */
 static int AST_Changes;
 static int AST_Round;
 static RPN *rpn;
@@ -773,7 +773,9 @@ static void AST_tagruns(void) {
    */
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b == models::btypes::N_CLAIM || a->p->b == models::btypes::I_PROC || a->p->b == models::btypes::E_TRACE ||
+    if (a->p->b == models::btypes::N_CLAIM ||
+        a->p->b == models::btypes::I_PROC ||
+        a->p->b == models::btypes::E_TRACE ||
         a->p->b == models::btypes::N_TRACE) {
       a->relevant |= 1; /* the proctype is relevant */
       continue;
@@ -1158,7 +1160,6 @@ void AST_track(models::Lextok *now, int code) /* called from main.c */
     }
 }
 static int AST_dump_rel(void) {
-  Slicer *rv;
   Ordered *walk;
   std::string buf;
   int banner = 0;
@@ -1166,15 +1167,15 @@ static int AST_dump_rel(void) {
 
   if (verbose_flags.NeedToPrintVerbose()) {
     printf("Relevant variables:\n");
-    for (rv = rel_vars; rv; rv = rv->nxt) {
+    for (auto rv = rel_vars; rv; rv = rv->next) {
       printf("\t");
-      AST_var(rv->n, rv->n->symbol, 1);
+      AST_var(rv->slice_criterion, rv->slice_criterion->symbol, 1);
       printf("\n");
     }
     return 1;
   }
-  for (rv = rel_vars; rv; rv = rv->nxt)
-    rv->n->symbol->last_depth = 1; /* mark it */
+  for (auto rv = rel_vars; rv; rv = rv->next)
+    rv->slice_criterion->symbol->last_depth = 1; /* mark it */
 
   for (walk = all_names; walk; walk = walk->next) {
     models::Symbol *s;
@@ -1278,21 +1279,21 @@ static void AST_suggestions(void) {
 }
 
 static void AST_preserve(void) {
-  Slicer *sc, *nx, *rv;
+  models::Slicer *sc, *nx, *rv;
 
   for (sc = slicer; sc; sc = nx) {
     if (!sc->used)
       break; /* done */
 
-    nx = sc->nxt;
+    nx = sc->next;
 
-    for (rv = rel_vars; rv; rv = rv->nxt)
-      if (AST_mutual(sc->n, rv->n, 1))
+    for (rv = rel_vars; rv; rv = rv->next)
+      if (AST_mutual(sc->slice_criterion, rv->slice_criterion, 1))
         break;
 
     if (!rv) /* not already there */
     {
-      sc->nxt = rel_vars;
+      sc->next = rel_vars;
       rel_vars = sc;
     }
   }
@@ -1300,34 +1301,33 @@ static void AST_preserve(void) {
 }
 
 static void check_slice(models::Lextok *n, int code) {
-  Slicer *sc;
+  models::Slicer *sc;
 
-  for (sc = slicer; sc; sc = sc->nxt)
-    if (AST_mutual(sc->n, n, 1) && sc->code == code)
+  for (sc = slicer; sc; sc = sc->next)
+    if (AST_mutual(sc->slice_criterion, n, 1) && sc->code == code)
       return; /* already there */
 
-  sc = (Slicer *)emalloc(sizeof(Slicer));
-  sc->n = n;
+  sc = (models::Slicer *)emalloc(sizeof(models::Slicer));
+  sc->slice_criterion = n;
 
   sc->code = code;
   sc->used = 0;
-  sc->nxt = slicer;
+  sc->next = slicer;
   slicer = sc;
 }
 
 static void AST_data_dep(void) {
-  Slicer *sc;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* mark all def-relevant transitions */
-  for (sc = slicer; sc; sc = sc->nxt) {
+  for (auto sc = slicer; sc; sc = sc->next) {
     sc->used = 1;
     if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: slice criterion ");
-      AST_var(sc->n, sc->n->symbol, 1);
-      printf(" type=%d\n", Sym_typ(sc->n));
+      AST_var(sc->slice_criterion, sc->slice_criterion->symbol, 1);
+      printf(" type=%d\n", Sym_typ(sc->slice_criterion));
     }
-    AST_relevant(sc->n);
+    AST_relevant(sc->slice_criterion);
   }
   AST_tagruns(); /* mark 'run's relevant if target proctype is relevant */
 }
@@ -1402,13 +1402,11 @@ static void AST_spread(AST *a, int s) {
 }
 
 static int AST_notrelevant(models::Lextok *n) {
-  Slicer *s;
-
-  for (s = rel_vars; s; s = s->nxt)
-    if (AST_mutual(s->n, n, 1))
+  for (auto s = rel_vars; s; s = s->next)
+    if (AST_mutual(s->slice_criterion, n, 1))
       return 0;
-  for (s = slicer; s; s = s->nxt)
-    if (AST_mutual(s->n, n, 1))
+  for (auto s = slicer; s; s = s->next)
+    if (AST_mutual(s->slice_criterion, n, 1))
       return 0;
   return 1;
 }
@@ -1601,7 +1599,9 @@ static void AST_control_dep(void) {
   AST *a;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE && a->p->b != models::btypes::N_TRACE) {
+    if (a->p->b != models::btypes::N_CLAIM &&
+        a->p->b != models::btypes::E_TRACE &&
+        a->p->b != models::btypes::N_TRACE) {
       AST_ctrl(a);
     }
   }
@@ -1613,7 +1613,9 @@ static void AST_prelabel(void) {
   FSM_trans *t;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE && a->p->b != models::btypes::N_TRACE)
+    if (a->p->b != models::btypes::N_CLAIM &&
+        a->p->b != models::btypes::E_TRACE &&
+        a->p->b != models::btypes::N_TRACE)
       for (f = a->fsm; f; f = f->nxt)
         for (t = f->t; t; t = t->nxt) {
           if (t->step && t->step->n && t->step->n->node_type == ASSERT) {
@@ -1705,7 +1707,8 @@ void AST_slice(void) {
 void AST_store(ProcList *p, int start_state) {
   AST *n_ast;
 
-  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE && p->b != models::btypes::N_TRACE) {
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
+      p->b != models::btypes::N_TRACE) {
     n_ast = (AST *)emalloc(sizeof(AST));
     n_ast->p = p;
     n_ast->i_st = start_state;
@@ -1783,7 +1786,9 @@ static void AST_par_init() /* parameter passing -- hidden_flags assignments */
   int cnt;
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b == models::btypes::N_CLAIM || a->p->b == models::btypes::I_PROC || a->p->b == models::btypes::E_TRACE ||
+    if (a->p->b == models::btypes::N_CLAIM ||
+        a->p->b == models::btypes::I_PROC ||
+        a->p->b == models::btypes::E_TRACE ||
         a->p->b == models::btypes::N_TRACE) {
       continue; /* has no params */
     }
@@ -1820,7 +1825,8 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
   }
 
   for (a = ast; a; a = a->nxt) {
-    if (a->p->b != models::btypes::N_CLAIM && a->p->b != models::btypes::E_TRACE &&
+    if (a->p->b != models::btypes::N_CLAIM &&
+        a->p->b != models::btypes::E_TRACE &&
         a->p->b != models::btypes::N_TRACE) /* has no locals */
       for (walk = all_names; walk; walk = walk->next) {
         sp = walk->entry;
