@@ -6,8 +6,8 @@
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
 #include "spin.hpp"
-#include "utils/verbose/verbose.hpp"
 #include "utils/seed/seed.hpp"
+#include "utils/verbose/verbose.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -83,8 +83,9 @@ void runnable(models::ProcList *p, int weight, int noparams) {
   run_lst = r;
 }
 
-models::ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, models::Sequence *s, int det,
-                 models::Lextok *prov, models::btypes b)
+models::ProcList *mk_rdy(models::Symbol *n, models::Lextok *p,
+                         models::Sequence *s, int det, models::Lextok *prov,
+                         models::btypes b)
 /* n=name, p=formals, s=body det=deterministic prov=provided */
 {
   models::ProcList *r = (models::ProcList *)emalloc(sizeof(models::ProcList));
@@ -985,7 +986,8 @@ static void oneparam(models::RunList *r, models::Lextok *t, models::Lextok *a,
   X_lst = oX;
 }
 
-static void setparams(models::RunList *r, models::ProcList *p, models::Lextok *q) {
+static void setparams(models::RunList *r, models::ProcList *p,
+                      models::Lextok *q) {
   models::Lextok *f, *a; /* formal and actual pars */
   models::Lextok *t;     /* list of pars of 1 type */
 
