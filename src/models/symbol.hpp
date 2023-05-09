@@ -64,4 +64,10 @@ struct Symbol {
   Symbol *context;      /* 0 if global, or procname */
   models::Symbol *next; /* linked list */
 };
+
+struct Ordered { /* links all names in Symbol table */
+  models::Symbol *entry;
+  struct Ordered *next;
+};
+
 } // namespace models

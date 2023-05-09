@@ -13,5 +13,6 @@ struct Access;
 struct Slicer;
 struct Lextok;
 struct Symbol;
+struct Ordered;
 
 } // namespace models

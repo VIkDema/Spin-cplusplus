@@ -6,7 +6,7 @@
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 
-extern Ordered *all_names;
+extern models::Ordered *all_names;
 extern FSM_use *use_free;
 extern FSM_state **fsm_tbl;
 extern FSM_state *fsmx;
@@ -379,7 +379,7 @@ static void AST_findrun(std::string &s, int parno) {
 static void AST_par_chans(
     ProcList *p) /* find local chan's init'd to chan passed as param */
 {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
 
   for (walk = all_names; walk; walk = walk->next) {
@@ -1160,7 +1160,7 @@ void AST_track(models::Lextok *now, int code) /* called from main.c */
     }
 }
 static int AST_dump_rel(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   std::string buf;
   int banner = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -1197,7 +1197,7 @@ static int AST_dump_rel(void) {
 
 static void AST_suggestions(void) {
   models::Symbol *s;
-  Ordered *walk;
+  models::Ordered *walk;
   FSM_state *f;
   FSM_trans *t;
   AST *a;
@@ -1806,7 +1806,7 @@ static void AST_par_init() /* parameter passing -- hidden_flags assignments */
 static void
 AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
 {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Lextok *x;
   models::Symbol *sp;
   AST *a;

@@ -21,13 +21,13 @@ extern int has_hidden;
 extern short has_xu;
 
 models::Symbol *context = ZS;
-Ordered *all_names = (Ordered *)0;
+models::Ordered *all_names = nullptr;
 int Nid_nr = 0;
 
 Mtypes_t *Mtypes;
 models::Lextok *runstmnts = ZN;
 
-static Ordered *last_name = (Ordered *)0;
+static models::Ordered *last_name = nullptr;
 static models::Symbol *symtab[Nhash + 1];
 
 static int samename(models::Symbol *a, models::Symbol *b) {
@@ -51,7 +51,7 @@ unsigned int hash(const std::string &s) {
 }
 
 void disambiguate(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   std::string n, m;
 
@@ -81,7 +81,7 @@ void disambiguate(void) {
 
 models::Symbol *lookup(const std::string &s) {
   models::Symbol *sp;
-  Ordered *no;
+  models::Ordered *no;
   unsigned int h = hash(s);
 
   if (launch_settings.need_old_scope_rules) { /* same scope - global refering to
@@ -130,7 +130,7 @@ models::Symbol *lookup(const std::string &s) {
   if (NamesNotAdded == 0) {
     sp->next = symtab[h];
     symtab[h] = sp;
-    no = (Ordered *)emalloc(sizeof(Ordered));
+    no = (models::Ordered *)emalloc(sizeof(models::Ordered));
     no->entry = sp;
     if (!last_name)
       last_name = all_names = no;
@@ -598,7 +598,7 @@ void symvar(models::Symbol *sp) {
 }
 
 void symdump(void) {
-  Ordered *walk;
+  models::Ordered *walk;
 
   for (walk = all_names; walk; walk = walk->next)
     symvar(walk->entry);
@@ -675,7 +675,7 @@ report:
   printf("%s\n", (!d) ? "\n\tnever used under this name" : "");
 }
 void chanaccess(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   std::string buf;
   extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();

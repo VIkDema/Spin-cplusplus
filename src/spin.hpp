@@ -17,11 +17,6 @@
 #include <memory.h>
 #endif
 
-struct Ordered { /* links all names in Symbol table */
-  models::Symbol *entry;
-  struct Ordered *next;
-};
-
 struct Mtypes_t {
   std::string nm;       /* name of mtype, or "_unnamed_" */
   models::Lextok *mt;   /* the linked list of names */

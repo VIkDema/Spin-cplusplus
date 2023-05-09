@@ -924,8 +924,8 @@ static void Docase(models::Symbol *s, int pid, int nid) {
 static void genconditionals(void) {
   models::Symbol *s;
   int last = 0, j;
-  extern Ordered *all_names;
-  Ordered *walk;
+  extern models::Ordered *all_names;
+  models::Ordered *walk;
 
   fprintf(fd_th, "#define LOCAL	1\n");
   fprintf(fd_th, "#define Q_FULL_F	2\n");

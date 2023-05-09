@@ -12,7 +12,7 @@
 #include <stdlib.h>
 
 extern char *claimproc, *eventmap, GBuf[];
-extern Ordered *all_names;
+extern models::Ordered *all_names;
 extern models::Symbol *Fname, *context;
 extern int lineno, nr_errs;
 extern int u_sync, Elcnt, TstOnly;
@@ -931,7 +931,7 @@ static void addsymbol(RunList *r, models::Symbol *s) {
 }
 
 static void setlocals(RunList *r) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   RunList *oX = X_lst;
 

@@ -16,7 +16,7 @@ extern char GBuf[];
 extern int nproc, nstop;
 extern int lineno, depth, verbose, limited_vis, Pid_nr;
 extern models::Lextok *Xu_List;
-extern Ordered *all_names;
+extern models::Ordered *all_names;
 extern RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
 extern models::Symbol *Fname;
@@ -250,7 +250,7 @@ void dumpclaims(FILE *fd, int pid, const std::string &s) {
 }
 
 void dumpglobals(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   static models::Lextok *dummy = ZN;
   models::Symbol *sp;
   int j;

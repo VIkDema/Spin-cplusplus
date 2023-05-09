@@ -19,7 +19,7 @@ extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
 extern Label *labtab;
-extern Ordered *all_names;
+extern models::Ordered *all_names;
 extern ProcList *ready;
 extern Queue *qtab;
 extern models::Symbol *Fname;
@@ -572,7 +572,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
                    const std::string &s, models::btypes b) {
   int h, j, k = 0;
   extern int nr_errs;
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   char buf[128], buf2[128], buf3[128];
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -747,7 +747,7 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
 }
 
 int c_splurge_any(ProcList *p) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
 
   if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
@@ -765,7 +765,7 @@ int c_splurge_any(ProcList *p) {
 }
 
 void c_splurge(FILE *fd, ProcList *p) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   char pref[64];
 
@@ -785,7 +785,7 @@ void c_splurge(FILE *fd, ProcList *p) {
 
 void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 {
-  Ordered *walk;
+  models::Ordered *walk;
   ProcList *p;
   models::Symbol *sp;
   Mtypes_t *lst;
@@ -833,7 +833,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 }
 
 static int doglobal(char *pre, int dowhat) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   int j, cnt = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -868,7 +868,7 @@ static int doglobal(char *pre, int dowhat) {
 }
 
 static void dohidden(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   int j;
 
