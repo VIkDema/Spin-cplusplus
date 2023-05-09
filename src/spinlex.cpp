@@ -18,10 +18,6 @@
 
 extern LaunchSettings launch_settings;
 
-constexpr int kMaxInl = 16;
-constexpr int kMaxPar = 32;
-constexpr int kMaxLen = 512;
-
 struct C_Added {
   models::Symbol *s;
   models::Symbol *t;
@@ -33,18 +29,16 @@ struct C_Added {
 
 extern models::RunList *X_lst;
 extern models::ProcList *ready;
-extern models::Symbol *Fname, *oFname;
-extern models::Symbol *context, *owner;
+extern models::Symbol *Fname;
+extern models::Symbol *context;
 extern YYSTYPE yylval;
-extern int need_arguments, hastrack;
+extern int hastrack;
 extern lexer::Lexer lexer_;
 short has_stack = 0;
 std::string yytext;
 FILE *yyin, *yyout;
 
 static C_Added *c_added, *c_tracked;
-
-static int last_token = 0;
 
 // use in pangen2.cpp
 void gencodetable(FILE *fd) {
