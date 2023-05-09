@@ -389,7 +389,7 @@ static void AST_par_chans(
         && sp->type == CHAN &&
         sp->init_value->node_type == NAME) /* != CONST and != CHAN */
     {
-      models::Lextok *x = nn(ZN, 0, ZN, ZN);
+      models::Lextok *x = models::Lextok::nn(ZN, 0, ZN, ZN);
       x->symbol = sp;
       AST_setcur(x);
       AST_add_alias(sp->init_value, 2); /* ASGN */
@@ -1819,7 +1819,7 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
         (sp->type != MTYPE ||
          sp->init_value->node_type != CONST) /* not mtype defs */
         && sp->init_value->node_type != CHAN) {
-      x = nn(ZN, TYPE, ZN, ZN);
+      x = models::Lextok::nn(ZN, TYPE, ZN, ZN);
       x->symbol = sp;
       AST_add_explicit(x, sp->init_value);
     }
@@ -1835,7 +1835,7 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
             sp->id >= 0 /* not a param */
             && sp->type != LABEL && sp->init_value &&
             sp->init_value->node_type != CHAN) {
-          x = nn(ZN, TYPE, ZN, ZN);
+          x = models::Lextok::nn(ZN, TYPE, ZN, ZN);
           x->symbol = sp;
           AST_add_explicit(x, sp->init_value);
         }

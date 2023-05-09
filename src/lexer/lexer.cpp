@@ -23,7 +23,7 @@ extern models::Symbol *context;
   {                                                                            \
     if (in_comment_)                                                           \
       goto again;                                                              \
-    yylval = nn(ZN, 0, ZN, ZN);                                                \
+    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                                \
     yylval->value = x;                                                         \
     last_token_ = y;                                                           \
     return y;                                                                  \
@@ -32,7 +32,7 @@ extern models::Symbol *context;
   {                                                                            \
     if (in_comment_)                                                           \
       goto again;                                                              \
-    yylval = nn(ZN, 0, ZN, ZN);                                                \
+    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                                \
     yylval->symbol = x;                                                        \
     last_token_ = y;                                                           \
     return y;                                                                  \
@@ -67,7 +67,7 @@ std::size_t Lexer::get_inline_nesting() { return argument_nesting_; }
 
 int Lexer::CheckName(const std::string &value) {
 
-  yylval = nn(ZN, 0, ZN, ZN);
+  yylval = models::Lextok::nn(ZN, 0, ZN, ZN);
 
   if (ltl_mode_) {
     auto opt_token = ::helpers::ParseLtlToken(value);
@@ -191,7 +191,7 @@ int Lexer::pre_proc() {
     pre_proc_command += (char)curr;
   }
 
-  yylval = nn(ZN, 0, ZN, ZN);
+  yylval = models::Lextok::nn(ZN, 0, ZN, ZN);
   yylval->symbol = lookup(pre_proc_command.data());
 
   return PREPROC;
@@ -798,10 +798,10 @@ models::Lextok *Lexer::ReturnStatement(models::Lextok *lextok) {
       InlineProcessor::GetInlineStub(InlineProcessor::GetInlining());
 
   if (inline_stub->rval) {
-      models::Lextok *g = nn(ZN, NAME, ZN, ZN);
+      models::Lextok *g = models::Lextok::nn(ZN, NAME, ZN, ZN);
       models::Lextok *h = inline_stub->rval;
       g->symbol = lookup("rv_");
-      return nn(h, ASGN, h, lextok);
+      return models::Lextok::nn(h, ASGN, h, lextok);
   } else {
       loger::fatal("return statement outside inline");
   }

@@ -17,7 +17,6 @@ set(SPIN_SOURCES
     src/sym.cpp
     src/vars.cpp
     src/main.cpp
-    src/old_main.cpp
     src/msc_tcl.cpp
     src/mesg.cpp
     src/flow.cpp
@@ -44,6 +43,8 @@ set(SPIN_SOURCES
     src/utils/seed/seed.cpp
     src/utils/verbose/verbose.hpp
     src/utils/verbose/verbose.cpp
+    src/utils/memory.hpp
+    src/utils/memory.cpp
     src/lexer/lexer.hpp
     src/lexer/lexer.cpp
     src/lexer/names.cpp
@@ -75,8 +76,11 @@ set(SPIN_SOURCES
     src/main/pan_processor.hpp
     src/main/pan_processor.cpp
     src/models/access.hpp
+    src/models/symbol.hpp
+    src/models/symbol.cpp
     src/models/fms.hpp
     src/models/lextok.hpp
+    src/models/lextok.cpp
     src/models/mtypes.hpp
     src/models/slicer.hpp
     src/models/queue.hpp

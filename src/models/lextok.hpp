@@ -16,5 +16,15 @@ struct Lextok {
   Sequence *sequence;       /* sequence old: sq*/
   SeqList *seq_list;        /* sequence list old: sl*/
   Lextok *left, *right;     /* children in parse tree old: fn*/
+  void ProcessSymbolForRead();
+  static Lextok *nn(models::Lextok *symbol, int type, models::Lextok *left,
+                    models::Lextok *right);
+  static Lextok *CreateRemoteLabelAssignment(models::Symbol *proctype_name,
+                                             models::Lextok *pid,
+                                             models::Symbol *label_name);
+  static Lextok *CreateRemoteVariableAssignment(models::Symbol *a,
+                                                models::Lextok *b,
+                                                models::Symbol *c,
+                                                models::Lextok *ndx);
 };
 } // namespace models

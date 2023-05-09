@@ -545,7 +545,7 @@ static int retrieve(models::Lextok **targ, int i, int want, models::Lextok *n,
         j = retrieve(targ, j, want, tl->symbol->struct_template, Ntyp);
         if (j < 0) {
           models::Lextok *x = cpnn(tl, 1, 0, 0);
-          x->right = nn(ZN, '.', (*targ), ZN);
+          x->right = models::Lextok::nn(ZN, '.', (*targ), ZN);
           (*targ) = x;
           return -1;
         }
@@ -553,7 +553,7 @@ static int retrieve(models::Lextok **targ, int i, int want, models::Lextok *n,
         for (k = 0; k < tl->symbol->value_type; k++, j++) {
           if (j == want) {
             *targ = cpnn(tl, 1, 0, 0);
-            (*targ)->left = nn(ZN, CONST, ZN, ZN);
+            (*targ)->left = models::Lextok::nn(ZN, CONST, ZN, ZN);
             (*targ)->left->value = k;
             if (Ntyp)
               (*targ)->node_type = (short)Ntyp;
@@ -622,7 +622,7 @@ models::Lextok *mk_explicit(models::Lextok *n, int Ok, int Ntyp)
     bld = mk_explicit(n->right->left, Ok, Ntyp);
     for (x = bld; x; x = x->right) {
       y = cpnn(n, 1, 0, 0);
-      y->right = nn(ZN, '.', x->left, ZN);
+      y->right = models::Lextok::nn(ZN, '.', x->left, ZN);
       x->left = y;
     }
 
@@ -640,13 +640,13 @@ models::Lextok *mk_explicit(models::Lextok *n, int Ok, int Ntyp)
 
   cnt = Cnt_flds(n->symbol->struct_template);
   for (i = cnt - 1; i >= 0; i--) {
-    bld = nn(ZN, ',', ZN, bld);
+    bld = models::Lextok::nn(ZN, ',', ZN, bld);
     if (retrieve(&(bld->left), 0, i, n->symbol->struct_template, Ntyp) >= 0) {
       printf("cannot retrieve field %d\n", i);
       loger::fatal("bad structure %s", n->symbol->name);
     }
     x = cpnn(n, 1, 0, 0);
-    x->right = nn(ZN, '.', bld->left, ZN);
+    x->right = models::Lextok::nn(ZN, '.', bld->left, ZN);
     bld->left = x;
   }
   return bld;

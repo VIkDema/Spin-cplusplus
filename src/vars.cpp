@@ -257,7 +257,7 @@ void dumpglobals(void) {
   int j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (!dummy)
-    dummy = nn(ZN, NAME, nn(ZN, CONST, ZN, ZN), ZN);
+    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
@@ -339,7 +339,7 @@ void dumplocal(models::RunList *r, int final) {
   s = r->symtab;
 
   if (!dummy) {
-    dummy = nn(ZN, NAME, nn(ZN, CONST, ZN, ZN), ZN);
+    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
   }
 
   for (z = s; z; z = z->next) {

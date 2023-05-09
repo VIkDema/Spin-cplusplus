@@ -774,13 +774,13 @@ void nochan_manip(models::Lextok *p, models::Lextok *n, int d) /* p=lhs n=rhs */
   }
 
   if (d == 0 && p->symbol && p->symbol->type == CHAN) {
-    setaccess(p->symbol, ZS, 0, 'L');
+    p->symbol->AddAccess(ZS, 0, 'L');
 
     if (n && n->node_type == CONST)
       loger::fatal("invalid asgn to chan");
 
     if (n && n->symbol && n->symbol->type == CHAN) {
-      setaccess(n->symbol, ZS, 0, 'V');
+      p->symbol->AddAccess(ZS, 0, 'V');
       return;
     }
   }
@@ -819,8 +819,9 @@ void nochan_manip(models::Lextok *p, models::Lextok *n, int d) /* p=lhs n=rhs */
   if (n->symbol && n->symbol->type == CHAN) {
     if (d == 1)
       loger::fatal("invalid use of chan name");
-    else
-      setaccess(n->symbol, ZS, 0, 'V');
+    else{
+      n->symbol->AddAccess(ZS,0,'V');
+    }
   }
 
   if (n->node_type == NAME || n->node_type == '.') {

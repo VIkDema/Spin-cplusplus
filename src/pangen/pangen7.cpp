@@ -905,13 +905,13 @@ static void get_seq(int n, models::Sequence *s) {
 
         if (t->left->node_type == CONST /* true */
             && t->left->value == 1 && y == NULL) {
-          y = nn(ZN, CONST, ZN, ZN);
+          y = models::Lextok::nn(ZN, CONST, ZN, ZN);
           y->value = 0;
         } else {
           if (!x)
             x = t;
           else
-            x = nn(ZN, OR, x, t);
+            x = models::Lextok::nn(ZN, OR, x, t);
           if (verbose_flags.NeedToPrintVeryVerbose()) {
             wrap_text(" [", x, "]\n");
           }
@@ -919,7 +919,7 @@ static void get_seq(int n, models::Sequence *s) {
       }
       if (haselse) {
         if (!y) {
-          y = nn(ZN, '!', x, ZN);
+          y = models::Lextok::nn(ZN, '!', x, ZN);
         }
         if (verbose_flags.NeedToPrintVeryVerbose()) {
           wrap_text(" [else: ", y, "]\n");

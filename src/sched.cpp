@@ -19,7 +19,8 @@ extern models::Symbol *Fname, *context;
 extern int nr_errs;
 extern int u_sync, Elcnt, TstOnly;
 extern short has_enabled;
-extern int limited_vis, nclaims;
+int limited_vis;
+extern int nclaims;
 extern int has_stdin;
 extern lexer::Lexer lexer_;
 extern LaunchSettings launch_settings;
@@ -441,7 +442,7 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
   }
   if (lexer_.GetHasPriority() &&
       !launch_settings.need_revert_old_rultes_for_priority) {
-    models::Lextok *n = nn(ZN, CONST, ZN, ZN);
+    models::Lextok *n = models::Lextok::nn(ZN, CONST, ZN, ZN);
     n->value = X_lst->pid;
     if (0)
       printf("pid %d %s run (priority)\n", X_lst->pid,

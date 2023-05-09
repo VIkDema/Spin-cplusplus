@@ -2,16 +2,16 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "lexer/line_number.hpp"
 #include "lexer/scope.hpp"
 #include "main/launch_settings.hpp"
-#include "models/symbol.hpp"
 #include "models/access.hpp"
+#include "models/lextok.hpp"
+#include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
-#include "models/lextok.hpp"
-#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
@@ -97,7 +97,8 @@ models::Symbol *lookup(const std::string &s) {
       if (sp->name == s && samename(sp->context, context) &&
           (sp->block_scope == lexer::ScopeProcessor::GetCurrScope() ||
            (sp->block_scope.compare(0, sp->block_scope.length(),
-                                    lexer::ScopeProcessor::GetCurrScope()) == 0 &&
+                                    lexer::ScopeProcessor::GetCurrScope()) ==
+                0 &&
             samename(sp->owner_name, owner)))) {
         if (!samename(sp->owner_name, owner)) {
           printf("spin: different container %s\n", sp->name.c_str());
@@ -167,7 +168,7 @@ void trackvar(models::Lextok *n, models::Lextok *m) {
   }
 }
 
-void trackrun(models::Lextok *n) { runstmnts = nn(ZN, 0, n, runstmnts); }
+void trackrun(models::Lextok *n) { runstmnts = models::Lextok::nn(ZN, 0, n, runstmnts); }
 
 void checkrun(models::Symbol *parnm, int posno) {
   models::Lextok *n, *now, *v;
@@ -223,8 +224,9 @@ void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
   models::Lextok *n = m;
   int count = 1;
   while (n) {
-    if (n->left && n->left->symbol && n->left->symbol->type == CHAN)
-      setaccess(n->left->symbol, w ? w->symbol : ZS, count, t);
+    if (n->left && n->left->symbol && n->left->symbol->type == CHAN) {
+      n->left->symbol->AddAccess(w ? w->symbol : ZS, count, t);
+    }
     n = n->right;
     count++;
   }
@@ -256,8 +258,9 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
         mtype_name->symbol->name != n->symbol->mtype_name->name) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
-              n->file_name->name.c_str(), n->line_number, n->symbol->name.c_str(),
-              mtype_name->symbol->name.c_str(), n->symbol->mtype_name->name.c_str());
+              n->file_name->name.c_str(), n->line_number,
+              n->symbol->name.c_str(), mtype_name->symbol->name.c_str(),
+              n->symbol->mtype_name->name.c_str());
       loger::non_fatal("type error");
     }
 
@@ -266,8 +269,9 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
 
     if (Expand_Ok) {
       n->symbol->hidden_flags |= (4 | 8 | 16); /* formal par */
-      if (t == CHAN)
-        setaccess(n->symbol, ZS, cnt, 'F');
+      if (t == CHAN) {
+        n->left->symbol->AddAccess(ZS, cnt, 'F');
+      }
     }
 
     if (t == UNSIGNED) {
@@ -303,7 +307,7 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
       n->symbol->id = 0;
       if (n->symbol->init_value && n->symbol->init_value->node_type == CHAN) {
         Fname = n->file_name;
-      file::LineNumber::Set(n->line_number);
+        file::LineNumber::Set(n->line_number);
         loger::fatal("chan initializer for non-channel %s", n->symbol->name);
       }
     }
@@ -354,11 +358,12 @@ void setxus(models::Lextok *p, int t) {
   if (launch_settings.need_lose_msgs_sent_to_full_queues && t == XS) {
     printf(
         "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
-        (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin", p->line_number);
+        (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin",
+        p->line_number);
   }
 
   if (!context) {
-      file::LineNumber::Set(p->line_number);
+    file::LineNumber::Set(p->line_number);
     Fname = p->file_name;
     loger::fatal("non-local x[rs] assertion");
   }
@@ -410,7 +415,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
   std::string s = "_unnamed_";
 
   if (m) {
-      file::LineNumber::Set(m->line_number);
+    file::LineNumber::Set(m->line_number);
     Fname = m->file_name;
   }
 
@@ -440,7 +445,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     if (n->left->symbol->type != models::SymbolType::kMtype) {
       n->left->symbol->hidden_flags |= 128; /* is used */
       n->left->symbol->type = models::SymbolType::kMtype;
-      n->left->symbol->init_value = nn(ZN, CONST, ZN, ZN);
+      n->left->symbol->init_value = models::Lextok::nn(ZN, CONST, ZN, ZN);
       n->left->symbol->init_value->value = cnt;
     } else if (n->left->symbol->init_value->value != cnt) {
       loger::non_fatal("name %s appears twice in mtype declaration",
@@ -448,7 +453,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     }
   }
 
-      file::LineNumber::Set(oln);
+  file::LineNumber::Set(oln);
   if (cnt > 256) {
     loger::fatal("too many mtype elements (>255)");
   }

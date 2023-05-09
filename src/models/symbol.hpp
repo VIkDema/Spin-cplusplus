@@ -64,6 +64,7 @@ struct Symbol {
   Symbol *owner_name;   /* set for names of subfields in typedefs */
   Symbol *context;      /* 0 if global, or procname */
   models::Symbol *next; /* linked list */
+  void AddAccess(models::Symbol *what, int count, int type);
 };
 
 struct Ordered { /* links all names in Symbol table */

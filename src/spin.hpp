@@ -18,6 +18,7 @@
 #include <optional>
 #include <stdio.h>
 #include <string.h>
+#include "utils/memory.hpp"
 
 #if !defined(WIN32) && !defined(WIN64)
 #include <unistd.h>
@@ -92,10 +93,7 @@ models::Lextok *do_unless(models::Lextok *, models::Lextok *);
 models::Lextok *expand(models::Lextok *, int);
 models::Lextok *getuname(models::Symbol *);
 models::Lextok *mk_explicit(models::Lextok *, int, int);
-models::Lextok *nn(models::Lextok *, int, models::Lextok *, models::Lextok *);
-models::Lextok *rem_lab(models::Symbol *, models::Lextok *, models::Symbol *);
-models::Lextok *rem_var(models::Symbol *, models::Lextok *, models::Symbol *,
-                        models::Lextok *);
+
 models::Lextok *tail_add(models::Lextok *, models::Lextok *);
 
 models::ProcList *mk_rdy(models::Symbol *, models::Lextok *, models::Sequence *, int,
@@ -110,7 +108,6 @@ models::Symbol *has_lab(models::Element *, int);
 models::Symbol *lookup(const std::string &s);
 
 char *put_inline(FILE *, const std::string &);
-char *emalloc(size_t);
 char *erealloc(void *, size_t, size_t);
 
 int any_oper(models::Lextok *, int);
@@ -228,7 +225,6 @@ void putunames(FILE *);
 void rem_Seq(void);
 void runnable(models::ProcList *, int, int);
 void sched(void);
-void setaccess(models::Symbol *, models::Symbol *, int, int);
 void set_lab(models::Symbol *, models::Element *);
 void setmtype(models::Lextok *, models::Lextok *);
 void setpname(models::Lextok *);
@@ -244,7 +240,6 @@ void sync_product(void);
 void trackchanuse(models::Lextok *, models::Lextok *, int);
 void trackvar(models::Lextok *, models::Lextok *);
 void trackrun(models::Lextok *);
-void trapwonly(models::Lextok * /* , char * */); /* spin.y and main.c */
 void typ2c(models::Symbol *);
 void typ_ck(int, int, const std::string &);
 void undostmnt(models::Lextok *, int);
