@@ -788,10 +788,10 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
   models::Ordered *walk;
   ProcList *p;
   models::Symbol *sp;
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
   int j;
-  extern Mtypes_t *Mtypes;
+  extern models::Mtypes_t *Mtypes;
 
   fprintf(fd, "void\nc_globals(void)\n{\t/* int i; */\n");
   fprintf(fd, "	printf(\"global vars:\\n\");\n");
@@ -820,10 +820,11 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 
   fprintf(fd, "void\nprintm(int x, char *s)\n{\n");
   fprintf(fd, "	if (!s) { s = \"_unnamed_\"; }\n");
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n", lst->nm.c_str());
+  for (lst = Mtypes; lst; lst = lst->next) {
+    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n",
+            lst->name_of_mtype.c_str());
     fprintf(fd, "	switch (x) {\n");
-    for (n = lst->mt, j = 1; n && j; n = n->right, j++)
+    for (n = lst->list_of_names, j = 1; n && j; n = n->right, j++)
       fprintf(fd, "\tcase %d: Printf(\"%s\"); return;\n", j,
               n->left->symbol->name.c_str());
     fprintf(fd, "	default: Printf(\"%%d\", x); return;\n");

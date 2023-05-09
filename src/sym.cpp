@@ -24,7 +24,7 @@ models::Symbol *context = ZS;
 models::Ordered *all_names = nullptr;
 int Nid_nr = 0;
 
-Mtypes_t *Mtypes;
+models::Mtypes_t *Mtypes;
 models::Lextok *runstmnts = ZN;
 
 static models::Ordered *last_name = nullptr;
@@ -387,20 +387,20 @@ void setxus(models::Lextok *p, int t) {
 }
 
 models::Lextok **find_mtype_list(const std::string &s) {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    if (lst->nm == s) {
-      return &(lst->mt);
+  for (lst = Mtypes; lst; lst = lst->next) {
+    if (lst->name_of_mtype == s) {
+      return &(lst->list_of_names);
     }
   }
 
   /* not found, create it */
-  lst = (Mtypes_t *)emalloc(sizeof(Mtypes_t));
-  lst->nm = s;
-  lst->nxt = Mtypes;
+  lst = (models::Mtypes_t *)emalloc(sizeof(models::Mtypes_t));
+  lst->name_of_mtype = s;
+  lst->next = Mtypes;
   Mtypes = lst;
-  return &(lst->mt);
+  return &(lst->list_of_names);
 }
 
 void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
@@ -457,13 +457,13 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
 std::string which_mtype(
     const std::string &str) /* which mtype is str, 0 if not an mtype at all  */
 {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    for (n = lst->mt; n; n = n->right) {
+  for (lst = Mtypes; lst; lst = lst->next) {
+    for (n = lst->list_of_names; n; n = n->right) {
       if (str == n->left->symbol->name) {
-        return lst->nm;
+        return lst->name_of_mtype;
       }
     }
   }
@@ -473,13 +473,13 @@ std::string which_mtype(
 
 int ismtype(const std::string &str) /* name to number */
 {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
   int count;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
+  for (lst = Mtypes; lst; lst = lst->next) {
     count = 1;
-    for (n = lst->mt; n; n = n->right) {
+    for (n = lst->list_of_names; n; n = n->right) {
       if (str == std::string(n->left->symbol->name)) {
         return count;
       }

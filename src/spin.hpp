@@ -3,8 +3,10 @@
 
 #include "models/lextok.hpp"
 #include "models/models_fwd.hpp"
-#include "models/symbol.hpp"
+#include "models/mtypes.hpp"
 #include "models/slicer.hpp"
+#include "models/symbol.hpp"
+
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
@@ -16,12 +18,6 @@
 #ifndef PC
 #include <memory.h>
 #endif
-
-struct Mtypes_t {
-  std::string nm;       /* name of mtype, or "_unnamed_" */
-  models::Lextok *mt;   /* the linked list of names */
-  struct Mtypes_t *nxt; /* linked list of mtypes */
-};
 
 struct Queue {
   short qid;         /* runtime q index */
