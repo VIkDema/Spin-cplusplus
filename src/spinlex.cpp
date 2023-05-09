@@ -3,6 +3,7 @@
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "main/launch_settings.hpp"
+#include "models/lextok.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -12,7 +13,6 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
-#include "models/lextok.hpp"
 extern LaunchSettings launch_settings;
 
 constexpr int kMaxInl = 16;
@@ -21,16 +21,16 @@ constexpr int kMaxLen = 512;
 
 struct IType {
   models::Symbol *nm;        /* name of the type */
-  models::Lextok *cn;                /* contents */
-  models::Lextok *params;            /* formal pars if any */
-  models::Lextok *rval;              /* variable to assign return value, if any */
+  models::Lextok *cn;        /* contents */
+  models::Lextok *params;    /* formal pars if any */
+  models::Lextok *rval;      /* variable to assign return value, if any */
   char **anms;               /* literal text for actual pars */
   char *prec;                /* precondition for c_code or c_expr */
   int uiid;                  /* unique inline id */
   int is_expr;               /* c_expr in an ltl formula */
   int dln, cln;              /* def and call linenr */
   models::Symbol *dfn, *cfn; /* def and call filename */
-  struct IType *next;         /* linked list */
+  struct IType *next;        /* linked list */
 };
 
 struct C_Added {
@@ -56,16 +56,16 @@ std::string yytext;
 FILE *yyin, *yyout;
 
 static C_Added *c_added, *c_tracked;
-static IType *Inline_stub[kMaxInl];
+static models::IType *Inline_stub[kMaxInl];
 static char *Inliner[kMaxInl], IArg_cont[kMaxPar][kMaxLen];
 static int last_token = 0;
 static int Inlining = -1;
 
-static IType *seqnames;
+static models::IType *seqnames;
 
 static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
                        models::Lextok *nms) {
-  IType *tmp;
+  models::IType *tmp;
   int cnt = 0;
   char *nw = (char *)emalloc(strlen(ptr) + 1);
   strcpy(nw, ptr);
@@ -79,7 +79,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
       tmp->dfn = Fname;
       return;
     }
-  tmp = (IType *)emalloc(sizeof(IType));
+  tmp = (models::IType *)emalloc(sizeof(models::IType));
   tmp->nm = s;
   tmp->cn = (models::Lextok *)nw;
   tmp->params = nms;
@@ -95,7 +95,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
 }
 
 void gencodetable(FILE *fd) {
-  IType *tmp;
+  models::IType *tmp;
   char *q;
   int cnt;
 
@@ -147,7 +147,7 @@ void gencodetable(FILE *fd) {
 }
 
 bool IsEqname(const std::string &value) {
-  IType *tmp;
+  models::IType *tmp;
 
   for (tmp = seqnames; tmp; tmp = tmp->next) {
     if (value == std::string(tmp->nm->name)) {
@@ -177,8 +177,8 @@ int is_inline(void) {
   return Inline_stub[Inlining]->uiid;
 }
 
-IType *find_inline(const std::string &s) {
-  IType *tmp;
+models::IType *find_inline(const std::string &s) {
+  models::IType *tmp;
 
   for (tmp = seqnames; tmp; tmp = tmp->next)
     if (s == tmp->nm->name) {
@@ -668,7 +668,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "#endif\n");
 }
 
-void plunk_reverse(FILE *fd, IType *p, int matchthis) {
+void plunk_reverse(FILE *fd, models::IType *p, int matchthis) {
   char *y, *z;
 
   if (!p)
@@ -717,7 +717,7 @@ void plunk_c_fcts(FILE *fd) {
   do_locinits(fd);
 }
 
-static void check_inline(IType *tmp) {
+static void check_inline(models::IType *tmp) {
   char buf[128];
   models::ProcList *p;
 
@@ -741,7 +741,7 @@ extern short terse;
 extern short nocast;
 
 void plunk_expr(FILE *fd, const std::string &s) {
-  IType *tmp;
+  models::IType *tmp;
   char *q;
 
   tmp = find_inline(s);
@@ -760,10 +760,11 @@ void plunk_expr(FILE *fd, const std::string &s) {
   }
 }
 
-void preruse(FILE *fd,
-             models::Lextok *n) /* check a condition for c_expr with preconditions */
+void preruse(
+    FILE *fd,
+    models::Lextok *n) /* check a condition for c_expr with preconditions */
 {
-  IType *tmp;
+  models::IType *tmp;
 
   if (!n)
     return;
@@ -786,7 +787,7 @@ void preruse(FILE *fd,
 }
 
 int glob_inline(const std::string &s) {
-  IType *tmp;
+  models::IType *tmp;
   char *bdy;
 
   tmp = find_inline(s);
@@ -796,7 +797,7 @@ int glob_inline(const std::string &s) {
 }
 
 char *put_inline(FILE *fd, const std::string &s) {
-  IType *tmp;
+  models::IType *tmp;
 
   tmp = find_inline(s);
   check_inline(tmp);
@@ -812,7 +813,7 @@ void mark_last(void) {
 void plunk_inline(FILE *fd, const std::string &s, int how,
                   int gencode) /* c_code with precondition */
 {
-  IType *tmp;
+  models::IType *tmp;
 
   tmp = find_inline(s.c_str());
   check_inline(tmp);
@@ -845,7 +846,7 @@ int side_scan(char *t, char *pat) {
 }
 
 void no_side_effects(const std::string &s) {
-  IType *tmp;
+  models::IType *tmp;
   char *t;
   char *z;
 
@@ -886,8 +887,9 @@ void no_side_effects(const std::string &s) {
   }
 }
 
-void pickup_inline(models::Symbol *t, models::Lextok *apars, models::Lextok *rval) {
-  IType *tmp;
+void pickup_inline(models::Symbol *t, models::Lextok *apars,
+                   models::Lextok *rval) {
+  models::IType *tmp;
   models::Lextok *p, *q;
   int j;
 

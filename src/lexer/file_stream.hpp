@@ -1,7 +1,8 @@
 #pragma once
+
 #include "../fatal/fatal.hpp"
+#include "../models/itype.hpp"
 #include "../spin.hpp"
-#include "models/itype.hpp"
 #include <string>
 
 namespace file {

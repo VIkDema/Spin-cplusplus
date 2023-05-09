@@ -559,10 +559,11 @@ void checktype(models::Symbol *sp, const std::string &s) {
     while (buf[--i] == ' ')
       buf[i] = '\0';
     prehint(sp);
-    if (sp->context)
+    if (sp->context) {
       printf("proctype %s:", s.c_str());
-    else
+    } else {
       printf("global");
+    }
     printf(" '%s %s' could be declared 'byte %s'\n", buf.c_str(),
            sp->name.c_str(), sp->name.c_str());
   }

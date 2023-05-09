@@ -1,7 +1,7 @@
 #include "file_stream.hpp"
 
 #define MAXINL 16 /* max recursion depth inline fcts */
-#include "models/itype.hpp"
+#include "../models/itype.hpp"
 #include <string>
 #include <vector>
 

@@ -76,6 +76,7 @@ set(SPIN_SOURCES
     src/models/mtypes.hpp
     src/models/slicer.hpp
     src/models/queue.hpp
+    src/models/itype.hpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 
