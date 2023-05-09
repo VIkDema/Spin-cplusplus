@@ -21,12 +21,12 @@ extern FILE *fd_tc, *fd_th, *fd_tt;
 extern Label *labtab;
 extern models::Ordered *all_names;
 extern ProcList *ready;
-extern Queue *qtab;
+extern models::Queue *qtab;
 extern models::Symbol *Fname;
 extern int lineno, verbose, Pid_nr, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
 extern short has_sorted, has_random;
-extern Queue *ltab[];
+extern models::Queue *ltab[];
 
 int Npars = 0, u_sync = 0, u_async = 0, hastrack = 1;
 short has_io = 0;
@@ -628,7 +628,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
 }
 
 void c_chandump(FILE *fd) {
-  Queue *q;
+  models::Queue *q;
   char buf[256];
   int i;
 
@@ -1367,7 +1367,7 @@ void qlen_type(int qmax) {
 void genaddqueue(void) {
   char buf0[256];
   int j, qmax = 0;
-  Queue *q;
+  models::Queue *q;
 
   ntimes(fd_tc, 0, 1, Addq0);
 

@@ -10,7 +10,7 @@
 
 extern LaunchSettings launch_settings;
 extern FILE *fd_tc, *fd_tb;
-extern Queue *qtab;
+extern models::Queue *qtab;
 extern models::Symbol *Fname;
 extern int lineno, Pid_nr, eventmapnr, multi_oval;
 extern short nocast, has_sorted;
@@ -278,7 +278,7 @@ static void check_proc(models::Lextok *now, int m) {
 
 void genunio(void) {
   std::string buf1;
-  Queue *q;
+  models::Queue *q;
   int i;
 
   ntimes(fd_tc, 0, 1, R13_);

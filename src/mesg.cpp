@@ -23,24 +23,24 @@ extern short Have_claim;
 extern LaunchSettings launch_settings;
 
 QH *qh_lst;
-Queue *qtab = (Queue *)0; /* linked list of queues */
-Queue *ltab[kMaxQueueSize];        /* linear list of queues */
+models::Queue *qtab = nullptr; /* linked list of queues */
+models::Queue *ltab[kMaxQueueSize];        /* linear list of queues */
 int nrqs = 0, firstrow = 1, has_stdin = 0;
 char GBuf[4096];
 
-static models::Lextok *n_rem = (models::Lextok *)0;
-static Queue *q_rem = (Queue *)0;
+static models::Lextok *n_rem = nullptr;
+static models::Queue *q_rem = nullptr;
 
-static int a_rcv(Queue *, models::Lextok *, int);
-static int a_snd(Queue *, models::Lextok *);
-static int sa_snd(Queue *, models::Lextok *);
-static int s_snd(Queue *, models::Lextok *);
+static int a_rcv(models::Queue *, models::Lextok *, int);
+static int a_snd(models::Queue *, models::Lextok *);
+static int sa_snd(models::Queue *, models::Lextok *);
+static int s_snd(models::Queue *, models::Lextok *);
 extern models::Lextok **find_mtype_list(const std::string &);
 extern std::string which_mtype(const std::string &);
 extern void sr_buf(int, int, const std::string &);
 extern void sr_mesg(FILE *, int, int, const std::string &);
 extern void putarrow(int, int);
-static void sr_talk(models::Lextok *, int, char *, char *, int, Queue *);
+static void sr_talk(models::Lextok *, int, char *, char *, int, models::Queue *);
 
 int cnt_mpars(models::Lextok *n) {
   models::Lextok *m;
@@ -53,7 +53,7 @@ int cnt_mpars(models::Lextok *n) {
 
 int qmake(models::Symbol *s) {
   models::Lextok *m;
-  Queue *q;
+  models::Queue *q;
   int i, j;
 
   if (!s->init_value)
@@ -71,7 +71,7 @@ int qmake(models::Symbol *s) {
   if (s->init_value->node_type != CHAN)
     return eval(s->init_value);
 
-  q = (Queue *)emalloc(sizeof(Queue));
+  q = (models::Queue *)emalloc(sizeof(models::Queue));
   q->qid = (short)++nrqs;
   q->nslots = s->init_value->value;
   q->nflds = cnt_mpars(s->init_value->right);
@@ -223,7 +223,7 @@ int qrecv(models::Lextok *n, int full) {
   return 0;
 }
 
-static int sa_snd(Queue *q, models::Lextok *n) /* sorted asynchronous */
+static int sa_snd(models::Queue *q, models::Lextok *n) /* sorted asynchronous */
 {
   models::Lextok *m;
   int i, j, k;
@@ -298,7 +298,7 @@ static void mtype_ck(const std::string &p, models::Lextok *arg) {
   }
 }
 
-static int a_snd(Queue *q, models::Lextok *n) {
+static int a_snd(models::Queue *q, models::Lextok *n) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   models::Lextok *m;
@@ -347,7 +347,7 @@ static int a_snd(Queue *q, models::Lextok *n) {
   return 1;
 }
 
-static int a_rcv(Queue *q, models::Lextok *n, int full) {
+static int a_rcv(models::Queue *q, models::Lextok *n, int full) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   models::Lextok *m;
   int i = 0, oi, j, k;
@@ -463,7 +463,7 @@ try_slot:
   return 1;
 }
 
-static int s_snd(Queue *q, models::Lextok *n) {
+static int s_snd(models::Queue *q, models::Lextok *n) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   models::Lextok *m;
   RunList *rX, *sX = X_lst; /* rX=recvr, sX=sendr */
@@ -536,8 +536,8 @@ static int s_snd(Queue *q, models::Lextok *n) {
         putarrow(depth, depth);
       }
     }
-    n_rem = (models::Lextok *)0;
-    q_rem = (Queue *)0;
+    n_rem = nullptr;
+    q_rem = nullptr;
   }
   return 1;
 }
@@ -572,7 +572,7 @@ static void channm(models::Lextok *n) {
   }
 }
 
-static void difcolumns(models::Lextok *n, char *tr, int v, int j, Queue *q) {
+static void difcolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *q) {
   extern int prno;
 
   if (j == 0) {
@@ -597,7 +597,7 @@ static void difcolumns(models::Lextok *n, char *tr, int v, int j, Queue *q) {
   }
 }
 
-static void docolumns(models::Lextok *n, char *tr, int v, int j, Queue *q) {
+static void docolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *q) {
   int i;
 
   if (firstrow) {
@@ -643,7 +643,7 @@ int qishidden(int q) {
   return 0;
 }
 
-static void sr_talk(models::Lextok *n, int v, char *tr, char *a, int j, Queue *q) {
+static void sr_talk(models::Lextok *n, int v, char *tr, char *a, int j, models::Queue *q) {
   char s[128];
 
   if (qishidden(eval(n->left)))
@@ -721,7 +721,7 @@ void sr_mesg(FILE *fd, int v, int j, const std::string &s) {
 }
 
 void doq(models::Symbol *s, int n, RunList *r) {
-  Queue *q;
+  models::Queue *q;
   int j, k;
 
   if (!s->value.empty()) /* uninitialized queue */
