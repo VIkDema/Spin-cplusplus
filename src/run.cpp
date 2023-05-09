@@ -9,11 +9,12 @@
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
+#include "lexer/line_number.hpp"
 
 extern models::RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
 extern models::Element *LastStep;
-extern int Rvous, lineno, Tval, MadeChoice, Priority_Sum;
+extern int Rvous, Tval, MadeChoice, Priority_Sum;
 extern int TstOnly, verbose, depth;
 extern int nproc, nstop;
 extern short Have_claim;
@@ -349,7 +350,7 @@ int eval(models::Lextok *now) {
   int temp;
 
   if (now) {
-    lineno = now->line_number;
+    file::LineNumber::Set(now->line_number);
     Fname = now->file_name;
 #ifdef DEBUG
     printf("eval ");

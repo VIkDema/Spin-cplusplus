@@ -8,17 +8,19 @@ namespace lexer {
 
 class ScopeProcessor {
 public:
-  ScopeProcessor();
-  void InitScopeName();
-  void SetCurrScope();
-  void AddScope();
-  void RemoveScope();
-  std::string GetCurrScope();
+  static void InitScopeName();
+  static void SetCurrScope();
+  static void AddScope();
+  static void RemoveScope();
+  static std::string GetCurrScope();
+  static int GetCurrScopeLevel();
+  static int GetCurrSegment();
+  static void SetCurrScopeLevel(int scope_level);
 
 private:
-  int scope_level_;
-  std::array<int, 256> scope_seq_;
-  std::string curr_scope_name_;
+  static int scope_level_;
+  static std::array<int, 256> scope_seq_;
+  static std::string curr_scope_name_;
 };
 
 } // namespace lexer

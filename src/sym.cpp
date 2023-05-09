@@ -11,12 +11,12 @@
 #include "y.tab.h"
 #include <iostream>
 #include "models/lextok.hpp"
+#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
-extern lexer::ScopeProcessor scope_processor_;
 
 extern models::Symbol *Fname, *owner;
-extern int lineno, depth, verbose, NamesNotAdded;
+extern int depth, verbose, NamesNotAdded;
 extern int has_hidden;
 extern short has_xu;
 
@@ -95,9 +95,9 @@ models::Symbol *lookup(const std::string &s) {
   } else { /* added 6.0.0: more traditional, scope rule */
     for (sp = symtab[h]; sp; sp = sp->next) {
       if (sp->name == s && samename(sp->context, context) &&
-          (sp->block_scope == scope_processor_.GetCurrScope() ||
+          (sp->block_scope == lexer::ScopeProcessor::GetCurrScope() ||
            (sp->block_scope.compare(0, sp->block_scope.length(),
-                                    scope_processor_.GetCurrScope()) == 0 &&
+                                    lexer::ScopeProcessor::GetCurrScope()) == 0 &&
             samename(sp->owner_name, owner)))) {
         if (!samename(sp->owner_name, owner)) {
           printf("spin: different container %s\n", sp->name.c_str());
@@ -125,7 +125,7 @@ models::Symbol *lookup(const std::string &s) {
   sp->last_depth = depth;
   sp->context = context;
   sp->owner_name = owner; /* if fld in struct */
-  sp->block_scope = scope_processor_.GetCurrScope();
+  sp->block_scope = lexer::ScopeProcessor::GetCurrScope();
 
   if (NamesNotAdded == 0) {
     sp->next = symtab[h];
@@ -233,23 +233,23 @@ void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
 void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
               models::Lextok *vis) /* predefined types */
 {
-  int oln = lineno, cnt = 1;
+  int oln = file::LineNumber::Get(), cnt = 1;
   extern int Expand_Ok;
 
   while (n) {
     if (n->symbol->type && !(n->symbol->hidden_flags & 32)) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::fatal("redeclaration of '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
     n->symbol->type = (models::SymbolType)t;
 
     if (mtype_name && t != MTYPE) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::fatal("missing semi-colon after '%s'?", mtype_name->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
 
     if (mtype_name && n->symbol->mtype_name &&
@@ -303,16 +303,16 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
       n->symbol->id = 0;
       if (n->symbol->init_value && n->symbol->init_value->node_type == CHAN) {
         Fname = n->file_name;
-        lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
         loger::fatal("chan initializer for non-channel %s", n->symbol->name);
       }
     }
 
     if (n->symbol->value_type <= 0) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::non_fatal("bad array size for '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
 
     n = n->right;
@@ -358,7 +358,7 @@ void setxus(models::Lextok *p, int t) {
   }
 
   if (!context) {
-    lineno = p->line_number;
+      file::LineNumber::Set(p->line_number);
     Fname = p->file_name;
     loger::fatal("non-local x[rs] assertion");
   }
@@ -377,11 +377,11 @@ void setxus(models::Lextok *p, int t) {
     else if (n->symbol->type == CHAN)
       setonexu(n->symbol, t);
     else {
-      int oln = lineno;
-      lineno = n->line_number;
+      int oln = file::LineNumber::Get();
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::non_fatal("xr or xs of non-chan '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
   }
 }
@@ -406,11 +406,11 @@ models::Lextok **find_mtype_list(const std::string &s) {
 void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
   models::Lextok **mtl; /* mtype list */
   models::Lextok *n, *Mtype;
-  int cnt, oln = lineno;
+  int cnt, oln = file::LineNumber::Get();
   std::string s = "_unnamed_";
 
   if (m) {
-    lineno = m->line_number;
+      file::LineNumber::Set(m->line_number);
     Fname = m->file_name;
   }
 
@@ -448,7 +448,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     }
   }
 
-  lineno = oln;
+      file::LineNumber::Set(oln);
   if (cnt > 256) {
     loger::fatal("too many mtype elements (>255)");
   }

@@ -2,6 +2,8 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/inline_processor.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/scope.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
@@ -33,7 +35,7 @@ extern	models::Lextok *sel_index(models::Lextok *, models::Lextok *, models::Lex
 extern  void    keep_track_off(models::Lextok *);
 extern	void	safe_break(void);
 extern	void	restore_break(void);
-extern  int	u_sync, u_async, scope_level;
+extern  int	u_sync, u_async;
 extern	int	initialization_ok;
 extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np;
 extern	short	has_state, has_io;
@@ -288,7 +290,7 @@ nm	: NAME			{ $$ = $1; }
 	;
 
 ns	: INLINE nm l_par		{ NamesNotAdded++; }
-	  args r_par		{ prep_inline($2->symbol, $5);
+	  args r_par		{ lexer_.HandleInline($2->symbol, $5);
 				  NamesNotAdded--;
 				}
 	;
@@ -324,7 +326,7 @@ cstate	: C_STATE STRING STRING	{
 
 ccode	: C_CODE		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 				  NamesNotAdded--;
 				  $$ = nn(ZN, C_CODE, ZN, ZN);
 				  $$->symbol = s;
@@ -334,7 +336,7 @@ ccode	: C_CODE		{ models::Symbol *s;
 				}
 	| C_DECL		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 				  NamesNotAdded--;
 				  s->type = models::SymbolType::kCodeDecl;
 				  $$ = nn(ZN, C_CODE, ZN, ZN);
@@ -346,11 +348,12 @@ ccode	: C_CODE		{ models::Symbol *s;
 	;
 cexpr	: C_EXPR		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 /* if context is 0 this was inside an ltl formula
    mark the last inline added to seqnames */
 				  if (!context)
-				  {	mark_last();
+				  {	
+					lexer::InlineProcessor::SetIsExpr();
 				  }
 				  NamesNotAdded--;
 				  $$ = nn(ZN, C_EXPR, ZN, ZN);
@@ -365,9 +368,9 @@ cexpr	: C_EXPR		{ models::Symbol *s;
 body	: '{'			{ open_seq(1); lexer_.SetInSeq($1->line_number); }
           sequence OS		{ add_seq(Stop); }
           '}'			{ $$->sequence = close_seq(0); lexer_.SetInSeq(0);
-				  if (scope_level != 0)
+				  if (lexer::ScopeProcessor::GetCurrScopeLevel())
 				  {	loger::non_fatal("missing '}' ?");
-					scope_level = 0;
+				  	lexer::ScopeProcessor::SetCurrScopeLevel(0);
 				  }
 				}
 	;
@@ -764,7 +767,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $9; }
-	| RETURN full_expr	{ $$ = return_statement($2); }	
+	| RETURN full_expr	{ $$ = lexer_.ReturnStatement($2); }	
 	;
 
 options : option		{ $$->seq_list = seqlist($1->sequence, 0); }

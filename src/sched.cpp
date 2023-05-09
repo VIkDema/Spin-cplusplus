@@ -2,6 +2,7 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "lexer/line_number.hpp"
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
@@ -15,11 +16,11 @@
 extern char *claimproc, *eventmap, GBuf[];
 extern models::Ordered *all_names;
 extern models::Symbol *Fname, *context;
-extern int lineno, nr_errs;
+extern int nr_errs;
 extern int u_sync, Elcnt, TstOnly;
 extern short has_enabled;
 extern int limited_vis, nclaims;
-extern int scope_seq[256], scope_level, has_stdin;
+extern int has_stdin;
 extern lexer::Lexer lexer_;
 extern LaunchSettings launch_settings;
 
@@ -99,7 +100,7 @@ models::ProcList *mk_rdy(models::Symbol *n, models::Lextok *p,
   r->b = b;
   r->prov = prov;
   r->tn = (short)nrRdy++;
-  n->sc = scope_seq[scope_level]; /* scope_level should be 0 */
+  n->sc = lexer::ScopeProcessor::GetCurrSegment(); /* scope_level should be 0 */
 
   if (det != 0 && det != 1) {
     fprintf(stderr, "spin: bad value for det (cannot happen)\n");
@@ -275,7 +276,7 @@ void check_param_count(int i, models::Lextok *m) {
     if (s->name == p->n->name) {
       if (m->left) /* actual param list */
       {
-        lineno = m->left->line_number;
+        file::LineNumber::Set(m->left->line_number);
         Fname = m->left->file_name;
       }
       for (f = p->p; f; f = f->right)      /* one type at a time */
@@ -709,7 +710,7 @@ void sched(void) {
   while (X_lst) {
     context = X_lst->n;
     if (X_lst->pc && X_lst->pc->n) {
-      lineno = X_lst->pc->n->line_number;
+      file::LineNumber::Set(X_lst->pc->n->line_number);
       Fname = X_lst->pc->n->file_name;
     }
     if (launch_settings.count_of_steps > 0 &&
@@ -992,7 +993,7 @@ static void setparams(models::RunList *r, models::ProcList *p,
   models::Lextok *t;     /* list of pars of 1 type */
 
   if (q) {
-    lineno = q->line_number;
+    file::LineNumber::Set(q->line_number);
     Fname = q->file_name;
   }
   for (f = p->p, a = q; f; f = f->right) /* one type at a time */
@@ -1134,7 +1135,7 @@ void p_talk(models::Element *e, int lnr) {
 int remotelab(models::Lextok *n) {
   int i;
 
-  lineno = n->line_number;
+  file::LineNumber::Set(n->line_number);
   Fname = n->file_name;
   if (n->symbol->type != 0 && n->symbol->type != LABEL) {
     printf("spin: error, type: %d\n", n->symbol->type);
@@ -1155,8 +1156,7 @@ int remotevar(models::Lextok *n) {
   models::RunList *Y, *oX;
   models::Lextok *onl;
   models::Symbol *os;
-
-  lineno = n->line_number;
+  file::LineNumber::Set(n->line_number);
   Fname = n->file_name;
 
   if (!n->left->left)

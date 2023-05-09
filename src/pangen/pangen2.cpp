@@ -1,6 +1,7 @@
 #include "pangen2.hpp"
 #include "../fatal/fatal.hpp"
 #include "../lexer/lexer.hpp"
+#include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
 #include "../main/main_processor.hpp"
 #include "../spin.hpp"
@@ -12,6 +13,7 @@
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
+
 extern LaunchSettings launch_settings;
 
 #define DELTA 500 /* sets an upperbound on nr of chan names */
@@ -35,7 +37,7 @@ extern models::RunList *run_lst;
 extern models::Lextok *runstmnts;
 extern models::Symbol *Fname, *oFname, *context;
 extern char *claimproc, *eventmap;
-extern int lineno, Npars, Mpars, nclaims;
+extern int Npars, Mpars, nclaims;
 extern int has_remote, has_remvar, rvopt;
 extern int Ntimeouts, Etimeouts;
 extern int u_sync, u_async, nrRdy, Unique;
@@ -2190,7 +2192,7 @@ static models::Element *find_target(models::Element *e) {
 models::Element *target(models::Element *e) {
   if (!e)
     return e;
-  lineno = e->n->line_number;
+  file::LineNumber::Set(e->n->line_number);
   Fname = e->n->file_name;
   t_cyc = 0;
   return find_target(e);
@@ -2470,7 +2472,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     fprintf(fd, "0");
     return;
   }
-  lineno = now->line_number;
+  file::LineNumber::Set(now->line_number);
   Fname = now->file_name;
 
   switch (now->node_type) {
@@ -2549,7 +2551,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
       fprintf(fd, "((trpt->tau)&1)");
     if (GenCode)
       printf("spin: %s:%d, warning, 'timeout' in d_step sequence\n",
-             Fname->name.c_str(), lineno);
+             Fname->name.c_str(), file::LineNumber::Get());
     /* is okay as a guard */
     break;
 
@@ -3485,7 +3487,7 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
   models::Symbol *s = n->symbol;
   std::string ptr;
 
-  lineno = n->line_number;
+  file::LineNumber::Set(n->line_number);
   Fname = n->file_name;
 
   if (!s)

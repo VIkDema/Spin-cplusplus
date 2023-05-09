@@ -23,6 +23,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
+#include "lexer/line_number.hpp"
+#include "lexer/inline_processor.hpp"
 
 #ifdef PC
 #include <io.h>
@@ -32,7 +34,7 @@
 
 #include "y.tab.h"
 
-extern int DstepStart, lineno;
+extern int DstepStart;
 extern FILE *yyin, *yyout, *tl_out;
 extern models::Symbol *context;
 extern char *claimproc;
@@ -164,7 +166,7 @@ models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll,
   models::Lextok *n = (models::Lextok *)emalloc(sizeof(models::Lextok));
   static int warn_nn = 0;
 
-  n->opt_inline_id = is_inline(); /* record origin of the statement */
+  n->opt_inline_id = lexer::InlineProcessor::GetCurrInlineUuid(); /* record origin of the statement */
   n->node_type = (unsigned short)t;
   if (s && s->file_name) {
     n->line_number = s->line_number;
@@ -176,7 +178,7 @@ models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll,
     n->line_number = ll->line_number;
     n->file_name = ll->file_name;
   } else {
-    n->line_number = lineno;
+    n->line_number = file::LineNumber::Get();
     n->file_name = Fname;
   }
   if (s)

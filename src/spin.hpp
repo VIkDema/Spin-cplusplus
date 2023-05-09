@@ -79,7 +79,6 @@ typedef models::Lextok *Lexptr;
 /** NEW**/
 int ismtype(const std::string &);
 bool IsProctype(const std::string &);
-bool IsEqname(const std::string &);
 bool IsUtype(const std::string &);
 /***** prototype definitions *****/
 models::Element *eval_sub(models::Element *);
@@ -98,7 +97,6 @@ models::Lextok *rem_lab(models::Symbol *, models::Lextok *, models::Symbol *);
 models::Lextok *rem_var(models::Symbol *, models::Lextok *, models::Symbol *,
                         models::Lextok *);
 models::Lextok *tail_add(models::Lextok *, models::Lextok *);
-models::Lextok *return_statement(models::Lextok *);
 
 models::ProcList *mk_rdy(models::Symbol *, models::Lextok *, models::Sequence *, int,
                  models::Lextok *, models::btypes);
@@ -110,7 +108,6 @@ models::Symbol *break_dest(void);
 models::Symbol *findloc(models::Symbol *);
 models::Symbol *has_lab(models::Element *, int);
 models::Symbol *lookup(const std::string &s);
-models::Symbol *prep_inline(models::Symbol *, models::Lextok *);
 
 char *put_inline(FILE *, const std::string &);
 char *emalloc(size_t);
@@ -138,7 +135,6 @@ int has_typ(models::Lextok *, int);
 int in_bound(models::Symbol *, int);
 int interprint(FILE *, models::Lextok *);
 int printm(FILE *, models::Lextok *);
-int is_inline(void);
 int ismtype(char *);
 
 int Lval_struct(models::Lextok *, models::Symbol *, int, int);

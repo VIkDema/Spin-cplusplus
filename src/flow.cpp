@@ -5,16 +5,17 @@
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 
+#include "lexer/inline_processor.hpp"
+#include "lexer/line_number.hpp"
 #include "lexer/scope.hpp"
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
 #include "y.tab.h"
 
-extern lexer::ScopeProcessor scope_processor_;
 extern LaunchSettings launch_settings;
 extern lexer::Lexer lexer_;
 extern models::Symbol *Fname;
-extern int nr_errs, lineno;
+extern int nr_errs;
 extern short has_unless, has_badelse, has_xu;
 
 models::Element *Al_El = ZE;
@@ -64,7 +65,7 @@ static int Rjumpslocal(models::Element *q, models::Element *stop) {
     if (f && f->n && f->n->node_type == GOTO) {
       lb = get_lab(f->n, 0);
       if (!lb || lb->Seqno < DstepStart) {
-        lineno = f->n->line_number;
+        file::LineNumber::Set(f->n->line_number);
         Fname = f->n->file_name;
         return 0;
       }
@@ -79,7 +80,7 @@ static int Rjumpslocal(models::Element *q, models::Element *stop) {
 
 void cross_dsteps(models::Lextok *a, models::Lextok *b) {
   if (a && b && a->index_step != b->index_step) {
-    lineno = a->line_number;
+    file::LineNumber::Set(a->line_number);
     Fname = a->file_name;
     if (!launch_settings.need_save_trail)
       loger::fatal("jump into d_step sequence");
@@ -108,8 +109,8 @@ void check_sequence(models::Sequence *s) {
                  n->line_number);
         }
         if (e != s->frst && e != s->last && e != s->extent) {
-          e->status |= DONE; /* not unreachable */
-          le->next = e->next;  /* remove it */
+          e->status |= DONE;  /* not unreachable */
+          le->next = e->next; /* remove it */
           e = le;
         }
       }
@@ -327,7 +328,8 @@ void loose_ends(void) /* properly tie-up ends of sub-sequences */
         e->n->seq_list->this_sequence->last->next = f;
       else {
         if (e->n->seq_list->this_sequence->last->next->n->node_type != GOTO) {
-          if (!f || e->n->seq_list->this_sequence->last->next->seqno != f->seqno)
+          if (!f ||
+              e->n->seq_list->this_sequence->last->next->seqno != f->seqno)
             loger::non_fatal("unexpected: loose ends");
         } else
           e->n->seq_list->this_sequence->last =
@@ -573,7 +575,7 @@ void add_seq(models::Lextok *n) {
 void set_lab(models::Symbol *s, models::Element *e) {
   models::Label *l;
   extern models::Symbol *context;
-  int cur_uiid = is_inline();
+  int cur_uiid = lexer::InlineProcessor::GetCurrInlineUuid();
 
   if (!s)
     return;
@@ -639,7 +641,7 @@ models::Element *get_lab(models::Lextok *n, int md) {
   }
 
   if (md) {
-    lineno = n->line_number;
+    file::LineNumber::Set(n->line_number);
     Fname = n->file_name;
     loger::fatal("undefined label %s", n->symbol->name);
   }
@@ -671,7 +673,7 @@ static void mov_lab(models::Symbol *z, models::Element *e, models::Element *y) {
       return;
     }
   if (e->n) {
-    lineno = e->n->line_number;
+    file::LineNumber::Set(e->n->line_number);
     Fname = e->n->file_name;
   }
   loger::fatal("cannot happen - mov_lab %s", z->name);
@@ -720,7 +722,7 @@ void fix_dest(models::Symbol *c,
   l->e->status |= CHECK2; /* treat as if global */
   if (l->e->status & (ATOM | L_ATOM | D_ATOM)) {
     printf("spin: %s:%d, warning, reference to label ", Fname->name.c_str(),
-           lineno);
+           file::LineNumber::Get());
     printf("from inside atomic or d_step (%s)\n", c->name.c_str());
   }
 }
@@ -885,7 +887,7 @@ models::Lextok *for_index(models::Lextok *a3, models::Lextok *a5) {
 
     sprintf(
         tmp_nm, "_f0r_t3mp%s",
-        scope_processor_.GetCurrScope().c_str()); /* make sure it's unique */
+        lexer::ScopeProcessor::GetCurrScope().c_str()); /* make sure it's unique */
     tmp_cnt = lookup(tmp_nm);
     if (z0->value > 255) /* check nr of slots, i.e. max length */
     {
@@ -987,7 +989,7 @@ static void walk_atomic(models::Element *a, models::Element *b, int added) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   ofn = Fname;
-  oln = lineno;
+  oln = file::LineNumber::Get();
   for (f = a;; f = f->next) {
     f->status |= (ATOM | added);
     switch (f->n->node_type) {
@@ -1030,7 +1032,7 @@ static void walk_atomic(models::Element *a, models::Element *b, int added) {
       break;
   }
   Fname = ofn;
-  lineno = oln;
+  file::LineNumber::Set(oln);
 }
 
 void dumplabels(void) {

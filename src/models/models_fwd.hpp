@@ -19,5 +19,6 @@ struct SeqList;
 struct ProcList;
 struct RunList;
 struct QH;
+struct IType;
 
 } // namespace models

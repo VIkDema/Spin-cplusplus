@@ -1,30 +1,30 @@
 /***** spin: mesg.c *****/
 
 #include "fatal/fatal.hpp"
+#include "lexer/line_number.hpp"
 #include "main/launch_settings.hpp"
+#include "models/lextok.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <fmt/core.h>
 #include <stdlib.h>
-#include "models/lextok.hpp"
 
-constexpr int kMaxQueueSize = 2500; 
-
+constexpr int kMaxQueueSize = 2500;
 
 extern models::RunList *X_lst;
 extern models::Symbol *Fname;
 extern int TstOnly;
-extern int lineno, depth;
+extern int depth;
 extern int nproc, nstop;
 extern short Have_claim;
 
 extern LaunchSettings launch_settings;
 
 models::QH *qh_lst;
-models::Queue *qtab = nullptr; /* linked list of queues */
-models::Queue *ltab[kMaxQueueSize];        /* linear list of queues */
+models::Queue *qtab = nullptr;      /* linked list of queues */
+models::Queue *ltab[kMaxQueueSize]; /* linear list of queues */
 int nrqs = 0, firstrow = 1, has_stdin = 0;
 char GBuf[4096];
 
@@ -40,7 +40,8 @@ extern std::string which_mtype(const std::string &);
 extern void sr_buf(int, int, const std::string &);
 extern void sr_mesg(FILE *, int, int, const std::string &);
 extern void putarrow(int, int);
-static void sr_talk(models::Lextok *, int, char *, char *, int, models::Queue *);
+static void sr_talk(models::Lextok *, int, char *, char *, int,
+                    models::Queue *);
 
 int cnt_mpars(models::Lextok *n) {
   models::Lextok *m;
@@ -60,7 +61,7 @@ int qmake(models::Symbol *s) {
     return 0;
 
   if (nrqs >= kMaxQueueSize) {
-    lineno = s->init_value->line_number;
+    file::LineNumber::Set(s->init_value->line_number);
     Fname = s->init_value->file_name;
     loger::fatal("too many queues (%s)", s->name);
   }
@@ -363,9 +364,10 @@ try_slot:
       mtype_ck(q->mtp[i * q->nflds + j], m->left); /* 6.4.8 */
     }
 
-    if (m->left->node_type == CONST && q->contents[i * q->nflds + j] != m->left->value) {
-      if (n->value == 0        /* fifo recv */
-          || n->value == 2     /* fifo poll */
+    if (m->left->node_type == CONST &&
+        q->contents[i * q->nflds + j] != m->left->value) {
+      if (n->value == 0      /* fifo recv */
+          || n->value == 2   /* fifo poll */
           || ++i >= q->qlen) /* last slot */
       {
         return 0; /* no match  */
@@ -392,8 +394,8 @@ try_slot:
         j--;
       } else {
         if (q->contents[i * q->nflds + j] != eval(fix)) {
-          if (n->value == 0        /* fifo recv */
-              || n->value == 2     /* fifo poll */
+          if (n->value == 0      /* fifo recv */
+              || n->value == 2   /* fifo poll */
               || ++i >= q->qlen) /* last slot */
           {
             return 0; /* no match  */
@@ -467,7 +469,7 @@ static int s_snd(models::Queue *q, models::Lextok *n) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   models::Lextok *m;
   models::RunList *rX, *sX = X_lst; /* rX=recvr, sX=sendr */
-  int i, j = 0;             /* q field# */
+  int i, j = 0;                     /* q field# */
 
   for (m = n->right; m && j < q->nflds; m = m->right, j++) {
     q->contents[j] = cast_val(q->fld_width[j], eval(m->left), 0);
@@ -572,7 +574,8 @@ static void channm(models::Lextok *n) {
   }
 }
 
-static void difcolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *q) {
+static void difcolumns(models::Lextok *n, char *tr, int v, int j,
+                       models::Queue *q) {
   extern int prno;
 
   if (j == 0) {
@@ -597,7 +600,8 @@ static void difcolumns(models::Lextok *n, char *tr, int v, int j, models::Queue 
   }
 }
 
-static void docolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *q) {
+static void docolumns(models::Lextok *n, char *tr, int v, int j,
+                      models::Queue *q) {
   int i;
 
   if (firstrow) {
@@ -643,7 +647,8 @@ int qishidden(int q) {
   return 0;
 }
 
-static void sr_talk(models::Lextok *n, int v, char *tr, char *a, int j, models::Queue *q) {
+static void sr_talk(models::Lextok *n, int v, char *tr, char *a, int j,
+                    models::Queue *q) {
   char s[128];
 
   if (qishidden(eval(n->left)))
@@ -763,8 +768,8 @@ void nochan_manip(models::Lextok *p, models::Lextok *n, int d) /* p=lhs n=rhs */
   int e = 1;
 
   if (!n || !p || !p->symbol ||
-      p->symbol->type == STRUCT) { /* if a struct, assignments to structure fields
-                                   arent checked yet */
+      p->symbol->type == STRUCT) { /* if a struct, assignments to structure
+                                   fields arent checked yet */
     return;
   }
 
@@ -798,16 +803,17 @@ void nochan_manip(models::Lextok *p, models::Lextok *n, int d) /* p=lhs n=rhs */
     } else if (lhs != rhs) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
-              p->file_name->name.c_str(), p->line_number, p->symbol ? p->symbol->name.c_str() : "?",
-              lhs.c_str(), n->symbol ? n->symbol->name.c_str() : "?", rhs.c_str());
+              p->file_name->name.c_str(), p->line_number,
+              p->symbol ? p->symbol->name.c_str() : "?", lhs.c_str(),
+              n->symbol ? n->symbol->name.c_str() : "?", rhs.c_str());
       loger::non_fatal("type error");
     }
   }
 
   /* ok on the rhs of an assignment: */
-  if (!n || n->node_type == LEN || n->node_type == RUN || n->node_type == FULL ||
-      n->node_type == NFULL || n->node_type == EMPTY || n->node_type == NEMPTY ||
-      n->node_type == 'R')
+  if (!n || n->node_type == LEN || n->node_type == RUN ||
+      n->node_type == FULL || n->node_type == NFULL || n->node_type == EMPTY ||
+      n->node_type == NEMPTY || n->node_type == 'R')
     return;
 
   if (n->symbol && n->symbol->type == CHAN) {
@@ -885,12 +891,11 @@ void checkindex(std::string &s, std::string &t) {
 void scan_tree(models::Lextok *t, std::string &mn, std::string &mx) {
   std::string sv;
   std::string tmp;
-  int oln = lineno;
+  int oln = file::LineNumber::Get();
 
   if (!t)
     return;
-
-  lineno = t->line_number;
+  file::LineNumber::Set(t->line_number);
 
   if (t->node_type == NAME) {
     if (t->symbol->name.length() + mn.length() > 256) // conservative
@@ -928,7 +933,7 @@ void scan_tree(models::Lextok *t, std::string &mn, std::string &mx) {
     mn += "??";
     mx += "??";
   }
-  lineno = oln;
+  file::LineNumber::Set(oln);
 }
 
 void no_nested_array_refs(

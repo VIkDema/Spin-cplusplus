@@ -10,13 +10,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "models/lextok.hpp"
+#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
 extern models::RunList *run_lst, *X_lst;
 extern models::Element *Al_El;
 extern models::Symbol *Fname, *oFname;
-extern int lineno, depth;
+extern int  depth;
 extern int nproc, nstop, Tval;
 extern short Have_claim, Skip_claim;
 extern lexer::Lexer lexer_;
@@ -310,8 +311,7 @@ okay:
       }
       X_lst->pc = dothis;
     }
-
-    lineno = dothis->n->line_number;
+    file::LineNumber::Set(dothis->n->line_number);
     Fname = dothis->n->file_name;
 
     if (dothis->n->node_type == D_STEP) {

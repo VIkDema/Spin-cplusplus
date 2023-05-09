@@ -50,6 +50,10 @@ set(SPIN_SOURCES
     src/lexer/names.hpp
     src/lexer/file_stream.cpp
     src/lexer/file_stream.hpp
+    src/lexer/inline_processor.cpp
+    src/lexer/inline_processor.hpp
+    src/lexer/line_number.cpp
+    src/lexer/line_number.hpp
     src/lexer/yylex.cpp
     src/lexer/yylex.hpp
     src/lexer/helpers.hpp

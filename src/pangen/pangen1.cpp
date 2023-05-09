@@ -13,8 +13,10 @@
 #else
 #include <stdint.h>
 #endif
+#include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
 #include <fmt/core.h>
+
 extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
@@ -23,7 +25,7 @@ extern models::Ordered *all_names;
 extern models::ProcList *ready;
 extern models::Queue *qtab;
 extern models::Symbol *Fname;
-extern int lineno, verbose, Pid_nr, nclaims;
+extern int verbose, Pid_nr, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
 extern short has_sorted, has_random;
 extern models::Queue *ltab[];
@@ -452,7 +454,7 @@ static struct {
 };
 
 static void end_labs(models::Symbol *s, int i) {
-  int oln = lineno;
+  int oln = file::LineNumber::Get();
   models::Symbol *ofn = Fname;
   models::Label *l;
   int j;
@@ -476,10 +478,11 @@ static void end_labs(models::Symbol *s, int i) {
         if (j > 0 && (l->e->status & ATOM)) {
           sprintf(foo, "%s label inside atomic", ln[j].s);
         complain:
-          lineno = l->e->n->line_number;
+          file::LineNumber::Set(l->e->n->line_number);
           Fname = l->e->n->file_name;
-          printf("spin: %3d:%s, warning, %s - is invisible\n", lineno,
-                 Fname ? Fname->name.c_str() : "-", foo);
+          printf("spin: %3d:%s, warning, %s - is invisible\n",
+                 file::LineNumber::Get(), Fname ? Fname->name.c_str() : "-",
+                 foo);
         }
       }
     }
@@ -488,7 +491,7 @@ static void end_labs(models::Symbol *s, int i) {
     if (l->visible && l->s->context->name == s->name)
       fprintf(fd_tc, "\tvisstate[%d][%d] = 1;\n", i, l->e->seqno);
 
-  lineno = oln;
+  file::LineNumber::Set(oln);
   Fname = ofn;
 }
 
@@ -1179,14 +1182,15 @@ static void put_pinit(models::ProcList *P) {
     for (fpt = fp->left; fpt; fpt = fpt->right, j++) {
       t = (fpt->node_type == ',') ? fpt->left : fpt;
       if (t->symbol->value_type > 1 || t->symbol->is_array) {
-        lineno = t->line_number;
+        file::LineNumber::Set(t->line_number);
+
         Fname = t->file_name;
         loger::fatal("array in parameter list, %s", t->symbol->name.c_str());
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->symbol->type == STRUCT) {
         if (full_name(fd_tc, t, t->symbol, 1)) {
-          lineno = t->line_number;
+          file::LineNumber::Set(t->line_number);
           Fname = t->file_name;
           loger::fatal("hidden_flags array in parameter %s",
                        t->symbol->name.c_str());
@@ -1228,7 +1232,9 @@ models::Element *huntstart(models::Element *f) {
   }
 
   if (cnt >= 200 || !e) {
-    lineno = (f && f->n) ? f->n->line_number : lineno;
+    if (f && f->n) {
+      file::LineNumber::Set(f->n->line_number);
+    }
     loger::fatal("confusing control. structure");
   }
   return e;
@@ -1247,7 +1253,9 @@ models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
       case GOTO:
         g = get_lab(e->n, 1);
         if (e == g) {
-          lineno = (f && f->n) ? f->n->line_number : lineno;
+          if (f && f->n) {
+            file::LineNumber::Set(f->n->line_number);
+          }
           loger::fatal("infinite goto loop");
         }
         cross_dsteps(e->n, g->n);
@@ -1275,7 +1283,9 @@ models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
       e = g;
     }
   if (cnt >= 500 || !e) {
-    lineno = (f && f->n) ? f->n->line_number : lineno;
+    if (f && f->n) {
+      file::LineNumber::Set(f->n->line_number);
+    }
     loger::fatal("confusing control structure");
   }
   return e;

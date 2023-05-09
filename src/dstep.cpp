@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
+#include "lexer/line_number.hpp"
 extern LaunchSettings launch_settings;
 constexpr int kMaxDstep = 2048; // было 512
 
@@ -313,7 +314,6 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
 
   if (next) {
     extern models::Symbol *Fname;
-    extern int lineno;
 
     if (FirstTime(next->Seqno) &&
         (!(next->status & DONE2) || !(next->status & D_ATOM))) {
@@ -322,7 +322,7 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
       LastGoto = 0;
     }
     Sourced(next->Seqno, 1);
-    lineno = ln;
+    file::LineNumber::Set(ln);
     Fname = next->n->file_name;
     Mopup(fd);
   }

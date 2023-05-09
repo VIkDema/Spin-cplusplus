@@ -9,12 +9,13 @@
 #include <fmt/core.h>
 #include <iostream>
 #include "models/lextok.hpp"
+#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
 extern char GBuf[];
 extern int nproc, nstop;
-extern int lineno, depth, verbose, limited_vis, Pid_nr;
+extern int depth, verbose, limited_vis, Pid_nr;
 extern models::Lextok *Xu_List;
 extern models::Ordered *all_names;
 extern models::RunList *X_lst, *LastX;
@@ -105,7 +106,7 @@ void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
       ((!i->symbol->context && !s->context) ||
        (i->symbol->context && s->context &&
         i->symbol->context->name == s->context->name))) {
-    lineno = i->line_number;
+    file::LineNumber::Set(i->line_number);
     Fname = i->file_name;
     loger::non_fatal("self-reference initializing '%s'", s->name);
     i->node_type = CONST;
@@ -117,7 +118,7 @@ void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
 }
 
 int checkvar(models::Symbol *s, int n) {
-  int i, oln = lineno; /* calls on eval() change it */
+  int i, oln = file::LineNumber::Get(); /* calls on eval() change it */
   models::Symbol *ofnm = Fname;
   models::Lextok *z, *y;
 
@@ -148,7 +149,7 @@ int checkvar(models::Symbol *s, int n) {
       }
     }
   }
-  lineno = oln;
+      file::LineNumber::Set(oln);
   Fname = ofnm;
 
   return 1;

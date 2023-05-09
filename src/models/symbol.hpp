@@ -23,7 +23,8 @@ enum SymbolType {
   kLabel = 278,
   kName = 315,
   kMtype = 275,
-  kCodeDecl = 4
+  kCodeDecl = 4,
+  kCodeFrag = 2
 };
 
 struct Symbol {

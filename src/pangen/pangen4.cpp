@@ -1,18 +1,18 @@
 /***** spin: pangen4.c *****/
 
 #include "../fatal/fatal.hpp"
+#include "../lexer/line_number.hpp"
+#include "../main/launch_settings.hpp"
+#include "../main/main_processor.hpp"
 #include "../spin.hpp"
 #include "y.tab.h"
 #include <fmt/format.h>
-#include "../main/launch_settings.hpp"
-#include "../main/main_processor.hpp"
-
 
 extern LaunchSettings launch_settings;
 extern FILE *fd_tc, *fd_tb;
 extern models::Queue *qtab;
 extern models::Symbol *Fname;
-extern int lineno, Pid_nr, eventmapnr, multi_oval;
+extern int Pid_nr, eventmapnr, multi_oval;
 extern short nocast, has_sorted;
 extern const char *R13_[], *R14_[], *R15_[];
 
@@ -26,7 +26,7 @@ void undostmnt(models::Lextok *now, int m) {
     fprintf(fd_tb, "0");
     return;
   }
-  lineno = now->line_number;
+  file::LineNumber::Set(now->line_number);
   Fname = now->file_name;
   switch (now->node_type) {
   case CONST:
@@ -235,7 +235,8 @@ void undostmnt(models::Lextok *now, int m) {
   }
 }
 
-int any_undo(models::Lextok *now) { /* is there anything to undo on a return move? */
+int any_undo(
+    models::Lextok *now) { /* is there anything to undo on a return move? */
   if (!now)
     return 1;
   switch (now->node_type) {

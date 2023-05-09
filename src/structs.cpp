@@ -2,19 +2,20 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
-#include "spin.hpp"
-#include "y.tab.h"
+#include "lexer/line_number.hpp"
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
+#include "spin.hpp"
+#include "y.tab.h"
 
 struct UType {
   models::Symbol *nm; /* name of the type */
-  models::Lextok *cn;         /* contents */
-  struct UType *next;  /* linked list */
+  models::Lextok *cn; /* contents */
+  struct UType *next; /* linked list */
 };
 
 extern models::Symbol *Fname;
-extern int lineno, depth, Expand_Ok, has_hidden;
+extern int depth, Expand_Ok, has_hidden;
 extern lexer::Lexer lexer_;
 
 models::Symbol *owner;
@@ -86,13 +87,13 @@ models::Lextok *getuname(models::Symbol *t) {
 void setutype(models::Lextok *p, models::Symbol *t,
               models::Lextok *vis) /* user-defined types */
 {
-  int oln = lineno;
+  int oln = file::LineNumber::Get();
   models::Symbol *ofn = Fname;
   models::Lextok *m, *n;
 
   m = getuname(t);
   for (n = p; n; n = n->right) {
-    lineno = n->line_number;
+    file::LineNumber::Set(n->line_number);
     Fname = n->file_name;
     if (n->symbol->type) {
       loger::fatal("redeclaration of '%s'", n->symbol->name);
@@ -123,17 +124,18 @@ void setutype(models::Lextok *p, models::Symbol *t,
     if (n->symbol->value_type <= 0)
       loger::non_fatal("bad array size for '%s'", n->symbol->name);
   }
-  lineno = oln;
+  file::LineNumber::Set(oln);
   Fname = ofn;
 }
 
-static models::Symbol *do_same(models::Lextok *n, models::Symbol *v, int xinit) {
+static models::Symbol *do_same(models::Lextok *n, models::Symbol *v,
+                               int xinit) {
   models::Lextok *tmp, *fp, *tl;
   int ix = eval(n->left);
-  int oln = lineno;
+  int oln = file::LineNumber::Get();
   models::Symbol *ofn = Fname;
+  file::LineNumber::Set(n->line_number);
 
-  lineno = n->line_number;
   Fname = n->file_name;
 
   /* n->symbol->type == STRUCT
@@ -152,7 +154,7 @@ static models::Symbol *do_same(models::Lextok *n, models::Symbol *v, int xinit) 
   }
   if (!n->right || !n->right->left) {
     loger::non_fatal("no subfields %s", v->name); /* i.e., wants all */
-    lineno = oln;
+    file::LineNumber::Set(oln);
     Fname = ofn;
     return ZS;
   }
@@ -170,7 +172,7 @@ static models::Symbol *do_same(models::Lextok *n, models::Symbol *v, int xinit) 
   for (fp = v->Sval[ix]; fp; fp = fp->right)
     for (tl = fp->left; tl; tl = tl->right)
       if (tl->symbol->name == tmp->symbol->name) {
-        lineno = oln;
+        file::LineNumber::Set(oln);
         Fname = ofn;
         return tl->symbol;
       }
@@ -255,7 +257,8 @@ is_lst:
     for (tl = fp->left; tl; tl = tl->right) {
       if (tl->symbol->type == models::SymbolType::kStruct) {
         if (tl->symbol->value_type > 1 || tl->symbol->is_array)
-          loger::fatal("array of structures in param list, %s", tl->symbol->name);
+          loger::fatal("array of structures in param list, %s",
+                       tl->symbol->name);
         cnt += Cnt_flds(tl->symbol->struct_template);
       } else
         cnt += tl->symbol->value_type;
@@ -305,7 +308,8 @@ void ini_struct(models::Symbol *s) {
     return;
   }
   if (s->Sval == (models::Lextok **)0) {
-    s->Sval = (models::Lextok **)emalloc(s->value_type * sizeof(models::Lextok *));
+    s->Sval =
+        (models::Lextok **)emalloc(s->value_type * sizeof(models::Lextok *));
     for (i = 0; i < s->value_type; i++) {
       s->Sval[i] = cpnn(s->struct_template, 1, 1, 1);
 
@@ -389,7 +393,8 @@ void validref(models::Lextok *p, models::Lextok *c) {
   loger::non_fatal(lbuf);
 }
 
-void struct_name(models::Lextok *n, models::Symbol *v, int xinit, std::string &buf) {
+void struct_name(models::Lextok *n, models::Symbol *v, int xinit,
+                 std::string &buf) {
   models::Symbol *tl;
   models::Lextok *tmp;
   std::string lbuf;
@@ -481,7 +486,8 @@ void c_struct(FILE *fd, const std::string &ipref, models::Symbol *z) {
           c_var(fd, eprefix, tl->symbol);
       }
 }
-void dump_struct(models::Symbol *z, const std::string &prefix, models::RunList *r) {
+void dump_struct(models::Symbol *z, const std::string &prefix,
+                 models::RunList *r) {
   models::Lextok *fp, *tl;
   std::string eprefix;
   int ix, jx;
@@ -519,7 +525,8 @@ void dump_struct(models::Symbol *z, const std::string &prefix, models::RunList *
               }
 
               sr_mesg(stdout, tl->symbol->value[jx],
-                      tl->symbol->type == models::SymbolType::kMtype, s.c_str());
+                      tl->symbol->type == models::SymbolType::kMtype,
+                      s.c_str());
               printf("\n");
             }
           }
@@ -527,7 +534,8 @@ void dump_struct(models::Symbol *z, const std::string &prefix, models::RunList *
   }
 }
 
-static int retrieve(models::Lextok **targ, int i, int want, models::Lextok *n, int Ntyp) {
+static int retrieve(models::Lextok **targ, int i, int want, models::Lextok *n,
+                    int Ntyp) {
   models::Lextok *fp, *tl;
   int j = i, k;
 
@@ -567,7 +575,7 @@ static int is_explicit(models::Lextok *n) {
   if (!n->right)
     return 0;
   if (n->right->node_type != '.') {
-    lineno = n->line_number;
+    file::LineNumber::Set(n->line_number);
     Fname = n->file_name;
     printf("node_type %d\n", n->right->node_type);
     loger::fatal("unexpected %s, no '.'", n->symbol->name);
@@ -607,7 +615,8 @@ models::Lextok *mk_explicit(models::Lextok *n, int Ok, int Ntyp)
       is_explicit(n))
     return n;
 
-  if (n->right && n->right->node_type == '.' && n->right->left && n->right->left->symbol &&
+  if (n->right && n->right->node_type == '.' && n->right->left &&
+      n->right->left->symbol &&
       n->right->left->symbol->type == models::SymbolType::kStruct) {
     models::Lextok *y;
     bld = mk_explicit(n->right->left, Ok, Ntyp);
