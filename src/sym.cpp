@@ -5,6 +5,7 @@
 #include "lexer/scope.hpp"
 #include "main/launch_settings.hpp"
 #include "models/symbol.hpp"
+#include "models/access.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -633,16 +634,16 @@ static struct X_lkp {
 static void chan_check(models::Symbol *sp) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  Access *a;
+  models::Access *a;
   int i, b = 0, d;
 
   if (verbose_flags.NeedToPrintGlobalVariables())
     goto report; /* -C -g */
 
-  for (a = sp->access; a; a = a->lnk)
-    if (a->typ == 'r')
+  for (a = sp->access; a; a = a->next)
+    if (a->type == 'r')
       b |= 1;
-    else if (a->typ == 's')
+    else if (a->type == 's')
       b |= 2;
   if (b == 3 || (sp->hidden_flags & 16)) /* balanced or formal par */
     return;
@@ -650,8 +651,8 @@ report:
   chname(sp);
   for (i = d = 0; i < (int)(sizeof(xx) / sizeof(struct X_lkp)); i++) {
     b = 0;
-    for (a = sp->access; a; a = a->lnk) {
-      if (a->typ == xx[i].typ) {
+    for (a = sp->access; a; a = a->next) {
+      if (a->type == xx[i].typ) {
         b++;
       }
     }
@@ -660,13 +661,13 @@ report:
     }
     d++;
     printf("\n\t%s by: ", xx[i].nm.c_str());
-    for (a = sp->access; a; a = a->lnk)
-      if (a->typ == xx[i].typ) {
+    for (a = sp->access; a; a = a->next)
+      if (a->type == xx[i].typ) {
         printf("%s", a->who->name.c_str());
         if (a->what)
           printf(" to %s", a->what->name.c_str());
-        if (a->cnt)
-          printf(" par %d", a->cnt);
+        if (a->count)
+          printf(" par %d", a->count);
         if (--b > 0)
           printf(", ");
       }

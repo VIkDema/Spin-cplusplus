@@ -1,25 +1,25 @@
+#include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
 #include "main/launch_settings.hpp"
+#include "models/access.hpp"
+#include "models/lextok.hpp"
 #include "models/symbol.hpp"
+#include "spin.hpp"
 #include "utils/format/preprocessed_file_viewer.hpp"
 #include "utils/format/pretty_print_viewer.hpp"
 #include "utils/seed/seed.hpp"
+#include "utils/verbose/verbose.hpp"
+#include "version/version.hpp"
+#include <assert.h>
 #include <filesystem>
 #include <fmt/core.h>
 #include <iostream>
 #include <optional>
+#include <signal.h>
 #include <sstream>
+#include <stdlib.h>
 #include <string>
 #include <string_view>
-#include "models/lextok.hpp"
-
-#include "fatal/fatal.hpp"
-#include "spin.hpp"
-#include "utils/verbose/verbose.hpp"
-#include "version/version.hpp"
-#include <assert.h>
-#include <signal.h>
-#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <time.h>
@@ -132,7 +132,8 @@ void trapwonly(models::Lextok *n /* , char *unused */) {
 
   i = (n->symbol) ? n->symbol->type : 0;
 
-  /* printf("%s	realread %d type %d\n", n->symbol?n->symbol->name:"--", realread, i);
+  /* printf("%s	realread %d type %d\n", n->symbol?n->symbol->name:"--",
+   * realread, i);
    */
 
   if (realread && (i == MTYPE || i == BIT || i == BYTE || i == SHORT ||
@@ -141,23 +142,25 @@ void trapwonly(models::Lextok *n /* , char *unused */) {
   }
 }
 
-void setaccess(models::Symbol *sp, models::Symbol *what, int cnt, int t) {
-  Access *a;
+void setaccess(models::Symbol *sp, models::Symbol *what, int count, int t) {
+  models::Access *a;
 
-  for (a = sp->access; a; a = a->lnk)
-    if (a->who == context && a->what == what && a->cnt == cnt && a->typ == t)
+  for (a = sp->access; a; a = a->next)
+    if (a->who == context && a->what == what && a->count == count &&
+        a->type == t)
       return;
 
-  a = (Access *)emalloc(sizeof(Access));
+  a = (models::Access *)emalloc(sizeof(models::Access));
   a->who = context;
   a->what = what;
-  a->cnt = cnt;
-  a->typ = t;
-  a->lnk = sp->access;
+  a->count = count;
+  a->type = t;
+  a->next = sp->access;
   sp->access = a;
 }
 
-models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll, models::Lextok *rl) {
+models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll,
+                   models::Lextok *rl) {
   models::Lextok *n = (models::Lextok *)emalloc(sizeof(models::Lextok));
   static int warn_nn = 0;
 
@@ -251,7 +254,7 @@ models::Lextok *nn(models::Lextok *s, int t, models::Lextok *ll, models::Lextok 
 }
 
 models::Lextok *rem_lab(models::Symbol *a, models::Lextok *b,
-                models::Symbol *c) /* proctype name, pid, label name */
+                        models::Symbol *c) /* proctype name, pid, label name */
 {
   models::Lextok *tmp1, *tmp2, *tmp3;
 
@@ -278,7 +281,8 @@ models::Lextok *rem_lab(models::Symbol *a, models::Lextok *b,
 #endif
 }
 
-models::Lextok *rem_var(models::Symbol *a, models::Lextok *b, models::Symbol *c, models::Lextok *ndx) {
+models::Lextok *rem_var(models::Symbol *a, models::Lextok *b, models::Symbol *c,
+                        models::Lextok *ndx) {
   models::Lextok *tmp1;
 
   has_remote++;

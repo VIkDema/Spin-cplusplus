@@ -17,13 +17,6 @@
 #include <memory.h>
 #endif
 
-struct Access {
-  models::Symbol *who;  /* proctype name of accessor */
-  models::Symbol *what; /* proctype name of accessed */
-  int cnt, typ;         /* parameter nr and, e.g., 's' or 'r' */
-  struct Access *lnk;   /* linked list */
-};
-
 struct Ordered { /* links all names in Symbol table */
   models::Symbol *entry;
   struct Ordered *next;
