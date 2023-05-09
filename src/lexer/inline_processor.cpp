@@ -21,6 +21,24 @@ models::IType *InlineProcessor::GetInlineStub(int index) {
 models::IType *InlineProcessor::GetInlineStub() {
   return Inline_stub[Inlining];
 }
+void InlineProcessor::SetInlineStub(models::IType *new_itype,
+                                    const std::string &name) {
+  Inline_stub[Inlining] = new_itype;
+
+  for (int j = 0; j < Inlining; j++) {
+    if (Inline_stub[j] == Inline_stub[Inlining]) {
+      loger::fatal("cyclic inline attempt on: %s", name.c_str());
+    }
+  }
+}
+void InlineProcessor::SetInliner(char *new_inliner) {
+  Inliner[Inlining] = new_inliner;
+}
+void InlineProcessor::IncInlining() {
+  Inlining++;
+  if (Inlining >= kMaxInl)
+    loger::fatal("inlines nested too deeply");
+}
 
 bool InlineProcessor::HasReDiRect() { return ReDiRect_ != nullptr; }
 
@@ -82,9 +100,7 @@ models::IType *InlineProcessor::FindInline(const std::string &s) {
   return tmp;
 }
 
-void InlineProcessor::AddSeqNames(models::IType *tmp) {
-  seqnames = tmp;
-}
+void InlineProcessor::AddSeqNames(models::IType *tmp) { seqnames = tmp; }
 
 void InlineProcessor::SetIsExpr() {
   if (seqnames) {

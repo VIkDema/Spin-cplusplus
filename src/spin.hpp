@@ -209,7 +209,6 @@ void nochan_manip(models::Lextok *, models::Lextok *, int);
 void ntimes(FILE *, int, int, const char *c[]);
 void open_seq(int);
 void p_talk(models::Element *, int);
-void pickup_inline(models::Symbol *, models::Lextok *, models::Lextok *);
 void plunk_c_decls(FILE *);
 void plunk_c_fcts(FILE *);
 void plunk_expr(FILE *, const std::string &);

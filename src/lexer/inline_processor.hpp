@@ -28,6 +28,10 @@ public:
 
   static bool IsEqname(const std::string &value);
 
+  static void SetInlineStub(models::IType *new_itype, const std::string &name);
+  static void SetInliner(char *new_inliner);
+  static void IncInlining();
+
 private:
   static int Inlining;
   static char *ReDiRect_;

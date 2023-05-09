@@ -15,6 +15,7 @@
 #include <optional>
 #include <stdlib.h>
 #include <string>
+
 extern LaunchSettings launch_settings;
 
 constexpr int kMaxInl = 16;
@@ -788,41 +789,4 @@ void no_side_effects(const std::string &s) {
       goto bad;
     t++;
   }
-}
-
-void pickup_inline(models::Symbol *t, models::Lextok *apars,
-                   models::Lextok *rval) {
-  models::IType *tmp;
-  models::Lextok *p, *q;
-  int j;
-
-  tmp = lexer::InlineProcessor::FindInline(t->name);
-  /*
-    if (++Inlining >= kMaxInl)
-      loger::fatal("inlines nested too deeply");
-    tmp->cln = file::LineNumber::Get();
-    tmp->cfn = Fname;
-    tmp->rval = rval;
-
-    for (p = apars, q = tmp->params, j = 0; p && q; p = p->right, q = q->right)
-      j++;
-    if (p || q)
-      loger::fatal("wrong nr of params on call of '%s'", t->name);
-
-    tmp->anms = (char **)emalloc(j * sizeof(char *));
-    for (p = apars, j = 0; p; p = p->right, j++) {
-      tmp->anms[j] = (char *)emalloc(strlen(IArg_cont[j]) + 1);
-      strcpy(tmp->anms[j], IArg_cont[j]);
-    }
-    file::LineNumber::Set(tmp->dln);
-    Fname = tmp->dfn;
-    Inliner[Inlining] = (char *)tmp->cn;
-    Inline_stub[Inlining] = tmp;
-    for (j = 0; j < Inlining; j++) {
-      if (Inline_stub[j] == Inline_stub[Inlining]) {
-        loger::fatal("cyclic inline attempt on: %s", t->name);
-      }
-    }
-    */
-  last_token = SEMI; /* avoid insertion of extra semi */
 }

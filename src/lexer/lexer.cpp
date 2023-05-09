@@ -40,17 +40,15 @@ extern models::Symbol *context;
 
 namespace lexer {
 Lexer::Lexer()
-    : inline_arguments_({}), curr_inline_argument_(0),
-      argument_nesting_(0), last_token_(0), pp_mode_(false), temp_has_(0),
-      parameter_count_(0), has_last_(0), has_code_(0), has_priority_(0),
-      in_for_(0), in_comment_(0), ltl_mode_(false), has_ltl_(false),
-      implied_semis_(1), in_seq_(0) {}
+    : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
+      last_token_(0), pp_mode_(false), temp_has_(0), parameter_count_(0),
+      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
+      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
 Lexer::Lexer(bool pp_mode)
-    : inline_arguments_({}), curr_inline_argument_(0),
-      argument_nesting_(0), last_token_(0), pp_mode_(pp_mode), temp_has_(0),
-      parameter_count_(0), has_last_(0), has_code_(0), has_priority_(0),
-      in_for_(0), in_comment_(0), ltl_mode_(false), has_ltl_(false),
-      implied_semis_(1), in_seq_(0) {}
+    : inline_arguments_({}), curr_inline_argument_(0), argument_nesting_(0),
+      last_token_(0), pp_mode_(pp_mode), temp_has_(0), parameter_count_(0),
+      has_last_(0), has_code_(0), has_priority_(0), in_for_(0), in_comment_(0),
+      ltl_mode_(false), has_ltl_(false), implied_semis_(1), in_seq_(0) {}
 
 void Lexer::SetLastToken(int last_token) { last_token_ = last_token; }
 int Lexer::GetLastToken() { return last_token_; }
@@ -808,5 +806,38 @@ models::Lextok *Lexer::ReturnStatement(models::Lextok *lextok) {
       loger::fatal("return statement outside inline");
   }
   return ZN;
+}
+
+void Lexer::PickupInline(models::Symbol *t, models::Lextok *apars,
+                         models::Lextok *rval) {
+  models::IType *tmp;
+  models::Lextok *p, *q;
+  int j;
+
+  tmp = lexer::InlineProcessor::FindInline(t->name);
+  lexer::InlineProcessor::IncInlining();
+
+  tmp->cln = file::LineNumber::Get();
+  tmp->cfn = Fname;
+  tmp->rval = rval;
+
+  for (p = apars, q = tmp->params, j = 0; p && q; p = p->right, q = q->right) {
+      j++;
+  }
+  if (p || q)
+      loger::fatal("wrong nr of params on call of '%s'", t->name);
+
+  tmp->anms = (char **)emalloc(j * sizeof(char *));
+  for (p = apars, j = 0; p; p = p->right, j++) {
+      tmp->anms[j] = (char *)emalloc(inline_arguments_[j].length() + 1);
+      strcpy(tmp->anms[j], inline_arguments_[j].c_str());
+  }
+  file::LineNumber::Set(tmp->dln);
+  Fname = tmp->dfn;
+
+  lexer::InlineProcessor::SetInliner((char *)tmp->cn);
+  lexer::InlineProcessor::SetInlineStub(tmp, t->name);
+
+  last_token_ = SEMI; /* avoid insertion of extra semi */
 }
 } // namespace lexer

@@ -756,14 +756,14 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
         			}
 	| INAME			{ need_arguments++; }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($1->symbol, $4, ZN);
+	  			  lexer_.PickupInline($1->symbol, $4, ZN);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $7; }
 
 	| varref ASGN INAME	{ need_arguments++; /* inline call */ }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($3->symbol, $6, $1);
+				  lexer_.PickupInline($3->symbol, $6, $1);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $9; }
