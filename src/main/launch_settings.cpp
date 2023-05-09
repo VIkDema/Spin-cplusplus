@@ -65,8 +65,8 @@ void LaunchSettings::SetOptimizationsOptions(int value) {
 }
 
 std::string LaunchSettings::BuildPanRuntime() {
-  extern QH *qh_lst;
-  QH *j;
+  extern models::QH *qh_lst;
+  models::QH *j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   auto &seed = utils::seed::Seed::getInstance();
 
@@ -85,7 +85,7 @@ std::string LaunchSettings::BuildPanRuntime() {
     pan_runtime_ += pre_arg + " ";
   }
 
-  for (j = qh_lst; j; j = j->nxt) {
+  for (j = qh_lst; j; j = j->next) {
     pan_runtime_ += fmt::format("-q{} ", j->n);
   }
   if (!pre_proc_processor.IsDefault()) {

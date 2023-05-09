@@ -31,7 +31,6 @@ int nr_errs;
 static FILE *fd_ltl = (FILE *)0;
 
 extern LaunchSettings launch_settings;
-extern lexer::ScopeProcessor scope_processor_;
 extern lexer::Lexer lexer_;
 
 std::string MainProcessor::out_;
@@ -59,7 +58,7 @@ void MainProcessor::InitStreams() {
   yyout = stdout;
   tl_out = stdout;
 }
-void MainProcessor::InitScope() { scope_processor_.InitScopeName(); }
+void MainProcessor::InitScope() { lexer::ScopeProcessor::InitScopeName(); }
 
 void MainProcessor::InitPreProcSettings() { pre_proc_processor.Init(); }
 

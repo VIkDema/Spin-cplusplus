@@ -9,15 +9,16 @@
 #include <fmt/core.h>
 #include <iostream>
 #include "models/lextok.hpp"
+#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
 extern char GBuf[];
 extern int nproc, nstop;
-extern int lineno, depth, verbose, limited_vis, Pid_nr;
+extern int depth, verbose, limited_vis, Pid_nr;
 extern models::Lextok *Xu_List;
-extern Ordered *all_names;
-extern RunList *X_lst, *LastX;
+extern models::Ordered *all_names;
+extern models::RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
 extern models::Symbol *Fname;
 
@@ -105,7 +106,7 @@ void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
       ((!i->symbol->context && !s->context) ||
        (i->symbol->context && s->context &&
         i->symbol->context->name == s->context->name))) {
-    lineno = i->line_number;
+    file::LineNumber::Set(i->line_number);
     Fname = i->file_name;
     loger::non_fatal("self-reference initializing '%s'", s->name);
     i->node_type = CONST;
@@ -117,7 +118,7 @@ void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
 }
 
 int checkvar(models::Symbol *s, int n) {
-  int i, oln = lineno; /* calls on eval() change it */
+  int i, oln = file::LineNumber::Get(); /* calls on eval() change it */
   models::Symbol *ofnm = Fname;
   models::Lextok *z, *y;
 
@@ -148,7 +149,7 @@ int checkvar(models::Symbol *s, int n) {
       }
     }
   }
-  lineno = oln;
+      file::LineNumber::Set(oln);
   Fname = ofnm;
 
   return 1;
@@ -250,13 +251,13 @@ void dumpclaims(FILE *fd, int pid, const std::string &s) {
 }
 
 void dumpglobals(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   static models::Lextok *dummy = ZN;
   models::Symbol *sp;
   int j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (!dummy)
-    dummy = nn(ZN, NAME, nn(ZN, CONST, ZN, ZN), ZN);
+    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
@@ -326,7 +327,7 @@ void dumpglobals(void) {
   }
 }
 
-void dumplocal(RunList *r, int final) {
+void dumplocal(models::RunList *r, int final) {
   static models::Lextok *dummy = ZN;
   models::Symbol *z, *s;
   int i;
@@ -338,7 +339,7 @@ void dumplocal(RunList *r, int final) {
   s = r->symtab;
 
   if (!dummy) {
-    dummy = nn(ZN, NAME, nn(ZN, CONST, ZN, ZN), ZN);
+    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
   }
 
   for (z = s; z; z = z->next) {

@@ -10,13 +10,14 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include "models/lextok.hpp"
+#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
-extern RunList *run_lst, *X_lst;
-extern Element *Al_El;
+extern models::RunList *run_lst, *X_lst;
+extern models::Element *Al_El;
 extern models::Symbol *Fname, *oFname;
-extern int lineno, depth;
+extern int  depth;
 extern int nproc, nstop, Tval;
 extern short Have_claim, Skip_claim;
 extern lexer::Lexer lexer_;
@@ -29,9 +30,9 @@ static FILE *fd;
 static void lost_trail(void);
 
 static void whichproc(int p) {
-  RunList *oX;
+  models::RunList *oX;
 
-  for (oX = run_lst; oX; oX = oX->nxt)
+  for (oX = run_lst; oX; oX = oX->next)
     if (oX->pid == p) {
       printf("(%s) ", oX->n->name.c_str());
       break;
@@ -54,7 +55,7 @@ bool newer(const std::string &f1, const std::string &f2) {
 }
 
 void hookup(void) {
-  Element *e;
+  models::Element *e;
 
   for (e = Al_El; e; e = e->Nxt)
     if (e->n && (e->n->node_type == ATOMIC || e->n->node_type == NON_ATOMIC ||
@@ -67,13 +68,13 @@ int not_claim(void) { return (!Have_claim || !X_lst || X_lst->pid != 0); }
 int globmin = INT_MAX;
 int globmax = 0;
 
-int find_min(Sequence *s) {
-  SeqList *l;
-  Element *e;
+int find_min(models::Sequence *s) {
+  models::SeqList *l;
+  models::Element *e;
 
   if (s->minel < 0) {
     s->minel = INT_MAX;
-    for (e = s->frst; e; e = e->nxt) {
+    for (e = s->frst; e; e = e->next) {
       if (e->status & 512) {
         continue;
       }
@@ -88,7 +89,7 @@ int find_min(Sequence *s) {
       } else if (e->Seqno < s->minel) {
         s->minel = e->Seqno;
       }
-      for (l = e->sub; l; l = l->nxt) {
+      for (l = e->sub; l; l = l->next) {
         int n = find_min(l->this_sequence);
         if (n < s->minel) {
           s->minel = n;
@@ -102,7 +103,7 @@ int find_min(Sequence *s) {
   return s->minel;
 }
 
-int find_max(Sequence *s) {
+int find_max(models::Sequence *s) {
   if (s->last->Seqno > globmax) {
     globmax = s->last->Seqno;
   }
@@ -111,7 +112,7 @@ int find_max(Sequence *s) {
 
 void match_trail(void) {
   int i, a, nst;
-  Element *dothis;
+  models::Element *dothis;
 
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -249,7 +250,7 @@ okay:
 
     if (dothis->n->node_type == '@') {
       if (prno == i - 1) {
-        run_lst = run_lst->nxt;
+        run_lst = run_lst->next;
         nstop++;
         if (verbose_flags.NeedToPrintAllProcessActions()) {
           if (launch_settings.need_generate_mas_flow_tcl_tk) {
@@ -272,7 +273,7 @@ okay:
     }
 
 
-    for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
+    for (X_lst = run_lst; X_lst; X_lst = X_lst->next) {
       if (--i == prno)
         break;
     }
@@ -284,7 +285,7 @@ okay:
         printf(" max %d (%d - %d + %d) claim %d ", nproc - nstop + Skip_claim,
                nproc, nstop, Skip_claim, Have_claim);
         printf("active processes:\n");
-        for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
+        for (X_lst = run_lst; X_lst; X_lst = X_lst->next) {
           printf("\tpid %d\tproctype %s\n", X_lst->pid, X_lst->n->name.c_str());
         }
         printf("\n");
@@ -310,12 +311,11 @@ okay:
       }
       X_lst->pc = dothis;
     }
-
-    lineno = dothis->n->line_number;
+    file::LineNumber::Set(dothis->n->line_number);
     Fname = dothis->n->file_name;
 
     if (dothis->n->node_type == D_STEP) {
-      Element *g, *og = dothis;
+      models::Element *g, *og = dothis;
       do {
         g = eval_sub(og);
         if (g && depth >= launch_settings.count_of_skipping_steps &&
@@ -337,7 +337,7 @@ okay:
             dumplocal(X_lst, 0);
         }
         og = g;
-      } while (g && g != dothis->nxt);
+      } while (g && g != dothis->next);
       if (X_lst != NULL) {
         X_lst->pc = g ? huntele(g, 0, -1) : g;
       }
@@ -423,9 +423,9 @@ static void lost_trail(void) {
 int pc_value(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
-  RunList *Y;
+  models::RunList *Y;
 
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     if (--i == pid)
       return Y->pc->seqno;
   }

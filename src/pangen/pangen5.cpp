@@ -10,52 +10,52 @@
 extern LaunchSettings launch_settings;
 
 struct BuildStack {
-  FSM_trans *t;
-  struct BuildStack *nxt;
+  models::FSM_trans *t;
+  struct BuildStack *next;
 };
 
-extern ProcList *ready;
+extern models::ProcList *ready;
 extern int verbose, eventmapnr, claimnr, u_sync;
-extern Element *Al_El;
+extern models::Element *Al_El;
 
-static FSM_state *fsm_free;
-static FSM_trans *trans_free;
+static models::FSM_state *fsm_free;
+static models::FSM_trans *trans_free;
 static BuildStack *bs, *bf;
 static int max_st_id;
 static int cur_st_id;
 int o_max;
-FSM_state *fsmx;
-FSM_state **fsm_tbl;
-FSM_use *use_free;
+models::FSM_state *fsmx;
+models::FSM_state **fsm_tbl;
+models::FSM_use *use_free;
 
-static void ana_seq(Sequence *);
-static void ana_stmnt(FSM_trans *, models::Lextok *, int);
+static void ana_seq(models::Sequence *);
+static void ana_stmnt(models::FSM_trans *, models::Lextok *, int);
 
 extern void AST_slice(void);
-extern void AST_store(ProcList *, int);
+extern void AST_store(models::ProcList *, int);
 extern int has_global(models::Lextok *);
 extern void exit(int);
 
 static void fsm_table(void) {
-  FSM_state *f;
+  models::FSM_state *f;
   max_st_id += 2;
   /* fprintf(stderr, "omax %d, max=%d\n", o_max, max_st_id); */
   if (o_max < max_st_id) {
     o_max = max_st_id;
-    fsm_tbl = (FSM_state **)emalloc(max_st_id * sizeof(FSM_state *));
+    fsm_tbl = (models::FSM_state **)emalloc(max_st_id * sizeof(models::FSM_state *));
   } else
-    memset((char *)fsm_tbl, 0, max_st_id * sizeof(FSM_state *));
+    memset((char *)fsm_tbl, 0, max_st_id * sizeof(models::FSM_state *));
   cur_st_id = max_st_id;
   max_st_id = 0;
 
-  for (f = fsmx; f; f = f->nxt)
+  for (f = fsmx; f; f = f->next)
     fsm_tbl[f->from] = f;
 }
 
-static int FSM_DFS(int from, FSM_use *u) {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *v;
+static int FSM_DFS(int from, models::FSM_use *u) {
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *v;
   int n;
 
   if (from == 0)
@@ -72,9 +72,9 @@ static int FSM_DFS(int from, FSM_use *u) {
     return 1;
   f->seen = 1;
 
-  for (t = f->t; t; t = t->nxt) {
+  for (t = f->t; t; t = t->next) {
     for (n = 0; n < 2; n++)
-      for (v = t->Val[n]; v; v = v->nxt)
+      for (v = t->Val[n]; v; v = v->next)
         if (u->var == v->var)
           return n; /* a read or write */
 
@@ -92,7 +92,7 @@ static void new_dfs(void) {
       fsm_tbl[i]->seen = 0;
 }
 
-static int good_dead(Element *e, FSM_use *u) {
+static int good_dead(models::Element *e, models::FSM_use *u) {
   switch (u->special) {
   case 2: /* ok if it's a receive */
     if (e->n->node_type == ASGN && e->n->right->node_type == CONST && e->n->right->value == 0)
@@ -106,8 +106,8 @@ static int good_dead(Element *e, FSM_use *u) {
   return 1;
 }
 
-static int eligible(FSM_trans *v) {
-  Element *el = ZE;
+static int eligible(models::FSM_trans *v) {
+  models::Element *el = ZE;
   models::Lextok *lt = ZN;
 
   if (v)
@@ -116,7 +116,7 @@ static int eligible(FSM_trans *v) {
     lt = v->step->n;
 
   if (!lt                      /* dead end */
-      || v->nxt                /* has alternatives */
+      || v->next                /* has alternatives */
       || el->esc               /* has an escape */
       || (el->status & CHECK2) /* remotely referenced */
       || lt->node_type == ATOMIC ||
@@ -141,12 +141,12 @@ static int eligible(FSM_trans *v) {
   return 1;
 }
 
-static int canfill_in(FSM_trans *v) {
-  Element *el = v->step;
+static int canfill_in(models::FSM_trans *v) {
+  models::Element *el = v->step;
   models::Lextok *lt = v->step->n;
 
   if (!lt                       /* dead end */
-      || v->nxt                 /* has alternatives */
+      || v->next                 /* has alternatives */
       || el->esc                /* has an escape */
       || (el->status & CHECK2)) /* remotely referenced */
     return 0;
@@ -158,19 +158,19 @@ static int canfill_in(FSM_trans *v) {
   return 1;
 }
 
-static int pushbuild(FSM_trans *v) {
+static int pushbuild(models::FSM_trans *v) {
   BuildStack *b;
 
-  for (b = bs; b; b = b->nxt)
+  for (b = bs; b; b = b->next)
     if (b->t == v)
       return 0;
   if (bf) {
     b = bf;
-    bf = bf->nxt;
+    bf = bf->next;
   } else
     b = (BuildStack *)emalloc(sizeof(BuildStack));
   b->t = v;
-  b->nxt = bs;
+  b->next = bs;
   bs = b;
   return 1;
 }
@@ -180,14 +180,14 @@ static void popbuild(void) {
   if (!bs)
     loger::fatal("cannot happen, popbuild");
   f = bs;
-  bs = bs->nxt;
-  f->nxt = bf;
+  bs = bs->next;
+  f->next = bf;
   bf = f; /* freelist */
 }
 
-static int build_step(FSM_trans *v) {
-  FSM_state *f;
-  Element *el;
+static int build_step(models::FSM_trans *v) {
+  models::FSM_state *f;
+  models::Element *el;
   int st;
   int r;
 
@@ -220,12 +220,12 @@ static int build_step(FSM_trans *v) {
 static void FSM_MERGER(
     /* char *pname */ void) /* find candidates for safely merging steps */
 {
-  FSM_state *f, *g;
-  FSM_trans *t;
+  models::FSM_state *f, *g;
+  models::FSM_trans *t;
   models::Lextok *lt;
 
-  for (f = fsmx; f; f = f->nxt)   /* all states */
-    for (t = f->t; t; t = t->nxt) /* all edges */
+  for (f = fsmx; f; f = f->next)   /* all states */
+    for (t = f->t; t; t = t->next) /* all edges */
     {
       if (!t->step)
         continue; /* happens with 'unless' */
@@ -265,8 +265,8 @@ static void FSM_MERGER(
 
   /* 2nd scan -- find possible merge_starts */
 
-  for (f = fsmx; f; f = f->nxt)   /* all states */
-    for (t = f->t; t; t = t->nxt) /* all edges */
+  for (f = fsmx; f; f = f->next)   /* all states */
+    for (t = f->t; t; t = t->next) /* all edges */
     {
       if (!t->step || t->step->merge)
         continue;
@@ -305,15 +305,15 @@ static void FSM_MERGER(
 }
 
 static void FSM_ANA(void) {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *u, *v, *w;
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *u, *v, *w;
   int n;
 
-  for (f = fsmx; f; f = f->nxt)   /* all states */
-    for (t = f->t; t; t = t->nxt) /* all edges */
+  for (f = fsmx; f; f = f->next)   /* all states */
+    for (t = f->t; t; t = t->next) /* all edges */
       for (n = 0; n < 2; n++)     /* reads and writes */
-        for (u = t->Val[n]; u; u = u->nxt) {
+        for (u = t->Val[n]; u; u = u->next) {
           if (!u->var->context /* global */
               || u->var->type == CHAN || u->var->type == STRUCT)
             continue;
@@ -323,81 +323,81 @@ static void FSM_ANA(void) {
         }
 
   if (!launch_settings.need_export_ast)
-    for (f = fsmx; f; f = f->nxt)
-      for (t = f->t; t; t = t->nxt)
+    for (f = fsmx; f; f = f->next)
+      for (t = f->t; t; t = t->next)
         for (n = 0; n < 2; n++)
-          for (u = t->Val[n], w = (FSM_use *)0; u;) {
+          for (u = t->Val[n], w = nullptr; u;) {
             if (u->special) {
-              v = u->nxt;
+              v = u->next;
               if (!w) /* remove from list */
                 t->Val[n] = v;
               else
-                w->nxt = v;
+                w->next = v;
               if (good_dead(t->step, u)) {
-                u->nxt = t->step->dead; /* insert into dead */
+                u->next = t->step->dead; /* insert into dead */
                 t->step->dead = u;
               }
               u = v;
             } else {
               w = u;
-              u = u->nxt;
+              u = u->next;
             }
           }
 }
 
-void rel_use(FSM_use *u) {
+void rel_use(models::FSM_use *u) {
   if (!u)
     return;
-  rel_use(u->nxt);
+  rel_use(u->next);
   u->var = (models::Symbol *)0;
   u->special = 0;
-  u->nxt = use_free;
+  u->next = use_free;
   use_free = u;
 }
 
-static void rel_trans(FSM_trans *t) {
+static void rel_trans(models::FSM_trans *t) {
   if (!t)
     return;
-  rel_trans(t->nxt);
+  rel_trans(t->next);
   rel_use(t->Val[0]);
   rel_use(t->Val[1]);
-  t->Val[0] = t->Val[1] = (FSM_use *)0;
-  t->nxt = trans_free;
+  t->Val[0] = t->Val[1] = nullptr;
+  t->next = trans_free;
   trans_free = t;
 }
 
-static void rel_state(FSM_state *f) {
+static void rel_state(models::FSM_state *f) {
   if (!f)
     return;
-  rel_state(f->nxt);
+  rel_state(f->next);
   rel_trans(f->t);
-  f->t = (FSM_trans *)0;
-  f->nxt = fsm_free;
+  f->t = nullptr;
+  f->next = fsm_free;
   fsm_free = f;
 }
 
 static void FSM_DEL(void) {
   rel_state(fsmx);
-  fsmx = (FSM_state *)0;
+  fsmx = (models::FSM_state *)0;
 }
 
-static FSM_state *mkstate(int s) {
-  FSM_state *f;
+static models::FSM_state *mkstate(int s) {
+  models::FSM_state *f;
 
   /* fsm_tbl isn't allocated yet */
-  for (f = fsmx; f; f = f->nxt)
+  for (f = fsmx; f; f = f->next)
     if (f->from == s)
       break;
   if (!f) {
     if (fsm_free) {
       f = fsm_free;
-      memset(f, 0, sizeof(FSM_state));
-      fsm_free = fsm_free->nxt;
+      memset(f, 0, sizeof(models::FSM_state));
+      fsm_free = fsm_free->next;
     } else
-      f = (FSM_state *)emalloc(sizeof(FSM_state));
+      f = (models::FSM_state *)emalloc(sizeof(models::FSM_state));
     f->from = s;
-    f->t = (FSM_trans *)0;
-    f->nxt = fsmx;
+    f->t = nullptr;
+    f->next = fsmx;
     fsmx = f;
     if (s > max_st_id)
       max_st_id = s;
@@ -405,29 +405,29 @@ static FSM_state *mkstate(int s) {
   return f;
 }
 
-static FSM_trans *get_trans(int to) {
-  FSM_trans *t;
+static models::FSM_trans *get_trans(int to) {
+  models::FSM_trans *t;
 
   if (trans_free) {
     t = trans_free;
-    memset(t, 0, sizeof(FSM_trans));
-    trans_free = trans_free->nxt;
+    memset(t, 0, sizeof(models::FSM_trans));
+    trans_free = trans_free->next;
   } else
-    t = (FSM_trans *)emalloc(sizeof(FSM_trans));
+    t = (models::FSM_trans *)emalloc(sizeof(models::FSM_trans));
 
   t->to = to;
   return t;
 }
 
-static void FSM_EDGE(int from, int to, Element *e) {
-  FSM_state *f;
-  FSM_trans *t;
+static void FSM_EDGE(int from, int to, models::Element *e) {
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = mkstate(from); /* find it or else make it */
   t = get_trans(to);
 
   t->step = e;
-  t->nxt = f->t;
+  t->next = f->t;
   f->t = t;
 
   f = mkstate(to);
@@ -436,7 +436,7 @@ static void FSM_EDGE(int from, int to, Element *e) {
   if (launch_settings.need_export_ast) {
     t = get_trans(from);
     t->step = e;
-    t->nxt = f->p; /* from is a predecessor of to */
+    t->next = f->p; /* from is a predecessor of to */
     f->p = t;
   }
 
@@ -448,8 +448,8 @@ static void FSM_EDGE(int from, int to, Element *e) {
 #define LVAL 1
 #define RVAL 0
 
-static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
-  FSM_use *u, *v;
+static void ana_var(models::FSM_trans *t, models::Lextok *now, int usage) {
+  models::FSM_use *u, *v;
 
   if (!t || !now || !now->symbol)
     return;
@@ -459,7 +459,7 @@ static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
     return;
 
   v = t->Val[usage];
-  for (u = v; u; u = u->nxt)
+  for (u = v; u; u = u->next)
     if (u->var == now->symbol)
       return; /* it's already there */
 
@@ -469,12 +469,12 @@ static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
                    */
     if (use_free) {
       u = use_free;
-      use_free = use_free->nxt;
+      use_free = use_free->next;
     } else
-      u = (FSM_use *)emalloc(sizeof(FSM_use));
+      u = (models::FSM_use *)emalloc(sizeof(models::FSM_use));
 
     u->var = now->symbol;
-    u->nxt = t->Val[usage];
+    u->next = t->Val[usage];
     t->Val[usage] = u;
   } else
     ana_stmnt(t, now->left, RVAL); /* index */
@@ -483,7 +483,7 @@ static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
     ana_var(t, now->right->left, usage);
 }
 
-static void ana_stmnt(FSM_trans *t, models::Lextok *now, int usage) {
+static void ana_stmnt(models::FSM_trans *t, models::Lextok *now, int usage) {
   models::Lextok *v;
 
   if (!t || !now)
@@ -631,9 +631,9 @@ static void ana_stmnt(FSM_trans *t, models::Lextok *now, int usage) {
 
 void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 {
-  ProcList *p;
-  Element *e;
-  for (p = ready; p; p = p->nxt) {
+  models::ProcList *p;
+  models::Element *e;
+  for (p = ready; p; p = p->next) {
     ana_seq(p->s);
     fsm_table();
 
@@ -668,8 +668,8 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 
 void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
 {
-  Element *e;
-  Sequence *s;
+  models::Element *e;
+  models::Sequence *s;
   extern int Unique;
 
   fprintf(f1, "unsigned char Is_Recv[%d];\n", Unique);
@@ -706,7 +706,7 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
     fprintf(f2, "	{	if (h == me) continue;\n");
     fprintf(f2, "		tt = (short) ((P0 *)pptr(h))->_p;\n");
     fprintf(f2, "		ot = (uchar) ((P0 *)pptr(h))->_t;\n");
-    fprintf(f2, "		for (t = trans[ot][tt]; t; t = t->nxt)\n");
+    fprintf(f2, "		for (t = trans[ot][tt]; t; t = t->next)\n");
     fprintf(f2, "			if (Is_Recv[t->t_id]) return 0;\n");
     fprintf(f2, "	}\n");
     fprintf(f2, "	return 1;\n");
@@ -714,13 +714,13 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
   }
 }
 
-static void ana_seq(Sequence *s) {
-  SeqList *h;
-  Sequence *t;
-  Element *e, *g;
+static void ana_seq(models::Sequence *s) {
+  models::SeqList *h;
+  models::Sequence *t;
+  models::Element *e, *g;
   int From, To;
 
-  for (e = s->frst; e; e = e->nxt) {
+  for (e = s->frst; e; e = e->next) {
     if (e->status & DONE)
       goto checklast;
 
@@ -731,7 +731,7 @@ static void ana_seq(Sequence *s) {
     if (e->n->node_type == UNLESS)
       ana_seq(e->sub->this_sequence);
     else if (e->sub) {
-      for (h = e->sub; h; h = h->nxt) {
+      for (h = e->sub; h; h = h->next) {
         g = huntstart(h->this_sequence->frst);
         To = g->seqno;
 
@@ -740,13 +740,13 @@ static void ana_seq(Sequence *s) {
           FSM_EDGE(From, To, e);
         /* else it's a dead link */
       }
-      for (h = e->sub; h; h = h->nxt)
+      for (h = e->sub; h; h = h->next)
         ana_seq(h->this_sequence);
     } else if (e->n->node_type == ATOMIC || e->n->node_type == D_STEP ||
                e->n->node_type == NON_ATOMIC) {
       t = e->n->seq_list->this_sequence;
       g = huntstart(t->frst);
-      t->last->nxt = e->nxt;
+      t->last->next = e->next;
       To = g->seqno;
       FSM_EDGE(From, To, e);
 
@@ -759,8 +759,8 @@ static void ana_seq(Sequence *s) {
           loger::fatal("unexpected error 2");
         }
         To = g->seqno;
-      } else if (e->nxt) {
-        g = huntele(e->nxt, e->status, -1);
+      } else if (e->next) {
+        g = huntele(e->next, e->status, -1);
         if (!g) {
           loger::fatal("unexpected error 3");
         }
@@ -771,7 +771,7 @@ static void ana_seq(Sequence *s) {
       FSM_EDGE(From, To, e);
 
       if (e->esc && e->n->node_type != GOTO && e->n->node_type != '.')
-        for (h = e->esc; h; h = h->nxt) {
+        for (h = e->esc; h; h = h->next) {
           g = huntstart(h->this_sequence->frst);
           To = g->seqno;
           FSM_EDGE(From, To, ZE);

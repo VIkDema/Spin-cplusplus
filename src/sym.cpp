@@ -2,31 +2,32 @@
 
 #include "fatal/fatal.hpp"
 #include "lexer/lexer.hpp"
+#include "lexer/line_number.hpp"
 #include "lexer/scope.hpp"
 #include "main/launch_settings.hpp"
+#include "models/access.hpp"
+#include "models/lextok.hpp"
 #include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
-#include "models/lextok.hpp"
 
 extern LaunchSettings launch_settings;
-extern lexer::ScopeProcessor scope_processor_;
 
 extern models::Symbol *Fname, *owner;
-extern int lineno, depth, verbose, NamesNotAdded;
+extern int depth, verbose, NamesNotAdded;
 extern int has_hidden;
 extern short has_xu;
 
 models::Symbol *context = ZS;
-Ordered *all_names = (Ordered *)0;
+models::Ordered *all_names = nullptr;
 int Nid_nr = 0;
 
-Mtypes_t *Mtypes;
+models::Mtypes_t *Mtypes;
 models::Lextok *runstmnts = ZN;
 
-static Ordered *last_name = (Ordered *)0;
+static models::Ordered *last_name = nullptr;
 static models::Symbol *symtab[Nhash + 1];
 
 static int samename(models::Symbol *a, models::Symbol *b) {
@@ -34,7 +35,7 @@ static int samename(models::Symbol *a, models::Symbol *b) {
     return 1;
   if (!a || !b)
     return 0;
-  return a->name != b->name;
+  return a->name == b->name;
 }
 
 unsigned int hash(const std::string &s) {
@@ -50,7 +51,7 @@ unsigned int hash(const std::string &s) {
 }
 
 void disambiguate(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   std::string n, m;
 
@@ -80,7 +81,7 @@ void disambiguate(void) {
 
 models::Symbol *lookup(const std::string &s) {
   models::Symbol *sp;
-  Ordered *no;
+  models::Ordered *no;
   unsigned int h = hash(s);
 
   if (launch_settings.need_old_scope_rules) { /* same scope - global refering to
@@ -94,9 +95,10 @@ models::Symbol *lookup(const std::string &s) {
   } else { /* added 6.0.0: more traditional, scope rule */
     for (sp = symtab[h]; sp; sp = sp->next) {
       if (sp->name == s && samename(sp->context, context) &&
-          (sp->block_scope == scope_processor_.GetCurrScope() ||
+          (sp->block_scope == lexer::ScopeProcessor::GetCurrScope() ||
            (sp->block_scope.compare(0, sp->block_scope.length(),
-                                    scope_processor_.GetCurrScope()) == 0 &&
+                                    lexer::ScopeProcessor::GetCurrScope()) ==
+                0 &&
             samename(sp->owner_name, owner)))) {
         if (!samename(sp->owner_name, owner)) {
           printf("spin: different container %s\n", sp->name.c_str());
@@ -124,12 +126,12 @@ models::Symbol *lookup(const std::string &s) {
   sp->last_depth = depth;
   sp->context = context;
   sp->owner_name = owner; /* if fld in struct */
-  sp->block_scope = scope_processor_.GetCurrScope();
+  sp->block_scope = lexer::ScopeProcessor::GetCurrScope();
 
   if (NamesNotAdded == 0) {
     sp->next = symtab[h];
     symtab[h] = sp;
-    no = (Ordered *)emalloc(sizeof(Ordered));
+    no = (models::Ordered *)emalloc(sizeof(models::Ordered));
     no->entry = sp;
     if (!last_name)
       last_name = all_names = no;
@@ -166,7 +168,9 @@ void trackvar(models::Lextok *n, models::Lextok *m) {
   }
 }
 
-void trackrun(models::Lextok *n) { runstmnts = nn(ZN, 0, n, runstmnts); }
+void trackrun(models::Lextok *n) {
+  runstmnts = models::Lextok::nn(ZN, 0, n, runstmnts);
+}
 
 void checkrun(models::Symbol *parnm, int posno) {
   models::Lextok *n, *now, *v;
@@ -222,8 +226,9 @@ void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
   models::Lextok *n = m;
   int count = 1;
   while (n) {
-    if (n->left && n->left->symbol && n->left->symbol->type == CHAN)
-      setaccess(n->left->symbol, w ? w->symbol : ZS, count, t);
+    if (n->left && n->left->symbol && n->left->symbol->type == CHAN) {
+      n->left->symbol->AddAccess(w ? w->symbol : ZS, count, t);
+    }
     n = n->right;
     count++;
   }
@@ -232,31 +237,32 @@ void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
 void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
               models::Lextok *vis) /* predefined types */
 {
-  int oln = lineno, cnt = 1;
+  int oln = file::LineNumber::Get(), cnt = 1;
   extern int Expand_Ok;
 
   while (n) {
     if (n->symbol->type && !(n->symbol->hidden_flags & 32)) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::fatal("redeclaration of '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
     n->symbol->type = (models::SymbolType)t;
 
     if (mtype_name && t != MTYPE) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::fatal("missing semi-colon after '%s'?", mtype_name->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
 
     if (mtype_name && n->symbol->mtype_name &&
         mtype_name->symbol->name != n->symbol->mtype_name->name) {
       fprintf(stderr,
               "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
-              n->file_name->name.c_str(), n->line_number, n->symbol->name.c_str(),
-              mtype_name->symbol->name.c_str(), n->symbol->mtype_name->name.c_str());
+              n->file_name->name.c_str(), n->line_number,
+              n->symbol->name.c_str(), mtype_name->symbol->name.c_str(),
+              n->symbol->mtype_name->name.c_str());
       loger::non_fatal("type error");
     }
 
@@ -265,8 +271,9 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
 
     if (Expand_Ok) {
       n->symbol->hidden_flags |= (4 | 8 | 16); /* formal par */
-      if (t == CHAN)
-        setaccess(n->symbol, ZS, cnt, 'F');
+      if (t == CHAN) {
+        n->left->symbol->AddAccess(ZS, cnt, 'F');
+      }
     }
 
     if (t == UNSIGNED) {
@@ -302,16 +309,16 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
       n->symbol->id = 0;
       if (n->symbol->init_value && n->symbol->init_value->node_type == CHAN) {
         Fname = n->file_name;
-        lineno = n->line_number;
+        file::LineNumber::Set(n->line_number);
         loger::fatal("chan initializer for non-channel %s", n->symbol->name);
       }
     }
 
     if (n->symbol->value_type <= 0) {
-      lineno = n->line_number;
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::non_fatal("bad array size for '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
 
     n = n->right;
@@ -353,11 +360,12 @@ void setxus(models::Lextok *p, int t) {
   if (launch_settings.need_lose_msgs_sent_to_full_queues && t == XS) {
     printf(
         "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
-        (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin", p->line_number);
+        (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin",
+        p->line_number);
   }
 
   if (!context) {
-    lineno = p->line_number;
+    file::LineNumber::Set(p->line_number);
     Fname = p->file_name;
     loger::fatal("non-local x[rs] assertion");
   }
@@ -376,40 +384,40 @@ void setxus(models::Lextok *p, int t) {
     else if (n->symbol->type == CHAN)
       setonexu(n->symbol, t);
     else {
-      int oln = lineno;
-      lineno = n->line_number;
+      int oln = file::LineNumber::Get();
+      file::LineNumber::Set(n->line_number);
       Fname = n->file_name;
       loger::non_fatal("xr or xs of non-chan '%s'", n->symbol->name);
-      lineno = oln;
+      file::LineNumber::Set(oln);
     }
   }
 }
 
 models::Lextok **find_mtype_list(const std::string &s) {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    if (lst->nm == s) {
-      return &(lst->mt);
+  for (lst = Mtypes; lst; lst = lst->next) {
+    if (lst->name_of_mtype == s) {
+      return &(lst->list_of_names);
     }
   }
 
   /* not found, create it */
-  lst = (Mtypes_t *)emalloc(sizeof(Mtypes_t));
-  lst->nm = s;
-  lst->nxt = Mtypes;
+  lst = (models::Mtypes_t *)emalloc(sizeof(models::Mtypes_t));
+  lst->name_of_mtype = s;
+  lst->next = Mtypes;
   Mtypes = lst;
-  return &(lst->mt);
+  return &(lst->list_of_names);
 }
 
 void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
   models::Lextok **mtl; /* mtype list */
   models::Lextok *n, *Mtype;
-  int cnt, oln = lineno;
+  int cnt, oln = file::LineNumber::Get();
   std::string s = "_unnamed_";
 
   if (m) {
-    lineno = m->line_number;
+    file::LineNumber::Set(m->line_number);
     Fname = m->file_name;
   }
 
@@ -439,7 +447,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     if (n->left->symbol->type != models::SymbolType::kMtype) {
       n->left->symbol->hidden_flags |= 128; /* is used */
       n->left->symbol->type = models::SymbolType::kMtype;
-      n->left->symbol->init_value = nn(ZN, CONST, ZN, ZN);
+      n->left->symbol->init_value = models::Lextok::nn(ZN, CONST, ZN, ZN);
       n->left->symbol->init_value->value = cnt;
     } else if (n->left->symbol->init_value->value != cnt) {
       loger::non_fatal("name %s appears twice in mtype declaration",
@@ -447,7 +455,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     }
   }
 
-  lineno = oln;
+  file::LineNumber::Set(oln);
   if (cnt > 256) {
     loger::fatal("too many mtype elements (>255)");
   }
@@ -456,13 +464,13 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
 std::string which_mtype(
     const std::string &str) /* which mtype is str, 0 if not an mtype at all  */
 {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    for (n = lst->mt; n; n = n->right) {
+  for (lst = Mtypes; lst; lst = lst->next) {
+    for (n = lst->list_of_names; n; n = n->right) {
       if (str == n->left->symbol->name) {
-        return lst->nm;
+        return lst->name_of_mtype;
       }
     }
   }
@@ -472,13 +480,13 @@ std::string which_mtype(
 
 int ismtype(const std::string &str) /* name to number */
 {
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
   int count;
 
-  for (lst = Mtypes; lst; lst = lst->nxt) {
+  for (lst = Mtypes; lst; lst = lst->next) {
     count = 1;
-    for (n = lst->mt; n; n = n->right) {
+    for (n = lst->list_of_names; n; n = n->right) {
       if (str == std::string(n->left->symbol->name)) {
         return count;
       }
@@ -597,7 +605,7 @@ void symvar(models::Symbol *sp) {
 }
 
 void symdump(void) {
-  Ordered *walk;
+  models::Ordered *walk;
 
   for (walk = all_names; walk; walk = walk->next)
     symvar(walk->entry);
@@ -633,16 +641,16 @@ static struct X_lkp {
 static void chan_check(models::Symbol *sp) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  Access *a;
+  models::Access *a;
   int i, b = 0, d;
 
   if (verbose_flags.NeedToPrintGlobalVariables())
     goto report; /* -C -g */
 
-  for (a = sp->access; a; a = a->lnk)
-    if (a->typ == 'r')
+  for (a = sp->access; a; a = a->next)
+    if (a->type == 'r')
       b |= 1;
-    else if (a->typ == 's')
+    else if (a->type == 's')
       b |= 2;
   if (b == 3 || (sp->hidden_flags & 16)) /* balanced or formal par */
     return;
@@ -650,8 +658,8 @@ report:
   chname(sp);
   for (i = d = 0; i < (int)(sizeof(xx) / sizeof(struct X_lkp)); i++) {
     b = 0;
-    for (a = sp->access; a; a = a->lnk) {
-      if (a->typ == xx[i].typ) {
+    for (a = sp->access; a; a = a->next) {
+      if (a->type == xx[i].typ) {
         b++;
       }
     }
@@ -660,13 +668,13 @@ report:
     }
     d++;
     printf("\n\t%s by: ", xx[i].nm.c_str());
-    for (a = sp->access; a; a = a->lnk)
-      if (a->typ == xx[i].typ) {
+    for (a = sp->access; a; a = a->next)
+      if (a->type == xx[i].typ) {
         printf("%s", a->who->name.c_str());
         if (a->what)
           printf(" to %s", a->what->name.c_str());
-        if (a->cnt)
-          printf(" par %d", a->cnt);
+        if (a->count)
+          printf(" par %d", a->count);
         if (--b > 0)
           printf(", ");
       }
@@ -674,7 +682,7 @@ report:
   printf("%s\n", (!d) ? "\n\tnever used under this name" : "");
 }
 void chanaccess(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   std::string buf;
   extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();

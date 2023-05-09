@@ -14,6 +14,8 @@ public:
   bool NeedToPrintSeed();
   void SetNeedToPrintSeed(bool need_to_print_seed);
 
+  static long Rand();
+
   static Seed &getInstance() {
     static Seed instance;
     return instance;

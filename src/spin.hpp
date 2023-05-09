@@ -1,12 +1,24 @@
 #ifndef SEEN_SPIN_H
 #define SEEN_SPIN_H
 
+#include "models/fms.hpp"
 #include "models/lextok.hpp"
+#include "models/models_fwd.hpp"
+#include "models/mtypes.hpp"
+#include "models/queue.hpp"
+#include "models/slicer.hpp"
 #include "models/symbol.hpp"
+#include "models/element.hpp"
+#include "models/label.hpp"
+#include "models/proc_list.hpp"
+#include "models/run_list.hpp"
+#include "models/sequence.hpp"
+#include "models/qh.hpp"
 #include <ctype.h>
 #include <optional>
 #include <stdio.h>
 #include <string.h>
+#include "utils/memory.hpp"
 
 #if !defined(WIN32) && !defined(WIN64)
 #include <unistd.h>
@@ -15,161 +27,13 @@
 #include <memory.h>
 #endif
 
-enum { INIV, PUTV, LOGV }; /* used in pangen1.c */
-enum btypes { NONE, N_CLAIM, I_PROC, A_PROC, P_PROC, E_TRACE, N_TRACE };
-
-struct Slicer {
-  models::Lextok *n;  /* global var, usable as slice criterion */
-  short code;         /* type of use: DEREF_USE or normal USE */
-  short used;         /* set when handled */
-  struct Slicer *nxt; /* linked list */
-};
-
-struct Access {
-  models::Symbol *who;  /* proctype name of accessor */
-  models::Symbol *what; /* proctype name of accessed */
-  int cnt, typ;         /* parameter nr and, e.g., 's' or 'r' */
-  struct Access *lnk;   /* linked list */
-};
-
-struct Ordered { /* links all names in Symbol table */
-  models::Symbol *entry;
-  struct Ordered *next;
-};
-
-struct Mtypes_t {
-  std::string nm;       /* name of mtype, or "_unnamed_" */
-  models::Lextok *mt;   /* the linked list of names */
-  struct Mtypes_t *nxt; /* linked list of mtypes */
-};
-
-struct Queue {
-  short qid;         /* runtime q index */
-  int qlen;          /* nr messages stored */
-  int nslots, nflds; /* capacity, flds/slot */
-  int setat;         /* last depth value changed */
-  int *fld_width;    /* type of each field */
-  int *contents;     /* the values stored */
-  int *stepnr;       /* depth when each msg was sent */
-  char **mtp;        /* if mtype, name of list, else 0 */
-  struct Queue *nxt; /* linked list */
-};
-
-struct FSM_state { /* used in pangen5.c - dataflow */
-  int from;        /* state number */
-  int seen;        /* used for dfs */
-  int in;          /* nr of incoming edges */
-  int cr;          /* has reachable 1-relevant successor */
-  int scratch;
-  unsigned long *dom, *mod; /* to mark dominant nodes */
-  struct FSM_trans *t;      /* outgoing edges */
-  struct FSM_trans *p;      /* incoming edges, predecessors */
-  struct FSM_state *nxt;    /* linked list of all states */
-};
-
-struct FSM_trans { /* used in pangen5.c - dataflow */
-  int to;
-  short relevant;         /* when sliced */
-  short round;            /* ditto: iteration when marked */
-  struct FSM_use *Val[2]; /* 0=reads, 1=writes */
-  struct Element *step;
-  struct FSM_trans *nxt;
-};
-
-struct FSM_use { /* used in pangen5.c - dataflow */
-  models::Lextok *n;
-  models::Symbol *var;
-  int special;
-  struct FSM_use *nxt;
-};
-
-struct Element {
-  models::Lextok *n; /* defines the type & contents */
-  int Seqno;         /* identifies this el within system */
-  int seqno;         /* identifies this el within a proc */
-  int merge;         /* set by -O if step can be merged */
-  int merge_start;
-  int merge_single;
-  short merge_in;       /* nr of incoming edges */
-  short merge_mark;     /* state was generated in merge sequence */
-  unsigned int status;  /* used by analyzer generator  */
-  struct FSM_use *dead; /* optional dead variable list */
-  struct SeqList *sub;  /* subsequences, for compounds */
-  struct SeqList *esc;  /* zero or more escape sequences */
-  struct Element *Nxt;  /* linked list - for global lookup */
-  struct Element *nxt;  /* linked list - program structure */
-};
-
-struct Sequence {
-  Element *frst;
-  Element *last;   /* links onto continuations */
-  Element *extent; /* last element in original */
-  int minel;       /* minimum Seqno, set and used only in guided.c */
-  int maxel;       /* 1+largest id in sequence */
-};
-
-struct SeqList {
-  struct Sequence *this_sequence; /* one sequence */
-  struct SeqList *nxt;            /* linked list  */
-};
-
-struct Label {
-  models::Symbol *s;
-  models::Symbol *c;
-  Element *e;
-  int opt_inline_id; /* non-zero if label appears in an inline */
-  int visible;       /* label referenced in claim (slice relevant) */
-  struct Label *nxt;
-};
-
-struct Lbreak {
-  models::Symbol *l;
-  struct Lbreak *nxt;
-};
-
-struct L_List {
-  models::Lextok *n;
-  struct L_List *nxt;
-};
-
-struct RunList {
-  models::Symbol *n;      /* name            */
-  int tn;                 /* ordinal of type */
-  int pid;                /* process id      */
-  int priority;           /* for simulations only */
-  enum btypes b;          /* the type of process */
-  Element *pc;            /* current stmnt   */
-  struct Sequence *ps;    /* used by analyzer generator */
-  models::Lextok *prov;   /* provided clause */
-  models::Symbol *symtab; /* local variables */
-  struct RunList *nxt;    /* linked list */
-};
-
-struct ProcList {
-  models::Symbol *n;      /* name       */
-  models::Lextok *p;      /* parameters */
-  Sequence *s;            /* body       */
-  models::Lextok *prov;   /* provided clause */
-  enum btypes b;          /* e.g., claim, trace, proc */
-  short tn;               /* ordinal number */
-  unsigned char det;      /* deterministic */
-  unsigned char unsafe;   /* contains global var inits */
-  unsigned char priority; /* process priority, if any */
-  struct ProcList *nxt;   /* linked list */
-};
-
-struct QH {
-  int n;
-  struct QH *nxt;
-};
-
 typedef models::Lextok *Lexptr;
 
 #define YYSTYPE Lexptr
 
 #define ZN (models::Lextok *)0
 #define ZS (models::Symbol *)0
-#define ZE (Element *)0
+#define ZE (models::Element *)0
 
 #define DONE 1      /* status bits of elements */
 #define ATOM 2      /* part of an atomic chain */
@@ -215,44 +79,36 @@ typedef models::Lextok *Lexptr;
 
 /** NEW**/
 int ismtype(const std::string &);
-bool IsProctype(const std::string &value);
-bool IsEqname(const std::string &value);
-bool IsUtype(const std::string &value);
+bool IsProctype(const std::string &);
+bool IsUtype(const std::string &);
 /***** prototype definitions *****/
-Element *eval_sub(Element *);
-Element *get_lab(models::Lextok *, int);
-Element *huntele(Element *, unsigned int, int);
-Element *huntstart(Element *);
-Element *mk_skip(void);
-Element *target(Element *);
+models::Element *eval_sub(models::Element *);
+models::Element *get_lab(models::Lextok *, int);
+models::Element *huntele(models::Element *, unsigned int, int);
+models::Element *huntstart(models::Element *);
+models::Element *mk_skip(void);
+models::Element *target(models::Element *);
 
 models::Lextok *do_unless(models::Lextok *, models::Lextok *);
 models::Lextok *expand(models::Lextok *, int);
 models::Lextok *getuname(models::Symbol *);
 models::Lextok *mk_explicit(models::Lextok *, int, int);
-models::Lextok *nn(models::Lextok *, int, models::Lextok *, models::Lextok *);
-models::Lextok *rem_lab(models::Symbol *, models::Lextok *, models::Symbol *);
-models::Lextok *rem_var(models::Symbol *, models::Lextok *, models::Symbol *,
-                        models::Lextok *);
+
 models::Lextok *tail_add(models::Lextok *, models::Lextok *);
-models::Lextok *return_statement(models::Lextok *);
 
-ProcList *mk_rdy(models::Symbol *, models::Lextok *, Sequence *, int,
-                 models::Lextok *, enum btypes);
+models::ProcList *mk_rdy(models::Symbol *, models::Lextok *, models::Sequence *, int,
+                 models::Lextok *, models::btypes);
 
-SeqList *seqlist(Sequence *, SeqList *);
-Sequence *close_seq(int);
+models::SeqList *seqlist(models::Sequence *, models::SeqList *);
+models::Sequence *close_seq(int);
 
 models::Symbol *break_dest(void);
 models::Symbol *findloc(models::Symbol *);
-models::Symbol *has_lab(Element *, int);
+models::Symbol *has_lab(models::Element *, int);
 models::Symbol *lookup(const std::string &s);
-models::Symbol *prep_inline(models::Symbol *, models::Lextok *);
 
 char *put_inline(FILE *, const std::string &);
-char *emalloc(size_t);
 char *erealloc(void *, size_t, size_t);
-long Rand(void);
 
 int any_oper(models::Lextok *, int);
 int any_undo(models::Lextok *);
@@ -264,7 +120,7 @@ int Cnt_flds(models::Lextok *);
 int cnt_mpars(models::Lextok *);
 int complete_rendez(void);
 int enable(models::Lextok *);
-int Enabled0(Element *);
+int Enabled0(models::Element *);
 int eval(models::Lextok *);
 int find_lab(models::Symbol *, models::Symbol *, int);
 int find_maxel(models::Symbol *);
@@ -276,7 +132,6 @@ int has_typ(models::Lextok *, int);
 int in_bound(models::Symbol *, int);
 int interprint(FILE *, models::Lextok *);
 int printm(FILE *, models::Lextok *);
-int is_inline(void);
 int ismtype(char *);
 
 int Lval_struct(models::Lextok *, models::Symbol *, int, int);
@@ -284,7 +139,7 @@ int main(int, char **);
 int pc_value(models::Lextok *);
 int pid_is_claim(int);
 int proper_enabler(models::Lextok *);
-int putcode(FILE *, Sequence *, Element *, int, int, int);
+int putcode(FILE *, models::Sequence *, models::Element *, int, int, int);
 int q_is_sync(models::Lextok *);
 int qlen(models::Lextok *);
 int qfull(models::Lextok *);
@@ -321,16 +176,16 @@ void checkrun(models::Symbol *, int);
 void comment(FILE *, models::Lextok *, int);
 void cross_dsteps(models::Lextok *, models::Lextok *);
 void disambiguate(void);
-void doq(models::Symbol *, int, RunList *);
+void doq(models::Symbol *, int, models::RunList *);
 void dotag(FILE *, char *);
 void do_locinits(FILE *);
 void do_var(FILE *, int, const std::string &, models::Symbol *,
             const std::string &, const std::string &, const std::string &);
-void dump_struct(models::Symbol *, const std::string &, RunList *);
+void dump_struct(models::Symbol *, const std::string &, models::RunList *);
 void dumpclaims(FILE *, int, const std::string &);
 void dumpglobals(void);
 void dumplabels(void);
-void dumplocal(RunList *, int);
+void dumplocal(models::RunList *, int);
 void dumpsrc(int, int);
 void fix_dest(models::Symbol *, models::Symbol *);
 void genaddproc(void);
@@ -343,15 +198,14 @@ void gensvmap(void);
 void genunio(void);
 void ini_struct(models::Symbol *);
 void loose_ends(void);
-void make_atomic(Sequence *, int);
+void make_atomic(models::Sequence *, int);
 void mark_last(void);
 void match_trail(void);
 void no_side_effects(const std::string &);
 void nochan_manip(models::Lextok *, models::Lextok *, int);
 void ntimes(FILE *, int, int, const char *c[]);
 void open_seq(int);
-void p_talk(Element *, int);
-void pickup_inline(models::Symbol *, models::Lextok *, models::Lextok *);
+void p_talk(models::Element *, int);
 void plunk_c_decls(FILE *);
 void plunk_c_fcts(FILE *);
 void plunk_expr(FILE *, const std::string &);
@@ -365,14 +219,13 @@ void putname(FILE *, const std::string &, models::Lextok *, int,
              const std::string &);
 void putremote(FILE *, models::Lextok *, int);
 void putskip(int);
-void putsrc(Element *);
+void putsrc(models::Element *);
 void putstmnt(FILE *, models::Lextok *, int);
 void putunames(FILE *);
 void rem_Seq(void);
-void runnable(ProcList *, int, int);
+void runnable(models::ProcList *, int, int);
 void sched(void);
-void setaccess(models::Symbol *, models::Symbol *, int, int);
-void set_lab(models::Symbol *, Element *);
+void set_lab(models::Symbol *, models::Element *);
 void setmtype(models::Lextok *, models::Lextok *);
 void setpname(models::Lextok *);
 void setptype(models::Lextok *, models::Lextok *, int, models::Lextok *);
@@ -387,7 +240,6 @@ void sync_product(void);
 void trackchanuse(models::Lextok *, models::Lextok *, int);
 void trackvar(models::Lextok *, models::Lextok *);
 void trackrun(models::Lextok *);
-void trapwonly(models::Lextok * /* , char * */); /* spin.y and main.c */
 void typ2c(models::Symbol *);
 void typ_ck(int, int, const std::string &);
 void undostmnt(models::Lextok *, int);

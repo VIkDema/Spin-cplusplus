@@ -381,7 +381,7 @@ void pstext(int x, char *s) {
 }
 
 void dotag(FILE *fd, char *s) {
-  extern RunList *X_lst;
+  extern models::RunList *X_lst;
   int i = (!strncmp(s, "MSC: ", 5)) ? 5 : 0;
   int pid = launch_settings.need_save_trail ? (prno - Have_claim)
                                             : (X_lst ? X_lst->pid : 0);

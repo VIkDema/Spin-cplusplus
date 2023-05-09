@@ -4,10 +4,13 @@
 #include <fmt/core.h>
 
 extern models::Symbol *context;
-lexer::ScopeProcessor scope_processor_;
 
 namespace lexer {
-ScopeProcessor::ScopeProcessor() : scope_level_(0) {}
+int ScopeProcessor::scope_level_ = 0;
+std::string ScopeProcessor::curr_scope_name_;
+std::array<int, 256> ScopeProcessor::scope_seq_;
+
+
 void ScopeProcessor::SetCurrScope() {
   curr_scope_name_ = "_";
 
@@ -22,5 +25,10 @@ void ScopeProcessor::AddScope() { scope_seq_[scope_level_++]++; }
 void ScopeProcessor::RemoveScope() { scope_level_--; }
 void ScopeProcessor::InitScopeName() { curr_scope_name_ = "_"; }
 std::string ScopeProcessor::GetCurrScope() { return curr_scope_name_; }
+int ScopeProcessor::GetCurrSegment() { return scope_seq_[scope_level_]; }
+int ScopeProcessor::GetCurrScopeLevel() { return scope_level_; }
+void ScopeProcessor::SetCurrScopeLevel(int scope_level) {
+  scope_level_ = scope_level;
+}
 
 } // namespace lexer

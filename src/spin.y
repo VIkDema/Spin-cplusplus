@@ -2,6 +2,8 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/inline_processor.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/scope.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
@@ -16,7 +18,7 @@
 
 #define YYMAXDEPTH	20000	/* default is 10000 */
 #define YYDEBUG		0
-#define Stop	nn(ZN,'@',ZN,ZN)
+#define Stop	models::Lextok::nn(ZN,'@',ZN,ZN)
 #define PART0	"place initialized declaration of "
 #define PART1	"place initialized chan decl of "
 #define PART2	" at start of proctype "
@@ -33,7 +35,7 @@ extern	models::Lextok *sel_index(models::Lextok *, models::Lextok *, models::Lex
 extern  void    keep_track_off(models::Lextok *);
 extern	void	safe_break(void);
 extern	void	restore_break(void);
-extern  int	u_sync, u_async, scope_level;
+extern  int	u_sync, u_async;
 extern	int	initialization_ok;
 extern	short	has_sorted, has_random, has_enabled, has_pcvalue, has_np;
 extern	short	has_state, has_io;
@@ -41,10 +43,11 @@ extern	void	check_mtypes(models::Lextok *, models::Lextok *);
 extern	void	count_runs(models::Lextok *);
 extern	void	no_internals(models::Lextok *);
 extern	void	any_runs(models::Lextok *);
-extern	void	ltl_list(const std::string& , const std::string& );
 extern	void	validref(models::Lextok *, models::Lextok *);
 extern	std::string yytext;
 extern LaunchSettings launch_settings;
+
+void ltl_list(const std::string& , const std::string& );
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
@@ -139,10 +142,10 @@ proc	: inst		/* optional instantiator */
 			}
 	  Opt_priority
 	  Opt_enabler
-	  body		{ ProcList *rl;
+	  body		{ models::ProcList *rl;
 			  if ($1 != ZN && $1->value > 0)
 			  {	int j;
-				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, A_PROC);
+				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, models::btypes::A_PROC);
 			  	for (j = 0; j < $1->value; j++)
 				{	runnable(rl, $9?$9->value:1, 1);
 					announce(":root:");
@@ -151,7 +154,7 @@ proc	: inst		/* optional instantiator */
 					$3->symbol->init_value = $1;
 				}
 			  } else
-			  {	rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, P_PROC);
+			  {	rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, models::btypes::P_PROC);
 			  }
 			  if (rl && has_ini == 1) /* global initializations, unsafe */
 			  {	/* printf("proctype %s has initialized data\n",
@@ -163,19 +166,20 @@ proc	: inst		/* optional instantiator */
 			}
 	;
 
-proctype: PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 0; }
-	| D_PROCTYPE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 1; }
+proctype: PROCTYPE	{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN); $$->value = 0; }
+	| D_PROCTYPE	{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN); $$->value = 1; }
 	;
 
 inst	: /* empty */	{ $$ = ZN; }
-	| ACTIVE	{ $$ = nn(ZN,CONST,ZN,ZN); $$->value = 1; }
+	| ACTIVE	{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN); $$->value = 1; }
 	| ACTIVE '[' const_expr ']' {
-			  $$ = nn(ZN,CONST,ZN,ZN); $$->value = $3->value;
+			  $$ = models::Lextok::nn(ZN,CONST,ZN,ZN); 
+			  $$->value = $3->value;
 			  if ($3->value > 255)
 				loger::non_fatal("max nr of processes is 255\n");
 			}
 	| ACTIVE '[' NAME ']' {
-			  $$ = nn(ZN,CONST,ZN,ZN);
+			  $$ = models::Lextok::nn(ZN,CONST,ZN,ZN);
 			  $$->value = 0;
 			  if (!$3->symbol->type)
 				loger::fatal("undeclared variable %s",
@@ -192,8 +196,8 @@ init	: INIT		{
 	context = $1->symbol;
 	 }
 	  Opt_priority
-	  body		{ ProcList *rl;
-			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN, I_PROC);
+	  body		{ models::ProcList *rl;
+			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN,    models::btypes::I_PROC);
 			  runnable(rl, $3?$3->value:1, 1);
 			  announce(":root:");
 			  context = ZS;
@@ -225,7 +229,7 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 			  claimproc = new char[$1->symbol->name.length() + 1];
 			  strcpy(claimproc, $1->symbol->name.c_str());
 			}
-	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, N_CLAIM);
+	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, models::btypes::N_CLAIM);
         		  context = ZS;
         		}
 	;
@@ -233,7 +237,7 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 optname : /* empty */	{ char tb[32];
 			  memset(tb, 0, 32);
 			  sprintf(tb, "never_%d", nclaims);
-			  $$ = nn(ZN, NAME, ZN, ZN);
+			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
 			  $$->symbol = lookup(tb);
 			}
 	| NAME		{ $$ = $1; }
@@ -242,7 +246,7 @@ optname : /* empty */	{ char tb[32];
 optname2 : /* empty */ { char tb[32]; static int nltl = 0;
 			  memset(tb, 0, 32);
 			  sprintf(tb, "ltl_%d", nltl++);
-			  $$ = nn(ZN, NAME, ZN, ZN);
+			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
 			  $$->symbol = lookup(tb);
 			}
 	| NAME		{ $$ = $1; }
@@ -258,9 +262,9 @@ events : TRACE		{
 			}
 	  body		{
 			  if ($1->symbol->name ==  ":trace:")
-			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, E_TRACE);
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, models::btypes::E_TRACE);
 			  } else
-			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, N_TRACE);
+			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, models::btypes::N_TRACE);
 			  }
         		  context = ZS;
 			  inEventMap--;
@@ -288,7 +292,7 @@ nm	: NAME			{ $$ = $1; }
 	;
 
 ns	: INLINE nm l_par		{ NamesNotAdded++; }
-	  args r_par		{ prep_inline($2->symbol, $5);
+	  args r_par		{ lexer_.HandleInline($2->symbol, $5);
 				  NamesNotAdded--;
 				}
 	;
@@ -324,9 +328,9 @@ cstate	: C_STATE STRING STRING	{
 
 ccode	: C_CODE		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 				  NamesNotAdded--;
-				  $$ = nn(ZN, C_CODE, ZN, ZN);
+				  $$ = models::Lextok::nn(ZN, C_CODE, ZN, ZN);
 				  $$->symbol = s;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -334,10 +338,10 @@ ccode	: C_CODE		{ models::Symbol *s;
 				}
 	| C_DECL		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 				  NamesNotAdded--;
 				  s->type = models::SymbolType::kCodeDecl;
-				  $$ = nn(ZN, C_CODE, ZN, ZN);
+				  $$ = models::Lextok::nn(ZN, C_CODE, ZN, ZN);
 				  $$->symbol = s;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -346,14 +350,15 @@ ccode	: C_CODE		{ models::Symbol *s;
 	;
 cexpr	: C_EXPR		{ models::Symbol *s;
 				  NamesNotAdded++;
-				  s = prep_inline(ZS, ZN);
+				  s = lexer_.HandleInline(ZS, ZN);
 /* if context is 0 this was inside an ltl formula
    mark the last inline added to seqnames */
 				  if (!context)
-				  {	mark_last();
+				  {	
+					lexer::InlineProcessor::SetIsExpr();
 				  }
 				  NamesNotAdded--;
-				  $$ = nn(ZN, C_EXPR, ZN, ZN);
+				  $$ = models::Lextok::nn(ZN, C_EXPR, ZN, ZN);
 				  $$->symbol = s;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -365,9 +370,9 @@ cexpr	: C_EXPR		{ models::Symbol *s;
 body	: '{'			{ open_seq(1); lexer_.SetInSeq($1->line_number); }
           sequence OS		{ add_seq(Stop); }
           '}'			{ $$->sequence = close_seq(0); lexer_.SetInSeq(0);
-				  if (scope_level != 0)
+				  if (lexer::ScopeProcessor::GetCurrScopeLevel())
 				  {	loger::non_fatal("missing '}' ?");
-					scope_level = 0;
+				  	lexer::ScopeProcessor::SetCurrScopeLevel(0);
 				  }
 				}
 	;
@@ -423,35 +428,35 @@ one_decl: vis TYPE osubt var_list {
 				}
 	;
 
-decl_lst: one_decl       	{ $$ = nn(ZN, ',', $1, ZN); }
+decl_lst: one_decl       	{ $$ = models::Lextok::nn(ZN, ',', $1, ZN); }
 	| one_decl SEMI
-	  decl_lst		{ $$ = nn(ZN, ',', $1, $3); }
+	  decl_lst		{ $$ = models::Lextok::nn(ZN, ',', $1, $3); }
 	;
 
 decl    : /* empty */		{ $$ = ZN; }
 	| decl_lst      	{ $$ = $1; }
 	;
 
-vref_lst: varref		{ $$ = nn($1, XU, $1, ZN); }
-	| varref ',' vref_lst	{ $$ = nn($1, XU, $1, $3); }
+vref_lst: varref		{ $$ = models::Lextok::nn($1, XU, $1, ZN); }
+	| varref ',' vref_lst	{ $$ = models::Lextok::nn($1, XU, $1, $3); }
 	;
 
-var_list: ivar           	{ $$ = nn($1, TYPE, ZN, ZN); }
-	| ivar ',' var_list	{ $$ = nn($1, TYPE, ZN, $3); }
+var_list: ivar           	{ $$ = models::Lextok::nn($1, TYPE, ZN, ZN); }
+	| ivar ',' var_list	{ $$ = models::Lextok::nn($1, TYPE, ZN, $3); }
 	;
 
 c_list	: CONST			{ $1->node_type = CONST; $$ = $1; }
-	| CONST ',' c_list	{ $1->node_type = CONST; $$ = nn($1, ',', $1, $3); }
+	| CONST ',' c_list	{ $1->node_type = CONST; $$ = models::Lextok::nn($1, ',', $1, $3); }
 	;
 
 ivar    : vardcl           	{ $$ = $1;
-				  $1->symbol->init_value = nn(ZN,CONST,ZN,ZN);
+				  $1->symbol->init_value = models::Lextok::nn(ZN,CONST,ZN,ZN);
 				  $1->symbol->init_value->value = 0;
 				  if (!initialization_ok)
 				  {	models::Lextok *zx, *xz;
-					zx = nn(ZN, NAME, ZN, ZN);
+					zx = models::Lextok::nn(ZN, NAME, ZN, ZN);
 					zx->symbol = $1->symbol;
-					xz = nn(zx, ASGN, zx, $1->symbol->init_value);
+					xz = models::Lextok::nn(zx, ASGN, zx, $1->symbol->init_value);
 					keep_track_off(xz);
 					/* make sure zx doesnt turn out to be a STRUCT later */
 					add_seq(xz);
@@ -465,9 +470,9 @@ ivar    : vardcl           	{ $$ = $1;
 				  has_ini = 1;
 				  $1->symbol->hidden_flags |= (4|8);	/* conservative */
 				  if (!initialization_ok)
-				  {	models::Lextok *zx = nn(ZN, NAME, ZN, ZN);
+				  {	models::Lextok *zx = models::Lextok::nn(ZN, NAME, ZN, ZN);
 					zx->symbol = $1->symbol;
-					add_seq(nn(zx, ASGN, zx, $4));
+					add_seq(models::Lextok::nn(zx, ASGN, zx, $4));
 				  }
 				}
 	| vardcl ASGN expr   	{ $$ = $1;	/* initialized scalar */
@@ -491,9 +496,9 @@ ivar    : vardcl           	{ $$ = $1;
 							$1->symbol->name.c_str());
 						fprintf(stderr, "could fail if placed here\n");
 					} else
-					{	models::Lextok *zx = nn(ZN, NAME, ZN, ZN);
+					{	models::Lextok *zx = models::Lextok::nn(ZN, NAME, ZN, ZN);
 						zx->symbol = $1->symbol;
-						add_seq(nn(zx, ASGN, zx, $3));
+						add_seq(models::Lextok::nn(zx, ASGN, zx, $3));
 						$1->symbol->init_value = 0;	/* Patrick Trentlin */
 				  }	}
 				}
@@ -516,7 +521,7 @@ ch_init : '[' const_expr ']' OF
 					int i = cnt_mpars($6);
 					Mpars = max(Mpars, i);
 				}
-				  $$ = nn(ZN, CHAN, ZN, $6);
+				  $$ = models::Lextok::nn(ZN, CHAN, ZN, $6);
 				  $$->value = $2->value;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -534,7 +539,7 @@ vardcl  : NAME  		{ $1->symbol->value_type = 1; $$ = $1; }
 				}
 	| NAME '[' const_expr ']'	{ $1->symbol->value_type = $3->value; $1->symbol->is_array = 1; $$ = $1; }
 	| NAME '[' NAME ']'	{	/* make an exception for an initialized scalars */
-					$$ = nn(ZN, CONST, ZN, ZN);
+					$$ = models::Lextok::nn(ZN, CONST, ZN, ZN);
 					fprintf(stderr, "spin: %s:%d, warning: '%s' in array bound ",
 						$1->file_name->name.c_str(), $1->line_number, $3->symbol->name.c_str());
 					if ($3->symbol->init_value
@@ -554,14 +559,14 @@ vardcl  : NAME  		{ $1->symbol->value_type = 1; $$ = $1; }
 varref	: cmpnd			{ $$ = mk_explicit($1, Expand_Ok, NAME); }
 	;
 
-pfld	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
+pfld	: NAME			{ $$ = models::Lextok::nn($1, NAME, ZN, ZN);
 				  if ($1->symbol->is_array && !lexer_.GetInFor() && !need_arguments)
 				  {	loger::non_fatal("missing array index for '%s'",
 						$1->symbol->name);
 				  }
 				}
 	| NAME			{ owner = ZS; }
-	  '[' expr ']'		{ $$ = nn($1, NAME, $4, ZN); }
+	  '[' expr ']'		{ $$ = models::Lextok::nn($1, NAME, $4, ZN); }
 	;
 
 cmpnd	: pfld			{ Embedded++;
@@ -582,7 +587,7 @@ cmpnd	: pfld			{ Embedded++;
 	;
 
 sfld	: /* empty */		{ $$ = ZN; }
-	| '.' cmpnd %prec DOT	{ $$ = nn(ZN, '.', $2, ZN); }
+	| '.' cmpnd %prec DOT	{ $$ = models::Lextok::nn(ZN, '.', $2, ZN); }
 	;
 
 stmnt	: Special		{ $$ = $1; initialization_ok = 0; }
@@ -592,7 +597,7 @@ stmnt	: Special		{ $$ = $1; initialization_ok = 0; }
 	;
 
 for_pre : FOR l_par		{ lexer_.SetInFor(1);}
-	  varref		{ trapwonly($4 /*, "for" */);
+	  varref		{ $4->ProcessSymbolForRead();
 				  pushbreak(); /* moved up */
 				  $$ = $4;
 				}
@@ -603,12 +608,12 @@ for_post: '{' sequence OS '}'
 
 Special : varref RCV		{ Expand_Ok++; }
 	  rargs			{ Expand_Ok--; has_io++;
-				  $$ = nn($1,  'r', $1, $4);
+				  $$ = models::Lextok::nn($1,  'r', $1, $4);
 				  trackchanuse($4, ZN, 'R');
 				}
 	| varref SND		{ Expand_Ok++; }
 	  margs			{ Expand_Ok--; has_io++;
-				  $$ = nn($1, 's', $1, $4);
+				  $$ = models::Lextok::nn($1, 's', $1, $4);
 				  $$->value=0; trackchanuse($4, ZN, 'S');
 				  any_runs($4);
 				}
@@ -622,26 +627,26 @@ Special : varref RCV		{ Expand_Ok++; }
 	  for_post		{ $$ = for_body($5, 1);
 				}
 	| SELECT l_par varref ':' expr DOTDOT expr r_par {
-				  trapwonly($3 /*, "select" */);
+				  $3->ProcessSymbolForRead();
 				  $$ = sel_index($3, $5, $7);
 				}
-	| IF options FI 	{ $$ = nn($1, IF, ZN, ZN);
+	| IF options FI 	{ $$ = models::Lextok::nn($1, IF, ZN, ZN);
         			  $$->seq_list = $2->seq_list;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
 				  prune_opts($$);
         			}
 	| DO    		{ pushbreak(); }
-          options OD    	{ $$ = nn($1, DO, ZN, ZN);
+          options OD    	{ $$ = models::Lextok::nn($1, DO, ZN, ZN);
         			  $$->seq_list = $3->seq_list;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
 				  prune_opts($$);
         			}
-	| BREAK  		{ $$ = nn(ZN, GOTO, ZN, ZN);
+	| BREAK  		{ $$ = models::Lextok::nn(ZN, GOTO, ZN, ZN);
 				  $$->symbol = break_dest();
 				}
-	| GOTO NAME		{ $$ = nn($2, GOTO, ZN, ZN);
+	| GOTO NAME		{ $$ = models::Lextok::nn($2, GOTO, ZN, ZN);
 				  if ($2->symbol->type != 0
 				  &&  $2->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
@@ -649,7 +654,7 @@ Special : varref RCV		{ Expand_Ok++; }
 				  }
 				  $2->symbol->type = models::SymbolType::kLabel;
 				}
-	| NAME ':' stmnt	{ $$ = nn($1, ':',$3, ZN);
+	| NAME ':' stmnt	{ $$ = models::Lextok::nn($1, ':',$3, ZN);
 				  if ($1->symbol->type != 0
 				  &&  $1->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
@@ -657,79 +662,79 @@ Special : varref RCV		{ Expand_Ok++; }
 				  }
 				  $1->symbol->type = models::SymbolType::kLabel;
 				}
-	| NAME ':'		{ $$ = nn($1, ':',ZN,ZN);
+	| NAME ':'		{ $$ = models::Lextok::nn($1, ':',ZN,ZN);
 				  if ($1->symbol->type != 0
 				  &&  $1->symbol->type != models::SymbolType::kLabel) {
 				  	loger::non_fatal("bad label-name %s",
 					$1->symbol->name);
 				  }
-				  $$->left = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
+				  $$->left = models::Lextok::nn(ZN, 'c', models::Lextok::nn(ZN,CONST,ZN,ZN), ZN);
 				  $$->left->left->value = 1; /* skip */
 				  $1->symbol->type = models::SymbolType::kLabel;
 				}
-	| error			{ $$ = nn(ZN, 'c', nn(ZN,CONST,ZN,ZN), ZN);
+	| error			{ $$ = models::Lextok::nn(ZN, 'c', models::Lextok::nn(ZN,CONST,ZN,ZN), ZN);
 				  $$->left->value = 1; /* skip */
 				}
 	;
 
-Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
+Stmnt	: varref ASGN full_expr	{ $$ = models::Lextok::nn($1, ASGN, $1, $3);	/* assignment */
 				  trackvar($1, $3);
 				  nochan_manip($1, $3, 0);
 				  no_internals($1);
 				}
-	| varref INCR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->value = 1;
-				  $$ = nn(ZN,  '+', $1, $$);
-				  $$ = nn($1, ASGN, $1, $$);
+	| varref INCR		{ $$ = models::Lextok::nn(ZN,CONST, ZN, ZN); $$->value = 1;
+				  $$ = models::Lextok::nn(ZN,  '+', $1, $$);
+				  $$ = models::Lextok::nn($1, ASGN, $1, $$);
 				  trackvar($1, $1);
 				  no_internals($1);
 				  if ($1->symbol->type == CHAN)
 				   loger::fatal("arithmetic on chan");
 				}
-	| varref DECR		{ $$ = nn(ZN,CONST, ZN, ZN); $$->value = 1;
-				  $$ = nn(ZN,  '-', $1, $$);
-				  $$ = nn($1, ASGN, $1, $$);
+	| varref DECR		{ $$ = models::Lextok::nn(ZN,CONST, ZN, ZN); $$->value = 1;
+				  $$ = models::Lextok::nn(ZN,  '-', $1, $$);
+				  $$ = models::Lextok::nn($1, ASGN, $1, $$);
 				  trackvar($1, $1);
 				  no_internals($1);
 				  if ($1->symbol->type == CHAN)
 				   loger::fatal("arithmetic on chan id's");
 				}
-	| SET_P l_par two_args r_par	{ $$ = nn(ZN, SET_P, $3, ZN); lexer_.IncHasPriority(); }
+	| SET_P l_par two_args r_par	{ $$ = models::Lextok::nn(ZN, SET_P, $3, ZN); lexer_.IncHasPriority(); }
 	| PRINT	l_par STRING	{ realread = 0; }
-	  prargs r_par		{ $$ = nn($3, PRINT, $5, ZN); realread = 1; }
-	| PRINTM l_par varref r_par	{ $$ = nn(ZN, PRINTM, $3, ZN); }
-	| PRINTM l_par CONST r_par	{ $$ = nn(ZN, PRINTM, $3, ZN); }
-	| ASSERT full_expr    	{ $$ = nn(ZN, ASSERT, $2, ZN); AST_track($2, 0); }
+	  prargs r_par		{ $$ = models::Lextok::nn($3, PRINT, $5, ZN); realread = 1; }
+	| PRINTM l_par varref r_par	{ $$ = models::Lextok::nn(ZN, PRINTM, $3, ZN); }
+	| PRINTM l_par CONST r_par	{ $$ = models::Lextok::nn(ZN, PRINTM, $3, ZN); }
+	| ASSERT full_expr    	{ $$ = models::Lextok::nn(ZN, ASSERT, $2, ZN); AST_track($2, 0); }
 	| ccode			{ $$ = $1; }
 	| varref R_RCV		{ Expand_Ok++; }
 	  rargs			{ Expand_Ok--; has_io++;
-				  $$ = nn($1,  'r', $1, $4);
+				  $$ = models::Lextok::nn($1,  'r', $1, $4);
 				  $$->value = has_random = 1;
 				  trackchanuse($4, ZN, 'R');
 				}
 	| varref RCV		{ Expand_Ok++; }
 	  LT rargs GT		{ Expand_Ok--; has_io++;
-				  $$ = nn($1, 'r', $1, $5);
+				  $$ = models::Lextok::nn($1, 'r', $1, $5);
 				  $$->value = 2;	/* fifo poll */
 				  trackchanuse($5, ZN, 'R');
 				}
 	| varref R_RCV		{ Expand_Ok++; }
 	  LT rargs GT		{ Expand_Ok--; has_io++;	/* rrcv poll */
-				  $$ = nn($1, 'r', $1, $5);
+				  $$ = models::Lextok::nn($1, 'r', $1, $5);
 				  $$->value = 3; has_random = 1;
 				  trackchanuse($5, ZN, 'R');
 				}
 	| varref O_SND		{ Expand_Ok++; }
 	  margs			{ Expand_Ok--; has_io++;
-				  $$ = nn($1, 's', $1, $4);
+				  $$ = models::Lextok::nn($1, 's', $1, $4);
 				  $$->value = has_sorted = 1;
 				  trackchanuse($4, ZN, 'S');
 				  any_runs($4);
 				}
-	| full_expr		{ $$ = nn(ZN, 'c', $1, ZN); count_runs($$); }
-	| ELSE  		{ $$ = nn(ZN,ELSE,ZN,ZN);
+	| full_expr		{ $$ = models::Lextok::nn(ZN, 'c', $1, ZN); count_runs($$); }
+	| ELSE  		{ $$ = models::Lextok::nn(ZN,ELSE,ZN,ZN);
 				}
 	| ATOMIC   '{'   	{ open_seq(0); }
-          sequence OS '}'   	{ $$ = nn($1, ATOMIC, ZN, ZN);
+          sequence OS '}'   	{ $$ = models::Lextok::nn($1, ATOMIC, ZN, ZN);
         			  $$->seq_list = seqlist(close_seq(3), 0);
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -738,7 +743,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 	| D_STEP '{'		{ open_seq(0);
 				  rem_Seq();
 				}
-          sequence OS '}'   	{ $$ = nn($1, D_STEP, ZN, ZN);
+          sequence OS '}'   	{ $$ = models::Lextok::nn($1, D_STEP, ZN, ZN);
         			  $$->seq_list = seqlist(close_seq(4), 0);
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -746,25 +751,25 @@ Stmnt	: varref ASGN full_expr	{ $$ = nn($1, ASGN, $1, $3);	/* assignment */
 				  unrem_Seq();
         			}
 	| '{'			{ open_seq(0); }
-	  sequence OS '}'	{ $$ = nn(ZN, NON_ATOMIC, ZN, ZN);
+	  sequence OS '}'	{ $$ = models::Lextok::nn(ZN, NON_ATOMIC, ZN, ZN);
         			  $$->seq_list = seqlist(close_seq(5), 0);
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
         			}
 	| INAME			{ need_arguments++; }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($1->symbol, $4, ZN);
+	  			  lexer_.PickupInline($1->symbol, $4, ZN);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $7; }
 
 	| varref ASGN INAME	{ need_arguments++; /* inline call */ }
 	  l_par args r_par	{ initialization_ok = 0;
-				  pickup_inline($3->symbol, $6, $1);
+				  lexer_.PickupInline($3->symbol, $6, $1);
 				  need_arguments--;
 				}
 	  Stmnt			{ $$ = $9; }
-	| RETURN full_expr	{ $$ = return_statement($2); }	
+	| RETURN full_expr	{ $$ = lexer_.ReturnStatement($2); }	
 	;
 
 options : option		{ $$->seq_list = seqlist($1->sequence, 0); }
@@ -772,7 +777,7 @@ options : option		{ $$->seq_list = seqlist($1->sequence, 0); }
 	;
 
 option  : SEP   		{ open_seq(0); }
-          sequence OS		{ $$ = nn(ZN,0,ZN,ZN);
+          sequence OS		{ $$ = models::Lextok::nn(ZN,0,ZN,ZN);
 				  $$->sequence = close_seq(6);
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
@@ -816,30 +821,30 @@ const_expr:	CONST			{ $$ = $1; }
 	;
 
 expr    : l_par expr r_par		{ $$ = $2; }
-	| expr '+' expr		{ $$ = nn(ZN, '+', $1, $3); }
-	| expr '-' expr		{ $$ = nn(ZN, '-', $1, $3); }
-	| expr '*' expr		{ $$ = nn(ZN, '*', $1, $3); }
-	| expr '/' expr		{ $$ = nn(ZN, '/', $1, $3); }
-	| expr '%' expr		{ $$ = nn(ZN, '%', $1, $3); }
-	| expr '&' expr		{ $$ = nn(ZN, '&', $1, $3); }
-	| expr '^' expr		{ $$ = nn(ZN, '^', $1, $3); }
-	| expr '|' expr		{ $$ = nn(ZN, '|', $1, $3); }
-	| expr GT expr		{ $$ = nn(ZN,  GT, $1, $3); }
-	| expr LT expr		{ $$ = nn(ZN,  LT, $1, $3); }
-	| expr GE expr		{ $$ = nn(ZN,  GE, $1, $3); }
-	| expr LE expr		{ $$ = nn(ZN,  LE, $1, $3); }
-	| expr EQ expr		{ $$ = nn(ZN,  EQ, $1, $3); }
-	| expr NE expr		{ $$ = nn(ZN,  NE, $1, $3); }
-	| expr AND expr		{ $$ = nn(ZN, AND, $1, $3); }
-	| expr OR  expr		{ $$ = nn(ZN,  OR, $1, $3); }
-	| expr LSHIFT expr	{ $$ = nn(ZN, LSHIFT,$1, $3); }
-	| expr RSHIFT expr	{ $$ = nn(ZN, RSHIFT,$1, $3); }
-	| '~' expr		{ $$ = nn(ZN, '~', $2, ZN); }
-	| '-' expr %prec UMIN	{ $$ = nn(ZN, UMIN, $2, ZN); }
-	| SND expr %prec NEG	{ $$ = nn(ZN, '!', $2, ZN); }
+	| expr '+' expr		{ $$ = models::Lextok::nn(ZN, '+', $1, $3); }
+	| expr '-' expr		{ $$ = models::Lextok::nn(ZN, '-', $1, $3); }
+	| expr '*' expr		{ $$ = models::Lextok::nn(ZN, '*', $1, $3); }
+	| expr '/' expr		{ $$ = models::Lextok::nn(ZN, '/', $1, $3); }
+	| expr '%' expr		{ $$ = models::Lextok::nn(ZN, '%', $1, $3); }
+	| expr '&' expr		{ $$ = models::Lextok::nn(ZN, '&', $1, $3); }
+	| expr '^' expr		{ $$ = models::Lextok::nn(ZN, '^', $1, $3); }
+	| expr '|' expr		{ $$ = models::Lextok::nn(ZN, '|', $1, $3); }
+	| expr GT expr		{ $$ = models::Lextok::nn(ZN,  GT, $1, $3); }
+	| expr LT expr		{ $$ = models::Lextok::nn(ZN,  LT, $1, $3); }
+	| expr GE expr		{ $$ = models::Lextok::nn(ZN,  GE, $1, $3); }
+	| expr LE expr		{ $$ = models::Lextok::nn(ZN,  LE, $1, $3); }
+	| expr EQ expr		{ $$ = models::Lextok::nn(ZN,  EQ, $1, $3); }
+	| expr NE expr		{ $$ = models::Lextok::nn(ZN,  NE, $1, $3); }
+	| expr AND expr		{ $$ = models::Lextok::nn(ZN, AND, $1, $3); }
+	| expr OR  expr		{ $$ = models::Lextok::nn(ZN,  OR, $1, $3); }
+	| expr LSHIFT expr	{ $$ = models::Lextok::nn(ZN, LSHIFT,$1, $3); }
+	| expr RSHIFT expr	{ $$ = models::Lextok::nn(ZN, RSHIFT,$1, $3); }
+	| '~' expr		{ $$ = models::Lextok::nn(ZN, '~', $2, ZN); }
+	| '-' expr %prec UMIN	{ $$ = models::Lextok::nn(ZN, UMIN, $2, ZN); }
+	| SND expr %prec NEG	{ $$ = models::Lextok::nn(ZN, '!', $2, ZN); }
 	| l_par expr ARROW expr ':' expr r_par {
-				  $$ = nn(ZN,  OR, $4, $6);
-				  $$ = nn(ZN, '?', $2, $$);
+				  $$ = models::Lextok::nn(ZN,  OR, $4, $6);
+				  $$ = models::Lextok::nn(ZN, '?', $2, $$);
 				}
 	| RUN aname		{ Expand_Ok++;
 				  if (!context)
@@ -847,42 +852,43 @@ expr    : l_par expr r_par		{ $$ = $2; }
 				}
 	  l_par args r_par
 	  Opt_priority		{ Expand_Ok--;
-				  $$ = nn($2, RUN, $5, ZN);
+				  $$ = models::Lextok::nn($2, RUN, $5, ZN);
 				  $$->value = ($7) ? $7->value : 0;
 				  trackchanuse($5, $2, 'A'); trackrun($$);
 				}
-	| LEN l_par varref r_par	{ $$ = nn($3, LEN, $3, ZN); }
-	| ENABLED l_par expr r_par	{ $$ = nn(ZN, ENABLED, $3, ZN); has_enabled++; }
-	| GET_P l_par expr r_par	{ $$ = nn(ZN, GET_P, $3, ZN); lexer_.IncHasPriority(); }
+	| LEN l_par varref r_par	{ $$ = models::Lextok::nn($3, LEN, $3, ZN); }
+	| ENABLED l_par expr r_par	{ $$ = models::Lextok::nn(ZN, ENABLED, $3, ZN); has_enabled++; }
+	| GET_P l_par expr r_par	{ $$ = models::Lextok::nn(ZN, GET_P, $3, ZN); lexer_.IncHasPriority(); }
 	| varref RCV		{ Expand_Ok++; }
 	  '[' rargs ']'		{ Expand_Ok--; has_io++;
-				  $$ = nn($1, 'R', $1, $5);
+				  $$ = models::Lextok::nn($1, 'R', $1, $5);
 				}
 	| varref R_RCV		{ Expand_Ok++; }
 	  '[' rargs ']'		{ Expand_Ok--; has_io++;
-				  $$ = nn($1, 'R', $1, $5);
+				  $$ = models::Lextok::nn($1, 'R', $1, $5);
 				  $$->value = has_random = 1;
 				}
-	| varref		{ $$ = $1; trapwonly($1 /*, "varref" */); }
+	| varref		{ $$ = $1; 
+	$1->ProcessSymbolForRead(); }
 	| cexpr			{ $$ = $1; }
-	| CONST 		{ $$ = nn(ZN,CONST,ZN,ZN);
+	| CONST 		{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN);
 				  $$->is_mtype_token = $1->is_mtype_token;
 				  $$->symbol = $1->symbol;
 				  $$->value = $1->value;
 				}
-	| TIMEOUT		{ $$ = nn(ZN,TIMEOUT, ZN, ZN); }
-	| NONPROGRESS		{ $$ = nn(ZN,NONPROGRESS, ZN, ZN);
+	| TIMEOUT		{ $$ = models::Lextok::nn(ZN,TIMEOUT, ZN, ZN); }
+	| NONPROGRESS		{ $$ = models::Lextok::nn(ZN,NONPROGRESS, ZN, ZN);
 				  has_np++;
 				}
-	| PC_VAL l_par expr r_par	{ $$ = nn(ZN, PC_VAL, $3, ZN);
+	| PC_VAL l_par expr r_par	{ $$ = models::Lextok::nn(ZN, PC_VAL, $3, ZN);
 				  has_pcvalue++;
 				}
 	| PNAME '[' expr ']' '@' NAME
-	  			{ $$ = rem_lab($1->symbol, $3, $6->symbol); }
+	  			{ $$ = models::Lextok::CreateRemoteLabelAssignment($1->symbol, $3, $6->symbol); }
 	| PNAME '[' expr ']' ':' pfld
-	  			{ $$ = rem_var($1->symbol, $3, $6->symbol, $6->left); }
-	| PNAME '@' NAME	{ $$ = rem_lab($1->symbol, ZN, $3->symbol); }
-	| PNAME ':' pfld	{ $$ = rem_var($1->symbol, ZN, $3->symbol, $3->left); }
+	  			{ $$ = models::Lextok::CreateRemoteVariableAssignment($1->symbol, $3, $6->symbol, $6->left); }
+	| PNAME '@' NAME	{ $$ = models::Lextok::CreateRemoteLabelAssignment($1->symbol, ZN, $3->symbol); }
+	| PNAME ':' pfld	{ $$ = models::Lextok::CreateRemoteVariableAssignment($1->symbol, ZN, $3->symbol, $3->left); }
 	| ltl_expr		{ $$ = $1; }
 	;
 
@@ -894,35 +900,35 @@ full_expr:	expr		{ $$ = $1; }
 	| Expr			{ $$ = $1; }
 	;
 
-ltl_expr: expr UNTIL expr	{ $$ = nn(ZN, UNTIL,   $1, $3); }
-	| expr RELEASE expr	{ $$ = nn(ZN, RELEASE, $1, $3); }
-	| expr WEAK_UNTIL expr	{ $$ = nn(ZN, ALWAYS, $1, ZN);
-				  $$ = nn(ZN, OR, $$, nn(ZN, UNTIL, $1, $3));
+ltl_expr: expr UNTIL expr	{ $$ = models::Lextok::nn(ZN, UNTIL,   $1, $3); }
+	| expr RELEASE expr	{ $$ = models::Lextok::nn(ZN, RELEASE, $1, $3); }
+	| expr WEAK_UNTIL expr	{ $$ = models::Lextok::nn(ZN, ALWAYS, $1, ZN);
+				  $$ = models::Lextok::nn(ZN, OR, $$, models::Lextok::nn(ZN, UNTIL, $1, $3));
 				}
-	| expr IMPLIES expr	{ $$ = nn(ZN, '!', $1, ZN);
-				  $$ = nn(ZN, OR,  $$, $3);
+	| expr IMPLIES expr	{ $$ = models::Lextok::nn(ZN, '!', $1, ZN);
+				  $$ = models::Lextok::nn(ZN, OR,  $$, $3);
 				}
-	| expr EQUIV expr	{ $$ = nn(ZN, EQUIV,   $1, $3); }
-	| NEXT expr       %prec NEG { $$ = nn(ZN, NEXT,  $2, ZN); }
-	| ALWAYS expr     %prec NEG { $$ = nn(ZN, ALWAYS,$2, ZN); }
-	| EVENTUALLY expr %prec NEG { $$ = nn(ZN, EVENTUALLY, $2, ZN); }
+	| expr EQUIV expr	{ $$ = models::Lextok::nn(ZN, EQUIV,   $1, $3); }
+	| NEXT expr       %prec NEG { $$ = models::Lextok::nn(ZN, NEXT,  $2, ZN); }
+	| ALWAYS expr     %prec NEG { $$ = models::Lextok::nn(ZN, ALWAYS,$2, ZN); }
+	| EVENTUALLY expr %prec NEG { $$ = models::Lextok::nn(ZN, EVENTUALLY, $2, ZN); }
 	;
 
 	/* an Expr cannot be negated - to protect Probe expressions */
 Expr	: Probe			{ $$ = $1; }
 	| l_par Expr r_par	{ $$ = $2; }
-	| Expr AND Expr		{ $$ = nn(ZN, AND, $1, $3); }
-	| Expr AND expr		{ $$ = nn(ZN, AND, $1, $3); }
-	| expr AND Expr		{ $$ = nn(ZN, AND, $1, $3); }
-	| Expr OR  Expr		{ $$ = nn(ZN,  OR, $1, $3); }
-	| Expr OR  expr		{ $$ = nn(ZN,  OR, $1, $3); }
-	| expr OR  Expr		{ $$ = nn(ZN,  OR, $1, $3); }
+	| Expr AND Expr		{ $$ = models::Lextok::nn(ZN, AND, $1, $3); }
+	| Expr AND expr		{ $$ = models::Lextok::nn(ZN, AND, $1, $3); }
+	| expr AND Expr		{ $$ = models::Lextok::nn(ZN, AND, $1, $3); }
+	| Expr OR  Expr		{ $$ = models::Lextok::nn(ZN,  OR, $1, $3); }
+	| Expr OR  expr		{ $$ = models::Lextok::nn(ZN,  OR, $1, $3); }
+	| expr OR  Expr		{ $$ = models::Lextok::nn(ZN,  OR, $1, $3); }
 	;
 
-Probe	: FULL l_par varref r_par	{ $$ = nn($3,  FULL, $3, ZN); }
-	| NFULL l_par varref r_par	{ $$ = nn($3, NFULL, $3, ZN); }
-	| EMPTY l_par varref r_par	{ $$ = nn($3, EMPTY, $3, ZN); }
-	| NEMPTY l_par varref r_par	{ $$ = nn($3,NEMPTY, $3, ZN); }
+Probe	: FULL l_par varref r_par	{ $$ = models::Lextok::nn($3,  FULL, $3, ZN); }
+	| NFULL l_par varref r_par	{ $$ = models::Lextok::nn($3, NFULL, $3, ZN); }
+	| EMPTY l_par varref r_par	{ $$ = models::Lextok::nn($3, EMPTY, $3, ZN); }
+	| NEMPTY l_par varref r_par	{ $$ = models::Lextok::nn($3,NEMPTY, $3, ZN); }
 	;
 
 Opt_enabler:	/* none */	{ $$ = ZN; }
@@ -959,11 +965,11 @@ basetype: TYPE oname		{ if ($2)
 	| error			/* e.g., unsigned ':' const */
 	;
 
-typ_list: basetype		{ $$ = nn($1, $1->value, ZN, ZN); }
-	| basetype ',' typ_list	{ $$ = nn($1, $1->value, ZN, $3); }
+typ_list: basetype		{ $$ = models::Lextok::nn($1, $1->value, ZN, ZN); }
+	| basetype ',' typ_list	{ $$ = models::Lextok::nn($1, $1->value, ZN, $3); }
 	;
 
-two_args:	expr ',' expr	{ $$ = nn(ZN, ',', $1, $3); }
+two_args:	expr ',' expr	{ $$ = models::Lextok::nn(ZN, ',', $1, $3); }
 	;
 
 args    : /* empty */		{ $$ = ZN; }
@@ -978,32 +984,37 @@ margs   : arg			{ $$ = $1; }
 	| expr l_par arg r_par	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
-				  	$$ = nn(ZN, ',', $1, $3);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, $3);
 				}
 	;
 
 arg     : expr			{ if ($1->node_type == ',')
 					$$ = $1;
 				  else
-				  	$$ = nn(ZN, ',', $1, ZN);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, ZN);
 				}
 	| expr ',' arg		{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
-				  	$$ = nn(ZN, ',', $1, $3);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, $3);
 				}
 	;
 
-rarg	: varref		{ $$ = $1; trackvar($1, $1);
-				  trapwonly($1 /*, "rarg" */); }
-	| EVAL l_par expr r_par	{ $$ = nn(ZN,EVAL,$3,ZN);
-				  trapwonly($1 /*, "eval rarg" */); }
-	| CONST 		{ $$ = nn(ZN,CONST,ZN,ZN);
+rarg	: varref  { 
+					$$ = $1; 
+					trackvar($1, $1);
+					$1->ProcessSymbolForRead();
+				  }
+	| EVAL l_par expr r_par	{ 
+				$$ = models::Lextok::nn(ZN,EVAL,$3,ZN);
+				$1->ProcessSymbolForRead();
+				}
+	| CONST 		{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN);
 				  $$->is_mtype_token = $1->is_mtype_token;
 				  $$->symbol = $1->symbol;
 				  $$->value = $1->value;
 				}
-	| '-' CONST %prec UMIN	{ $$ = nn(ZN,CONST,ZN,ZN);
+	| '-' CONST %prec UMIN	{ $$ = models::Lextok::nn(ZN,CONST,ZN,ZN);
 				  $$->value = - ($2->value);
 				}
 	;
@@ -1011,25 +1022,25 @@ rarg	: varref		{ $$ = $1; trackvar($1, $1);
 rargs	: rarg			{ if ($1->node_type == ',')
 					$$ = $1;
 				  else
-				  	$$ = nn(ZN, ',', $1, ZN);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, ZN);
 				}
 	| rarg ',' rargs	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
-				  	$$ = nn(ZN, ',', $1, $3);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, $3);
 				}
 	| rarg l_par rargs r_par	{ if ($1->node_type == ',')
 					$$ = tail_add($1, $3);
 				  else
-				  	$$ = nn(ZN, ',', $1, $3);
+				  	$$ = models::Lextok::nn(ZN, ',', $1, $3);
 				}
 	| l_par rargs r_par		{ $$ = $2; }
 	;
 
-nlst	: NAME			{ $$ = nn($1, NAME, ZN, ZN);
-				  $$ = nn(ZN, ',', $$, ZN); }
-	| nlst NAME 		{ $$ = nn($2, NAME, ZN, ZN);
-				  $$ = nn(ZN, ',', $$, $1);
+nlst	: NAME			{ $$ = models::Lextok::nn($1, NAME, ZN, ZN);
+				  $$ = models::Lextok::nn(ZN, ',', $$, ZN); }
+	| nlst NAME 		{ $$ = models::Lextok::nn($2, NAME, ZN, ZN);
+				  $$ = models::Lextok::nn(ZN, ',', $$, $1);
 				}
 	| nlst ','		{ $$ = $1; /* commas optional */ }
 	;
@@ -1088,13 +1099,9 @@ recursive(FILE *fd, models::Lextok *n)
 	}
 }
 
-#ifdef __MINGW32__
-extern ssize_t getline(char **, size_t *, FILE *); /* see main.c */
-#endif
-
 static models::Lextok *
 ltl_to_string(models::Lextok *n)
-{	models::Lextok *m = nn(ZN, 0, ZN, ZN);
+{	models::Lextok *m = models::Lextok::nn(ZN, 0, ZN, ZN);
 	ssize_t retval;
 	char *ltl_formula = NULL;
 	FILE *tf = fopen(TMP_FILE1, "w+"); /* tmpfile() fails on Windows 7 */
@@ -1152,4 +1159,36 @@ void
 yyerror(char *fmt, ...)
 {
 	loger::non_fatal(fmt );
+}
+//TODO: 
+void ltl_list(const std::string &, const std::string &) {
+  if (true
+      // s_trail || launch_settings.need_to_analyze ||
+      //       dumptab
+      ) /* when generating pan.c or replaying a trace */
+  {
+   /* if (!ltl_claims) {
+      ltl_claims = "_spin_nvr.tmp";
+       if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
+         loger::fatal("cannot open tmp file %s", ltl_claims);
+       }
+       tl_out = fd_ltl;
+     */
+    }
+    /*
+    add_ltl = (char **)emalloc(5 * sizeof(char *));
+    add_ltl[1] = "-c";
+    add_ltl[2] = nm;
+    add_ltl[3] = "-f";
+    add_ltl[4] = (char *)emalloc(strlen(fm) + 4);
+    strcpy(add_ltl[4], "!(");
+    strcat(add_ltl[4], fm);
+    strcat(add_ltl[4], ")");
+    */
+    /* add_ltl[4] = fm; */
+    // TODO:    nr_errs += tl_main(4, add_ltl);
+
+    //fflush(tl_out);
+    /* should read this file after the main file is read */
+ // }
 }

@@ -17,7 +17,6 @@ set(SPIN_SOURCES
     src/sym.cpp
     src/vars.cpp
     src/main.cpp
-    src/old_main.cpp
     src/msc_tcl.cpp
     src/mesg.cpp
     src/flow.cpp
@@ -44,12 +43,18 @@ set(SPIN_SOURCES
     src/utils/seed/seed.cpp
     src/utils/verbose/verbose.hpp
     src/utils/verbose/verbose.cpp
+    src/utils/memory.hpp
+    src/utils/memory.cpp
     src/lexer/lexer.hpp
     src/lexer/lexer.cpp
     src/lexer/names.cpp
     src/lexer/names.hpp
     src/lexer/file_stream.cpp
     src/lexer/file_stream.hpp
+    src/lexer/inline_processor.cpp
+    src/lexer/inline_processor.hpp
+    src/lexer/line_number.cpp
+    src/lexer/line_number.hpp
     src/lexer/yylex.cpp
     src/lexer/yylex.hpp
     src/lexer/helpers.hpp
@@ -70,6 +75,16 @@ set(SPIN_SOURCES
     src/main/pre_proc_settings.cpp
     src/main/pan_processor.hpp
     src/main/pan_processor.cpp
+    src/models/access.hpp
+    src/models/symbol.hpp
+    src/models/symbol.cpp
+    src/models/fms.hpp
+    src/models/lextok.hpp
+    src/models/lextok.cpp
+    src/models/mtypes.hpp
+    src/models/slicer.hpp
+    src/models/queue.hpp
+    src/models/itype.hpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

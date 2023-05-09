@@ -21,7 +21,7 @@ struct Transition {
   Symbol *name;
   Node *cond;
   int redundant, merged, marked;
-  struct Transition *nxt;
+  struct Transition *next;
 };
 
 struct State {
@@ -31,7 +31,7 @@ struct State {
   unsigned char redundant;
   unsigned char accepting;
   unsigned char reachable;
-  struct State *nxt;
+  struct State *next;
 };
 
 static State *never = (State *)0;
@@ -87,7 +87,7 @@ static Node *Prune(Node *p) {
 
 static State *findstate(char *nm) {
   State *b;
-  for (b = never; b; b = b->nxt)
+  for (b = never; b; b = b->next)
     if (!strcmp(b->name->name, nm))
       return b;
   if (strcmp(nm, "accept_all")) {
@@ -116,7 +116,7 @@ static void Dfs(State *b) {
 
   if (b->redundant)
     printf("/* redundant state %s */\n", b->name->name);
-  for (t = b->trans; t; t = t->nxt) {
+  for (t = b->trans; t; t = t->next) {
     if (!t->redundant) {
       Dfs(findstate(t->name->name));
       if (!hitsall && strcmp(t->name->name, "accept_all") == 0)
@@ -133,11 +133,11 @@ void retarget(char *from, char *to) {
   if (tl_verbose)
     printf("replace %s with %s\n", from, to);
 
-  for (b = never; b; b = b->nxt) {
+  for (b = never; b; b = b->next) {
     if (!strcmp(b->name->name, from))
       b->redundant = 1;
     else
-      for (t = b->trans; t; t = t->nxt) {
+      for (t = b->trans; t; t = t->next) {
         if (!strcmp(t->name->name, from))
           t->name = To;
       }
@@ -259,11 +259,11 @@ static void clutter(void) {
   State *p;
   Transition *s;
 
-  for (p = never; p; p = p->nxt)
-    for (s = p->trans; s; s = s->nxt) {
+  for (p = never; p; p = p->next)
+    for (s = p->trans; s; s = s->next) {
       s->cond = unclutter(s->cond, p->name->name);
       if (s->cond && s->cond->ntyp == FALSE) {
-        if (s != p->trans || s->nxt)
+        if (s != p->trans || s->next)
           s->redundant = 1;
       }
     }
@@ -272,7 +272,7 @@ static void clutter(void) {
 static void showtrans(State *a) {
   Transition *s;
 
-  for (s = a->trans; s; s = s->nxt) {
+  for (s = a->trans; s; s = s->next) {
     printf("%s ", s->name ? s->name->name : "-");
     dump(s->cond);
     printf(" %d %d %d\n", s->redundant, s->merged, s->marked);
@@ -285,15 +285,15 @@ static int mergetrans(void) {
   Node *nc;
   int cnt = 0;
 
-  for (b = never; b; b = b->nxt) {
+  for (b = never; b; b = b->next) {
     if (!b->reachable)
       continue;
 
-    for (s = b->trans; s; s = s->nxt) {
+    for (s = b->trans; s; s = s->next) {
       if (s->redundant)
         continue;
 
-      for (t = s->nxt; t; t = t->nxt)
+      for (t = s->next; t; t = t->next)
         if (!t->redundant && !strcmp(s->name->name, t->name->name)) {
           if (tl_verbose) {
             printf("===\nstate %s, trans to %s redundant\n", b->name->name,
@@ -334,11 +334,11 @@ static int all_trans_match(State *a, State *b) {
   if (a->accepting != b->accepting)
     goto done;
 
-  for (s = a->trans; s; s = s->nxt) {
+  for (s = a->trans; s; s = s->next) {
     if (s->redundant)
       continue;
     found = 0;
-    for (t = b->trans; t; t = t->nxt) {
+    for (t = b->trans; t; t = t->next) {
       if (t->redundant)
         continue;
       if (sametrans(s, t)) {
@@ -350,11 +350,11 @@ static int all_trans_match(State *a, State *b) {
     if (!found)
       goto done;
   }
-  for (s = b->trans; s; s = s->nxt) {
+  for (s = b->trans; s; s = s->next) {
     if (s->redundant || s->marked)
       continue;
     found = 0;
-    for (t = a->trans; t; t = t->nxt) {
+    for (t = a->trans; t; t = t->next) {
       if (t->redundant)
         continue;
       if (sametrans(s, t)) {
@@ -367,7 +367,7 @@ static int all_trans_match(State *a, State *b) {
   }
   result = 1;
 done:
-  for (s = b->trans; s; s = s->nxt)
+  for (s = b->trans; s; s = s->next)
     s->marked = 0;
   return result;
 }
@@ -381,11 +381,11 @@ static int all_bucky(State *a, State *b) {
   Transition *s, *t;
   int found, result = 0;
 
-  for (s = a->trans; s; s = s->nxt) {
+  for (s = a->trans; s; s = s->next) {
     if (s->redundant)
       continue;
     found = 0;
-    for (t = b->trans; t; t = t->nxt) {
+    for (t = b->trans; t; t = t->next) {
       if (t->redundant)
         continue;
 
@@ -408,11 +408,11 @@ static int all_bucky(State *a, State *b) {
     if (!found)
       goto done;
   }
-  for (s = b->trans; s; s = s->nxt) {
+  for (s = b->trans; s; s = s->next) {
     if (s->redundant || s->marked)
       continue;
     found = 0;
-    for (t = a->trans; t; t = t->nxt) {
+    for (t = a->trans; t; t = t->next) {
       if (t->redundant)
         continue;
 
@@ -436,7 +436,7 @@ static int all_bucky(State *a, State *b) {
   }
   result = 1;
 done:
-  for (s = b->trans; s; s = s->nxt)
+  for (s = b->trans; s; s = s->next)
     s->marked = 0;
   return result;
 }
@@ -448,14 +448,14 @@ static int buckyballs(void) {
   do {
     m = 0;
     cnt++;
-    for (a = never; a; a = a->nxt) {
+    for (a = never; a; a = a->next) {
       if (!a->reachable)
         continue;
 
       if (a->redundant)
         continue;
 
-      for (b = a->nxt; b; b = b->nxt) {
+      for (b = a->next; b; b = b->next) {
         if (!b->reachable)
           continue;
 
@@ -507,14 +507,14 @@ static int mergestates(int v) {
   do {
     m = 0;
     cnt++;
-    for (a = never; a; a = a->nxt) {
+    for (a = never; a; a = a->next) {
       if (v && !a->reachable)
         continue;
 
       if (a->redundant)
         continue; /* 3.3.10 */
 
-      for (b = a->nxt; b; b = b->nxt) {
+      for (b = a->next; b; b = b->next) {
         if (v && !b->reachable)
           continue;
 
@@ -562,7 +562,7 @@ rev_trans(Transition *t) /* print transitions  in reverse order... */
 {
   if (!t)
     return;
-  rev_trans(t->nxt);
+  rev_trans(t->next);
 
   if (t->redundant && !tl_verbose)
     return;
@@ -628,9 +628,9 @@ void addtrans(Graph *col, char *from, Node *op, char *to) {
   if (t->cond)
     t->cond = rewrite(t->cond);
 
-  for (b = never; b; b = b->nxt)
+  for (b = never; b; b = b->next)
     if (!strcmp(b->name->name, from)) {
-      t->nxt = b->trans;
+      t->next = b->trans;
       b->trans = t;
       return;
     }
@@ -640,13 +640,13 @@ void addtrans(Graph *col, char *from, Node *op, char *to) {
   b->trans = t;
   if (!strncmp(from, "accept", 6))
     b->accepting = 1;
-  b->nxt = never;
+  b->next = never;
   never = b;
 }
 
 static void clr_reach(void) {
   State *p;
-  for (p = never; p; p = p->nxt)
+  for (p = never; p; p = p->next)
     p->reachable = 0;
   hitsall = 0;
 }
@@ -690,7 +690,7 @@ void fsm_print(void) {
     fprintf(tl_out, "	0 /* false */;\n");
   } else {
     printstate(b); /* init state must be first */
-    for (b = never; b; b = b->nxt)
+    for (b = never; b; b = b->next)
       printstate(b);
   }
   if (hitsall)

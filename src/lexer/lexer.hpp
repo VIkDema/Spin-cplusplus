@@ -51,6 +51,13 @@ public:
   int GetImpliedSemis() { return implied_semis_; }
   void SetImpliedSemis(int implied_semis) { implied_semis_ = implied_semis; }
 
+  models::Symbol *HandleInline(models::Symbol *s, models::Lextok *nms);
+  models::Lextok *ReturnStatement(models::Lextok *Lextok);
+
+
+  void PickupInline(models::Symbol *t, models::Lextok *apars,
+                   models::Lextok *rval);
+
 private:
   int pre_proc();
   void do_directive(int first_char);
@@ -59,9 +66,11 @@ private:
               int max_size = 0);
   bool ScatTo(int stop);
   int Follow(int token, int ifyes, int ifno);
+  void Precondition(char *q);
+  void DefInline(models::Symbol *s, int ln, char *ptr, char *prc,
+                 models::Lextok *nms);
 
   file::FileStream stream_;
-  ScopeProcessor& scope_;
   ::helpers::Deferred deferred_;
 
   std::vector<std::string> inline_arguments_;

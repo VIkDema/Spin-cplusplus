@@ -5,6 +5,7 @@
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
+#include "lexer/line_number.hpp"
 extern LaunchSettings launch_settings;
 constexpr int kMaxDstep = 2048; // было 512
 
@@ -14,7 +15,7 @@ int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
 static int Tojump[kMaxDstep], Jumpto[kMaxDstep], Special[kMaxDstep];
-static void putCode(FILE *, Element *, Element *, Element *, int);
+static void putCode(FILE *, models::Element *, models::Element *, models::Element *, int);
 
 extern int Pid_nr, OkBreak;
 
@@ -91,14 +92,14 @@ static int FirstTime(int n) {
   return 1;
 }
 
-static void illegal(Element *e, char *str) {
+static void illegal(models::Element *e, char *str) {
   printf("illegal operator in 'd_step:' '");
   comment(stdout, e->n, 0);
   printf("'\n");
   loger::fatal("'%s'", str);
 }
 
-static void filterbad(Element *e) {
+static void filterbad(models::Element *e) {
   switch (e->n->node_type) {
   case ASSERT:
   case PRINT:
@@ -132,11 +133,11 @@ static void filterbad(Element *e) {
   }
 }
 
-static int CollectGuards(FILE *fd, Element *e, int inh) {
-  SeqList *h;
-  Element *ee;
+static int CollectGuards(FILE *fd, models::Element *e, int inh) {
+  models::SeqList *h;
+  models::Element *ee;
 
-  for (h = e->sub; h; h = h->nxt) {
+  for (h = e->sub; h; h = h->next) {
     ee = huntstart(h->this_sequence->frst);
     filterbad(ee);
     switch (ee->n->node_type) {
@@ -147,8 +148,8 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
       inh += CollectGuards(fd, ee, inh);
       break;
     case '.':
-      if (ee->nxt->n->node_type == DO)
-        inh += CollectGuards(fd, ee->nxt, inh);
+      if (ee->next->n->node_type == DO)
+        inh += CollectGuards(fd, ee->next, inh);
       break;
     case ELSE:
       if (inh++ > 0)
@@ -205,7 +206,7 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
   return inh;
 }
 
-int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
+int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards, int ln,
             int seqno) {
   int isg = 0;
   static std::string buf;
@@ -216,7 +217,7 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   switch (s->frst->n->node_type) {
   case UNLESS:
     loger::non_fatal("'unless' inside d_step - ignored");
-    return putcode(fd, s->frst->n->seq_list->this_sequence, nxt, 0, ln, seqno);
+    return putcode(fd, s->frst->n->seq_list->this_sequence, next, 0, ln, seqno);
   case NON_ATOMIC:
     (void)putcode(fd, s->frst->n->seq_list->this_sequence, ZE, 1, ln, seqno);
     if (justguards)
@@ -230,9 +231,9 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
     isg = 1;
     break;
   case '.':
-    if (s->frst->nxt->n->node_type == DO) {
+    if (s->frst->next->n->node_type == DO) {
       fprintf(fd, "if (!(");
-      if (!CollectGuards(fd, s->frst->nxt, 0))
+      if (!CollectGuards(fd, s->frst->next, 0))
         fprintf(fd, "1");
       fprintf(fd, "))\n\t\t\tcontinue;");
       isg = 1;
@@ -309,36 +310,35 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   fprintf(fd, "\n\t\tsv_save();\n\t\t");
   buf = "Uerror(\"block in d_step seq, line " + std::to_string(ln) + "\")";
   NextLab[0] = buf;
-  putCode(fd, s->frst, s->extent, nxt, isg);
+  putCode(fd, s->frst, s->extent, next, isg);
 
-  if (nxt) {
+  if (next) {
     extern models::Symbol *Fname;
-    extern int lineno;
 
-    if (FirstTime(nxt->Seqno) &&
-        (!(nxt->status & DONE2) || !(nxt->status & D_ATOM))) {
-      fprintf(fd, "S_%.3d_0: /* 1 */\n", nxt->Seqno);
-      nxt->status |= DONE2;
+    if (FirstTime(next->Seqno) &&
+        (!(next->status & DONE2) || !(next->status & D_ATOM))) {
+      fprintf(fd, "S_%.3d_0: /* 1 */\n", next->Seqno);
+      next->status |= DONE2;
       LastGoto = 0;
     }
-    Sourced(nxt->Seqno, 1);
-    lineno = ln;
-    Fname = nxt->n->file_name;
+    Sourced(next->Seqno, 1);
+    file::LineNumber::Set(ln);
+    Fname = next->n->file_name;
     Mopup(fd);
   }
   unskip(s->frst->seqno);
   return LastGoto;
 }
 
-static void putCode(FILE *fd, Element *f, Element *last, Element *next,
+static void putCode(FILE *fd, models::Element *f, models::Element *last, models::Element *next,
                     int isguard) {
-  Element *e, *N;
-  SeqList *h;
+  models::Element *e, *N;
+  models::SeqList *h;
   int i;
   std::string NextOpt;
   static int bno = 0;
 
-  for (e = f; e; e = e->nxt) {
+  for (e = f; e; e = e->next) {
     if (e->status & DONE2)
       continue;
     e->status |= DONE2;
@@ -359,14 +359,14 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
       switch (e->n->node_type) {
       case NON_ATOMIC:
         h = e->n->seq_list;
-        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, e->nxt,
+        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, e->next,
                 0);
         break;
       case BREAK:
         if (LastGoto)
           break;
-        if (e->nxt) {
-          i = target(huntele(e->nxt, e->status, -1))->Seqno;
+        if (e->next) {
+          i = target(huntele(e->next, e->status, -1))->Seqno;
           fprintf(fd, "\t\tgoto S_%.3d_0;	", i);
           fprintf(fd, "/* 'break' */\n");
           Dested(i);
@@ -390,8 +390,8 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
       case '.':
         if (LastGoto)
           break;
-        if (e->nxt && (e->nxt->status & DONE2)) {
-          i = e->nxt->Seqno;
+        if (e->next && (e->next->status & DONE2)) {
+          i = e->next->Seqno;
           fprintf(fd, "\t\tgoto S_%.3d_0;", i);
           fprintf(fd, " /* '.' */\n");
           Dested(i);
@@ -407,21 +407,21 @@ static void putCode(FILE *fd, Element *f, Element *last, Element *next,
         GenCode = IsGuard = isguard = LastGoto = 0;
         break;
       }
-      i = e->nxt ? e->nxt->Seqno : 0;
-      if (e->nxt && (e->nxt->status & DONE2) && !LastGoto) {
+      i = e->next ? e->next->Seqno : 0;
+      if (e->next && (e->next->status & DONE2) && !LastGoto) {
         fprintf(fd, "\t\tgoto S_%.3d_0; ", i);
         fprintf(fd, "/* ';' */\n");
         Dested(i);
         break;
       }
     } else {
-      for (h = e->sub, i = 1; h; h = h->nxt, i++) {
+      for (h = e->sub, i = 1; h; h = h->next, i++) {
         std::ostringstream oss;
         oss << "goto S_" << std::setfill('0') << std::setw(3) << e->Seqno << "_"
             << i;
         NextOpt = oss.str();
         NextLab[++Level] = NextOpt;
-        N = (e->n && e->n->node_type == DO) ? e : e->nxt;
+        N = (e->n && e->n->node_type == DO) ? e : e->next;
         putCode(fd, h->this_sequence->frst, h->this_sequence->extent, N, 1);
         Level--;
         fprintf(fd, "%s: /* 3 */\n", &NextOpt[5]);

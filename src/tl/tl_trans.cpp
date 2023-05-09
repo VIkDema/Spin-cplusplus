@@ -88,22 +88,22 @@ static void dump_graph(Graph *g) {
   Node *n1;
 
   printf("\n\tnew:\t");
-  for (n1 = g->New; n1; n1 = n1->nxt) {
+  for (n1 = g->New; n1; n1 = n1->next) {
     dump(n1);
     printf(", ");
   }
   printf("\n\told:\t");
-  for (n1 = g->Old; n1; n1 = n1->nxt) {
+  for (n1 = g->Old; n1; n1 = n1->next) {
     dump(n1);
     printf(", ");
   }
   printf("\n\tnxt:\t");
-  for (n1 = g->Next; n1; n1 = n1->nxt) {
+  for (n1 = g->Next; n1; n1 = n1->next) {
     dump(n1);
     printf(", ");
   }
   printf("\n\tother:\t");
-  for (n1 = g->Other; n1; n1 = n1->nxt) {
+  for (n1 = g->Other; n1; n1 = n1->next) {
     dump(n1);
     printf(", ");
   }
@@ -114,7 +114,7 @@ static void push_stack(Graph *g) {
   if (!g)
     return;
 
-  g->nxt = Nodes_Stack;
+  g->next = Nodes_Stack;
   Nodes_Stack = g;
   if (tl_verbose) {
     Symbol *z;
@@ -132,7 +132,7 @@ static Graph *pop_stack(void) {
   Graph *g = Nodes_Stack;
 
   if (g)
-    Nodes_Stack = g->nxt;
+    Nodes_Stack = g->next;
 
   Stack_sz--;
 
@@ -155,7 +155,7 @@ static int has_clause(int tok, Graph *p, Node *n) {
     return has_clause(tok, p, n->left) || has_clause(tok, p, n->right);
   }
 
-  for (q = p->Other; q; q = q->nxt) {
+  for (q = p->Other; q; q = q->next) {
     qq = right_linked(q);
     if (anywhere(tok, n, qq))
       return 1;
@@ -171,7 +171,7 @@ static void mk_grn(Node *n) {
 
   n = right_linked(n);
 more:
-  for (p = Nodes_Set; p; p = p->nxt)
+  for (p = Nodes_Set; p; p = p->next)
     if (p->outgoing && has_clause(AND, p, n)) {
       p->isgrn[p->grncnt++] = (unsigned char)Red_cnt;
       Lab_cnt++;
@@ -191,7 +191,7 @@ static void mk_red(Node *n) {
     return;
 
   n = right_linked(n);
-  for (p = Nodes_Set; p; p = p->nxt) {
+  for (p = Nodes_Set; p; p = p->next) {
     if (p->outgoing && has_clause(0, p, n)) {
       if (p->redcnt >= 63)
         loger::fatal("too many Untils", (char *)0);
@@ -228,10 +228,10 @@ static Graph *findgraph(char *nm) {
   Graph *p;
   Mapping *m;
 
-  for (p = Nodes_Set; p; p = p->nxt)
+  for (p = Nodes_Set; p; p = p->next)
     if (!strcmp(p->name->name, nm))
       return p;
-  for (m = Mapped; m; m = m->nxt)
+  for (m = Mapped; m; m = m->next)
     if (strcmp(m->from, nm) == 0)
       return m->to;
 
@@ -414,7 +414,7 @@ static void mkbuchi(void) {
   char curnm[64];
 
   for (k = 0; k <= Max_Red; k++)
-    for (p = Nodes_Set; p; p = p->nxt) {
+    for (p = Nodes_Set; p; p = p->next) {
       if (!p->outgoing)
         continue;
       if (k != 0 && !strcmp(p->name->name, "init") && Max_Red != 0)
@@ -494,12 +494,12 @@ static void fixinit(Node *orig) {
   ng(tl_lookup("init"), ZS, ZN, ZN, ZN);
   p1 = pop_stack();
   if (p1) {
-    p1->nxt = Nodes_Set;
+    p1->next = Nodes_Set;
     p1->Other = p1->Old = orig;
     Nodes_Set = p1;
   }
 
-  for (g = Nodes_Set; g; g = g->nxt) {
+  for (g = Nodes_Set; g; g = g->next) {
     for (q1 = g->incoming; q1; q1 = q2) {
       q2 = q1->next;
       Addout(g->name->name, q1->name);
@@ -512,7 +512,7 @@ static void fixinit(Node *orig) {
 static Node *flatten(Node *p) {
   Node *q, *r, *z = ZN;
 
-  for (q = p; q; q = q->nxt) {
+  for (q = p; q; q = q->next) {
     r = dupnode(q);
     if (z)
       z = tl_nn(AND, r, z);
@@ -528,10 +528,10 @@ static Node *flatten(Node *p) {
 static Node *Duplicate(Node *n) {
   Node *n1, *n2, *lst = ZN, *d = ZN;
 
-  for (n1 = n; n1; n1 = n1->nxt) {
+  for (n1 = n; n1; n1 = n1->next) {
     n2 = dupnode(n1);
     if (lst) {
-      lst->nxt = n2;
+      lst->next = n2;
       lst = n2;
     } else
       d = lst = n2;
@@ -641,12 +641,12 @@ static int not_new(Graph *g) {
     dump_graph(g);
 
   Debug2("\tformula-old: [%s]\n", g->oldstring ? g->oldstring->name : "true");
-  Debug2("\tformula-nxt: [%s]\n", g->nxtstring ? g->nxtstring->name : "true");
-  for (q1 = Nodes_Set; q1; q1 = q1->nxt) {
+  Debug2("\tformula-next: [%s]\n", g->nxtstring ? g->nxtstring->name : "true");
+  for (q1 = Nodes_Set; q1; q1 = q1->next) {
     Debug2("	compare old to: %s", q1->name->name);
     Debug2(" [%s]", q1->oldstring ? q1->oldstring->name : "true");
 
-    Debug2("	compare nxt to: %s", q1->name->name);
+    Debug2("	compare next to: %s", q1->name->name);
     Debug2(" [%s]", q1->nxtstring ? q1->nxtstring->name : "true");
 
     if (q1->oldstring != g->oldstring || q1->nxtstring != g->nxtstring) {
@@ -661,14 +661,14 @@ static int not_new(Graph *g) {
     /* check if there's anything in g->Other that needs
        adding to q1->Other
     */
-    for (n2 = g->Other; n2; n2 = n2->nxt) {
-      for (n1 = q1->Other; n1; n1 = n1->nxt)
+    for (n2 = g->Other; n2; n2 = n2->next) {
+      for (n1 = q1->Other; n1; n1 = n1->next)
         if (isequal(n1, n2))
           break;
       if (!n1) {
         Node *n3 = dupnode(n2);
-        /* don't mess up n2->nxt */
-        n3->nxt = q1->Other;
+        /* don't mess up n2->next */
+        n3->next = q1->Other;
         q1->Other = n3;
       }
     }
@@ -676,19 +676,19 @@ static int not_new(Graph *g) {
     map = (Mapping *)tl_emalloc(sizeof(Mapping));
     map->from = g->name->name;
     map->to = q1;
-    map->nxt = Mapped;
+    map->next = Mapped;
     Mapped = map;
 
     for (n1 = g->Other; n1; n1 = n2) {
-      n2 = n1->nxt;
+      n2 = n1->next;
       releasenode(1, n1);
     }
     for (n1 = g->Old; n1; n1 = n2) {
-      n2 = n1->nxt;
+      n2 = n1->next;
       releasenode(1, n1);
     }
     for (n1 = g->Next; n1; n1 = n2) {
-      n2 = n1->nxt;
+      n2 = n1->next;
       releasenode(1, n1);
     }
     return 1;
@@ -697,7 +697,7 @@ static int not_new(Graph *g) {
   if (newstates)
     tl_verbose = 1;
   Debug2("	New Node %s [", g->name->name);
-  for (n1 = g->Old; n1; n1 = n1->nxt) {
+  for (n1 = g->Old; n1; n1 = n1->next) {
     Dump(n1);
     Debug(", ");
   }
@@ -706,7 +706,7 @@ static int not_new(Graph *g) {
     tl_verbose = 0;
 
   Base++;
-  g->nxt = Nodes_Set;
+  g->next = Nodes_Set;
   Nodes_Set = g;
 
   return 0;
@@ -727,7 +727,7 @@ static void expand_g(Graph *g) {
     }
     if (g->Next) {
       Debug("	Has Next [");
-      for (n1 = g->Next; n1; n1 = n1->nxt) {
+      for (n1 = g->Next; n1; n1 = n1->next) {
         Dump(n1);
         Debug(", ");
       }
@@ -749,16 +749,16 @@ static void expand_g(Graph *g) {
   }
 
   if (g->New->ntyp == AND) {
-    if (g->New->nxt) {
+    if (g->New->next) {
       n2 = g->New->right;
-      while (n2->nxt)
-        n2 = n2->nxt;
-      n2->nxt = g->New->nxt;
+      while (n2->next)
+        n2 = n2->next;
+      n2->next = g->New->next;
     }
     n1 = n2 = g->New->left;
-    while (n2->nxt)
-      n2 = n2->nxt;
-    n2->nxt = g->New->right;
+    while (n2->next)
+      n2 = n2->next;
+    n2->next = g->New->right;
 
     releasenode(0, g->New);
 
@@ -769,17 +769,17 @@ static void expand_g(Graph *g) {
 
   can_release = 0; /* unless it need not go into Old */
   now = g->New;
-  g->New = g->New->nxt;
-  now->nxt = ZN;
+  g->New = g->New->next;
+  now->next = ZN;
 
   if (now->ntyp != TRUE) {
     if (g->Old) {
-      for (n1 = g->Old; n1->nxt; n1 = n1->nxt)
+      for (n1 = g->Old; n1->next; n1 = n1->next)
         if (isequal(now, n1)) {
           can_release = 1;
           goto out;
         }
-      n1->nxt = now;
+      n1->next = now;
     } else
       g->Old = now;
   }
@@ -802,38 +802,38 @@ out:
   case V_OPER:
     Assert(now->right != ZN, now->ntyp);
     Assert(now->left != ZN, now->ntyp);
-    Assert(now->right->nxt == ZN, now->ntyp);
-    Assert(now->left->nxt == ZN, now->ntyp);
+    Assert(now->right->next == ZN, now->ntyp);
+    Assert(now->left->next == ZN, now->ntyp);
     n1 = now->right;
-    n1->nxt = g->New;
+    n1->next = g->New;
 
     if (can_release)
       nx = now;
     else
       nx = getnode(now); /* now also appears in Old */
-    nx->nxt = g->Next;
+    nx->next = g->Next;
 
     n2 = now->left;
-    n2->nxt = getnode(now->right);
-    n2->nxt->nxt = g->New;
+    n2->next = getnode(now->right);
+    n2->next->next = g->New;
     g->New = flatten(n2);
     push_stack(g);
     ng(ZS, g->incoming, n1, g->Old, nx);
     break;
 
   case U_OPER:
-    Assert(now->right->nxt == ZN, now->ntyp);
-    Assert(now->left->nxt == ZN, now->ntyp);
+    Assert(now->right->next == ZN, now->ntyp);
+    Assert(now->left->next == ZN, now->ntyp);
     n1 = now->left;
 
     if (can_release)
       nx = now;
     else
       nx = getnode(now); /* now also appears in Old */
-    nx->nxt = g->Next;
+    nx->next = g->Next;
 
     n2 = now->right;
-    n2->nxt = g->New;
+    n2->next = g->New;
 
     goto common;
 
@@ -841,7 +841,7 @@ out:
   case NEXT:
     Assert(now->left != ZN, now->ntyp);
     nx = dupnode(now->left);
-    nx->nxt = g->Next;
+    nx->next = g->Next;
     g->Next = nx;
     if (can_release)
       releasenode(0, now);
@@ -850,15 +850,15 @@ out:
 #endif
 
   case OR:
-    Assert(now->right->nxt == ZN, now->ntyp);
-    Assert(now->left->nxt == ZN, now->ntyp);
+    Assert(now->right->next == ZN, now->ntyp);
+    Assert(now->left->next == ZN, now->ntyp);
     n1 = now->left;
     nx = g->Next;
 
     n2 = now->right;
-    n2->nxt = g->New;
+    n2->next = g->New;
   common:
-    n1->nxt = g->New;
+    n1->next = g->New;
 
     ng(ZS, g->incoming, n1, g->Old, nx);
     g->New = flatten(n2);
@@ -931,7 +931,7 @@ void trans(Node *p) {
 
   ng(ZS, getsym(tl_lookup("init")), p, ZN, ZN);
   while ((g = Nodes_Stack) != (Graph *)0) {
-    Nodes_Stack = g->nxt;
+    Nodes_Stack = g->next;
     expand_g(g);
   }
   if (newstates)

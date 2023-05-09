@@ -27,7 +27,7 @@ struct Node {
   struct Symbol *symbol;
   struct Node *left; /* tree */
   struct Node *right; /* tree */
-  struct Node *nxt; /* if linked list */
+  struct Node *next; /* if linked list */
 };
 
 struct Graph {
@@ -43,13 +43,13 @@ struct Graph {
   unsigned char isred[64], isgrn[64];
   unsigned char redcnt, grncnt;
   unsigned char reachable;
-  struct Graph *nxt;
+  struct Graph *next;
 };
 
 struct Mapping {
   char *from;
   Graph *to;
-  struct Mapping *nxt;
+  struct Mapping *next;
 };
 
 enum {

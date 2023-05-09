@@ -13,20 +13,22 @@
 #else
 #include <stdint.h>
 #endif
-#include <fmt/core.h>
+#include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
+#include <fmt/core.h>
+
 extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
-extern Label *labtab;
-extern Ordered *all_names;
-extern ProcList *ready;
-extern Queue *qtab;
+extern models::Label *labtab;
+extern models::Ordered *all_names;
+extern models::ProcList *ready;
+extern models::Queue *qtab;
 extern models::Symbol *Fname;
-extern int lineno, verbose, Pid_nr, nclaims;
+extern int verbose, Pid_nr, nclaims;
 extern int nrRdy, nrqs, mstp, Mpars, claimnr, eventmapnr;
 extern short has_sorted, has_random;
-extern Queue *ltab[];
+extern models::Queue *ltab[];
 
 int Npars = 0, u_sync = 0, u_async = 0, hastrack = 1;
 short has_io = 0;
@@ -43,24 +45,24 @@ static int doglobal(char *, int);
 static void dohidden(void);
 static void do_init(FILE *, models::Symbol *);
 static void end_labs(models::Symbol *, int);
-static void put_ptype(const std::string &, int, int, int, enum btypes);
+static void put_ptype(const std::string &, int, int, int, models::btypes);
 static void tc_predef_np(void);
-static void put_pinit(ProcList *);
+static void put_pinit(models::ProcList *);
 static void multi_init(void);
 
 void walk_struct(FILE *, int, const std::string &, models::Symbol *,
                  const std::string &, const std::string &, const std::string &);
 
-static void reverse_names(ProcList *p) {
+static void reverse_names(models::ProcList *p) {
   if (!p)
     return;
-  reverse_names(p->nxt);
+  reverse_names(p->next);
   fprintf(fd_tc, "   \"%s\",\n", p->n->name.c_str());
 }
-static void reverse_types(ProcList *p) {
+static void reverse_types(models::ProcList *p) {
   if (!p)
     return;
-  reverse_types(p->nxt);
+  reverse_types(p->next);
   fprintf(fd_tc, "   %d,	/* %s */\n", p->b, p->n->name.c_str());
 }
 
@@ -76,7 +78,7 @@ static int blog(int n) /* for small log2 without rounding problems */
 }
 
 void genheader(void) {
-  ProcList *p;
+  models::ProcList *p;
   int i;
 
   if (launch_settings.separate_version == 2) {
@@ -101,7 +103,7 @@ void genheader(void) {
   putunames(fd_th);
 
   fprintf(fd_tc, "\nshort Air[] = { ");
-  for (p = ready, i = 0; p; p = p->nxt, i++)
+  for (p = ready, i = 0; p; p = p->next, i++)
     fprintf(fd_tc, "%s (short) Air%d", (p != ready) ? "," : "", i);
   fprintf(fd_tc, ", (short) Air%d", i); /* np_ */
   if (nclaims > 1) {
@@ -117,10 +119,13 @@ void genheader(void) {
   fprintf(fd_tc, "	0\n");
   fprintf(fd_tc, "};\n\n");
 
-  fprintf(fd_tc, "enum btypes { NONE=%d, N_CLAIM=%d,", NONE, N_CLAIM);
-  fprintf(fd_tc, " I_PROC=%d, A_PROC=%d,", I_PROC, A_PROC);
-  fprintf(fd_tc, " P_PROC=%d, E_TRACE=%d, N_TRACE=%d };\n\n", P_PROC, E_TRACE,
-          N_TRACE);
+  fprintf(fd_tc, "enum btypes { NONE=%d, N_CLAIM=%d,", models::btypes::NONE,
+          models::btypes::N_CLAIM);
+  fprintf(fd_tc, " I_PROC=%d, A_PROC=%d,", models::btypes::I_PROC,
+          models::btypes::A_PROC);
+  fprintf(fd_tc, " P_PROC=%d, E_TRACE=%d, N_TRACE=%d };\n\n",
+          models::btypes::P_PROC, models::btypes::E_TRACE,
+          models::btypes::N_TRACE);
 
   fprintf(fd_tc, "int Btypes[] = {\n");
   reverse_types(ready);
@@ -128,10 +133,10 @@ void genheader(void) {
   fprintf(fd_tc, "};\n\n");
 
 here:
-  for (p = ready; p; p = p->nxt)
+  for (p = ready; p; p = p->next)
     put_ptype(p->n->name, p->tn, mstp, nrRdy + 1, p->b);
   /* +1 for np_ */
-  put_ptype("np_", nrRdy, mstp, nrRdy + 1, static_cast<btypes>(0));
+  put_ptype("np_", nrRdy, mstp, nrRdy + 1, static_cast<models::btypes>(0));
 
   if (nclaims >
       1) { /* this is the structure that goes into the state-vector
@@ -212,7 +217,7 @@ here:
   ntimes(fd_th, 0, 1, Head1);
 
   LstSet = ZS;
-  doglobal("", PUTV);
+  doglobal("", models::PUTV);
 
   hastrack = c_add_sv(fd_th);
 
@@ -239,7 +244,7 @@ here:
   fprintf(fd_th, "#endif\n");
   fprintf(fd_th, "	short psize;\n");
   fprintf(fd_th, "	short parent_pid;\n");
-  fprintf(fd_th, "	struct TRIX_v6 *nxt;\n");
+  fprintf(fd_th, "	struct TRIX_v6 *next;\n");
   fprintf(fd_th, "} TRIX_v6;\n");
   fprintf(fd_th, "#endif\n\n");
 
@@ -256,7 +261,7 @@ here:
 }
 
 void genaddproc(void) {
-  ProcList *p;
+  models::ProcList *p;
   int i = 0;
 
   if (launch_settings.separate_version == 2)
@@ -302,7 +307,7 @@ shortcut:
     multi_init();
   }
   tc_predef_np();
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     Pid_nr = p->tn;
     put_pinit(p);
   }
@@ -324,7 +329,7 @@ shortcut:
 }
 
 void do_locinits(FILE *fd) {
-  ProcList *p;
+  models::ProcList *p;
 
   /* the locinit functions may refer to pptr or qptr */
   fprintf(fd, "#if VECTORSZ>32000\n");
@@ -334,19 +339,19 @@ void do_locinits(FILE *fd) {
   fprintf(fd, "#endif\n");
   fprintf(fd, "	*proc_offset, *q_offset;\n");
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     c_add_locinit(fd, p->tn, p->n->name);
   }
 }
 
 void genother(void) {
-  ProcList *p;
+  models::ProcList *p;
 
   switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
-      for (p = ready; p; p = p->nxt) {
-        if (p->b == N_CLAIM) {
+      for (p = ready; p; p = p->next) {
+        if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0); /* claims only */
           fprintf(fd_tc, "#ifdef HAS_CODE\n");
           ntimes(fd_tc, p->tn, p->tn + 1, R00);
@@ -357,8 +362,8 @@ void genother(void) {
     break;
   case 1:
     ntimes(fd_tc, 0, 1, Code0);
-    for (p = ready; p; p = p->nxt) {
-      if (p->b != N_CLAIM) {
+    for (p = ready; p; p = p->next) {
+      if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0); /* all except claims */
         fprintf(fd_tc, "#ifdef HAS_CODE\n");
         ntimes(fd_tc, p->tn, p->tn + 1, R00);
@@ -384,22 +389,22 @@ void genother(void) {
     fprintf(fd_tc, "\t	Maxbody += WS - (Maxbody %% WS);\n\n");
   }
 
-  for (p = ready; p; p = p->nxt)
+  for (p = ready; p; p = p->next)
     end_labs(p->n, p->tn);
 
   switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
-      for (p = ready; p; p = p->nxt) {
-        if (p->b == N_CLAIM) {
+      for (p = ready; p; p = p->next) {
+        if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* claims only */
         }
       }
     }
     return;
   case 1:
-    for (p = ready; p; p = p->nxt) {
-      if (p->b != N_CLAIM) {
+    for (p = ready; p; p = p->next) {
+      if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* all except claims */
       }
     }
@@ -428,9 +433,9 @@ void genother(void) {
   fprintf(fd_tc, "}\n\n");
 
   fprintf(fd_tc, "void\niniglobals(int calling_pid)\n{\n");
-  if (doglobal("", INIV) > 0) {
+  if (doglobal("", models::INIV) > 0) {
     fprintf(fd_tc, "#ifdef VAR_RANGES\n");
-    (void)doglobal("logval(\"", LOGV);
+    (void)doglobal("logval(\"", models::LOGV);
     fprintf(fd_tc, "#endif\n");
   }
   fprintf(fd_tc, "}\n\n");
@@ -449,16 +454,17 @@ static struct {
 };
 
 static void end_labs(models::Symbol *s, int i) {
-  int oln = lineno;
+  int oln = file::LineNumber::Get();
   models::Symbol *ofn = Fname;
-  Label *l;
+  models::Label *l;
   int j;
   char foo[128];
 
-  if ((pid_is_claim(i) && launch_settings.separate_version == 1) || (!pid_is_claim(i) && launch_settings.separate_version == 2))
+  if ((pid_is_claim(i) && launch_settings.separate_version == 1) ||
+      (!pid_is_claim(i) && launch_settings.separate_version == 2))
     return;
 
-  for (l = labtab; l; l = l->nxt)
+  for (l = labtab; l; l = l->next)
     for (j = 0; ln[j].n; j++) {
       if (strncmp(l->s->name.c_str(), ln[j].s, ln[j].n) == 0 &&
           l->c->name == s->name) {
@@ -472,19 +478,20 @@ static void end_labs(models::Symbol *s, int i) {
         if (j > 0 && (l->e->status & ATOM)) {
           sprintf(foo, "%s label inside atomic", ln[j].s);
         complain:
-          lineno = l->e->n->line_number;
+          file::LineNumber::Set(l->e->n->line_number);
           Fname = l->e->n->file_name;
-          printf("spin: %3d:%s, warning, %s - is invisible\n", lineno,
-                 Fname ? Fname->name.c_str() : "-", foo);
+          printf("spin: %3d:%s, warning, %s - is invisible\n",
+                 file::LineNumber::Get(), Fname ? Fname->name.c_str() : "-",
+                 foo);
         }
       }
     }
   /* visible states -- through remote refs: */
-  for (l = labtab; l; l = l->nxt)
+  for (l = labtab; l; l = l->next)
     if (l->visible && l->s->context->name == s->name)
       fprintf(fd_tc, "\tvisstate[%d][%d] = 1;\n", i, l->e->seqno);
 
-  lineno = oln;
+  file::LineNumber::Set(oln);
   Fname = ofn;
 }
 
@@ -518,10 +525,10 @@ void checktype(models::Symbol *sp, const std::string &s) {
 
   if (sp->hidden_flags & 16) /* formal parameter */
   {
-    ProcList *p;
+    models::ProcList *p;
     models::Lextok *f, *t;
     int posnr = 0;
-    for (p = ready; p; p = p->nxt)
+    for (p = ready; p; p = p->next)
       if (!p->n->name.empty() && s == p->n->name) {
         break;
       }
@@ -555,25 +562,26 @@ void checktype(models::Symbol *sp, const std::string &s) {
     while (buf[--i] == ' ')
       buf[i] = '\0';
     prehint(sp);
-    if (sp->context)
+    if (sp->context) {
       printf("proctype %s:", s.c_str());
-    else
+    } else {
       printf("global");
+    }
     printf(" '%s %s' could be declared 'byte %s'\n", buf.c_str(),
            sp->name.c_str(), sp->name.c_str());
   }
 }
 
 static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
-                   const std::string &s, enum btypes b) {
+                   const std::string &s, models::btypes b) {
   int h, j, k = 0;
   extern int nr_errs;
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   char buf[128], buf2[128], buf3[128];
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  if (dowhat == INIV) { /* initialize in order of declaration */
+  if (dowhat == models::INIV) { /* initialize in order of declaration */
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (sp->context && !sp->owner_name && s == sp->context->name) {
@@ -595,7 +603,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
                (h == 1 && (sp->value_type > 1 || sp->is_array == 1))) &&
               s == sp->context->name) {
             switch (dowhat) {
-            case LOGV:
+            case models::LOGV:
               if (sp->type == CHAN && !verbose_flags.Active())
                 break;
               sprintf(buf, "%s%s:", pre, s.c_str());
@@ -605,13 +613,13 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
               }
               do_var(ofd, dowhat, "", sp, buf, buf2, buf3);
               break;
-            case PUTV:
+            case models::PUTV:
               sprintf(buf, "((P%d *)pptr(h))->", p);
               do_var(ofd, dowhat, buf, sp, "", " = ", ";\n");
               k++;
               break;
             }
-            if (b == N_CLAIM) {
+            if (b == models::btypes::N_CLAIM) {
               printf("error: %s defines local %s\n", s.c_str(),
                      sp->name.c_str());
               nr_errs++;
@@ -624,7 +632,7 @@ static int dolocal(FILE *ofd, char *pre, int dowhat, int p,
 }
 
 void c_chandump(FILE *fd) {
-  Queue *q;
+  models::Queue *q;
   char buf[256];
   int i;
 
@@ -645,7 +653,7 @@ void c_chandump(FILE *fd) {
   fprintf(fd, "	z = qptr(from);\n");
   fprintf(fd, "	switch (((Q0 *)z)->_t) {\n");
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     fprintf(fd, "	case %d:\n\t\t", q->qid);
     sprintf(buf, "((Q%d *)z)->", q->qid);
 
@@ -742,11 +750,12 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
   }
 }
 
-int c_splurge_any(ProcList *p) {
-  Ordered *walk;
+int c_splurge_any(models::ProcList *p) {
+  models::Ordered *walk;
   models::Symbol *sp;
 
-  if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
+      p->b != models::btypes::N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
@@ -759,12 +768,13 @@ int c_splurge_any(ProcList *p) {
   return 0;
 }
 
-void c_splurge(FILE *fd, ProcList *p) {
-  Ordered *walk;
+void c_splurge(FILE *fd, models::ProcList *p) {
+  models::Ordered *walk;
   models::Symbol *sp;
   char pref[64];
 
-  if (p->b != N_CLAIM && p->b != E_TRACE && p->b != N_TRACE)
+  if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
+      p->b != models::btypes::N_TRACE)
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
@@ -779,13 +789,13 @@ void c_splurge(FILE *fd, ProcList *p) {
 
 void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 {
-  Ordered *walk;
-  ProcList *p;
+  models::Ordered *walk;
+  models::ProcList *p;
   models::Symbol *sp;
-  Mtypes_t *lst;
+  models::Mtypes_t *lst;
   models::Lextok *n;
   int j;
-  extern Mtypes_t *Mtypes;
+  extern models::Mtypes_t *Mtypes;
 
   fprintf(fd, "void\nc_globals(void)\n{\t/* int i; */\n");
   fprintf(fd, "	printf(\"global vars:\\n\");\n");
@@ -799,7 +809,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 
   fprintf(fd, "void\nc_locals(int pid, int tp)\n{\t/* int i; */\n");
   fprintf(fd, "	switch(tp) {\n");
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     fprintf(fd, "	case %d:\n", p->tn);
     if (c_splurge_any(p)) {
       fprintf(fd, "	\tprintf(\"local vars proc %%d (%s):\\n\", pid);\n",
@@ -814,10 +824,11 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 
   fprintf(fd, "void\nprintm(int x, char *s)\n{\n");
   fprintf(fd, "	if (!s) { s = \"_unnamed_\"; }\n");
-  for (lst = Mtypes; lst; lst = lst->nxt) {
-    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n", lst->nm.c_str());
+  for (lst = Mtypes; lst; lst = lst->next) {
+    fprintf(fd, "	if (strcmp(s, \"%s\") == 0)\n",
+            lst->name_of_mtype.c_str());
     fprintf(fd, "	switch (x) {\n");
-    for (n = lst->mt, j = 1; n && j; n = n->right, j++)
+    for (n = lst->list_of_names, j = 1; n && j; n = n->right, j++)
       fprintf(fd, "\tcase %d: Printf(\"%s\"); return;\n", j,
               n->left->symbol->name.c_str());
     fprintf(fd, "	default: Printf(\"%%d\", x); return;\n");
@@ -827,7 +838,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 }
 
 static int doglobal(char *pre, int dowhat) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   int j, cnt = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -838,17 +849,17 @@ static int doglobal(char *pre, int dowhat) {
       if (!sp->context && !sp->owner_name && sp->type == Types[j]) {
         if (Types[j] != MTYPE || !ismtype(sp->name))
           switch (dowhat) {
-          case LOGV:
+          case models::LOGV:
             if (sp->type == CHAN && !verbose_flags.Active())
               break;
             if (sp->hidden_flags & 1)
               break;
             do_var(fd_tc, dowhat, "", sp, pre, "\", now.", ");\n");
             break;
-          case INIV:
+          case models::INIV:
             checktype(sp, std::string{});
             cnt++; /* fall through */
-          case PUTV:
+          case models::PUTV:
             char *putv_char = "now.";
             if (sp->hidden_flags & 1) {
               putv_char = "";
@@ -862,7 +873,7 @@ static int doglobal(char *pre, int dowhat) {
 }
 
 static void dohidden(void) {
-  Ordered *walk;
+  models::Ordered *walk;
   models::Symbol *sp;
   int j;
 
@@ -891,29 +902,29 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
   }
 
   switch (dowhat) {
-  case PUTV:
+  case models::PUTV:
     if (sp->hidden_flags & 1)
       break;
 
     typ2c(sp);
     break;
 
-  case LOGV:
+  case models::LOGV:
     if (!launch_settings.need_old_scope_rules) {
       while (*ptr == '_' || isdigit((int)*ptr)) {
         ptr++;
       }
     }
     /* fall thru */
-  case INIV:
+  case models::INIV:
     if (sp->type == STRUCT) { /* struct may contain a chan */
       walk_struct(ofd, dowhat, s, sp, pre, sep, ter);
       break;
     }
-    if (!sp->init_value && dowhat != LOGV) /* it defaults to 0 */
+    if (!sp->init_value && dowhat != models::LOGV) /* it defaults to 0 */
       break;
     if (sp->value_type == 1 && sp->is_array == 0) {
-      if (dowhat == LOGV) {
+      if (dowhat == models::LOGV) {
         fprintf(ofd, "\t\t%s%s%s%s", pre.c_str(), s.c_str(), ptr, sep.c_str());
         fprintf(ofd, "%s%s", s.c_str(), sp->name.c_str());
       } else {
@@ -927,14 +938,15 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
         for (i = 0; i < sp->value_type; i++) {
           fprintf(ofd, "\t\t%s%s%s[%d]%s", pre.c_str(), s.c_str(),
                   sp->name.c_str(), i, sep.c_str());
-          if (dowhat == LOGV)
+          if (dowhat == models::LOGV)
             fprintf(ofd, "%s%s[%d]", s.c_str(), sp->name.c_str(), i);
           else
             do_init(ofd, sp);
           fprintf(ofd, "%s", ter.c_str());
         }
       } else if (sp->init_value) {
-        if (dowhat != LOGV && sp->is_array && sp->init_value->node_type == ',') {
+        if (dowhat != models::LOGV && sp->is_array &&
+            sp->init_value->node_type == ',') {
           models::Lextok *z, *y;
           z = sp->init_value;
           for (i = 0; i < sp->value_type; i++) {
@@ -956,7 +968,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
           fprintf(ofd, "\t\t{\n");
           fprintf(ofd, "\t\t\t%s%s%s[l_in]%s", pre.c_str(), s.c_str(),
                   sp->name.c_str(), sep.c_str());
-          if (dowhat == LOGV) {
+          if (dowhat == models::LOGV) {
             fprintf(ofd, "%s%s[l_in]", s.c_str(), sp->name.c_str());
           } else {
             putstmnt(ofd, sp->init_value, 0);
@@ -986,12 +998,12 @@ static void do_init(FILE *ofd, models::Symbol *sp) {
   }
 }
 static void put_ptype(const std::string &s, int i, int m0, int m1,
-                      enum btypes b) {
+                      models::btypes b) {
   int k;
 
-  if (b == I_PROC) {
+  if (b == models::btypes::I_PROC) {
     fprintf(fd_th, "#define Pinit	((P%d *)_this)\n", i);
-  } else if (b == P_PROC || b == A_PROC) {
+  } else if (b == models::btypes::P_PROC || b == models::btypes::A_PROC) {
     fprintf(fd_th, "#define P%s	((P%d *)_this)\n", s.c_str(), i);
   }
 
@@ -1004,7 +1016,7 @@ static void put_ptype(const std::string &s, int i, int m0, int m1,
   fprintf(fd_th, "#endif\n");
   LstSet = ZS;
   nBits = 8 + blog(m1) + blog(m0);
-  k = dolocal(fd_tc, "", PUTV, i, s, b); /* includes pars */
+  k = dolocal(fd_tc, "", models::PUTV, i, s, b); /* includes pars */
   c_add_loc(fd_th, s);
 
   fprintf(fd_th, "} P%d;\n", i);
@@ -1075,16 +1087,16 @@ static void tc_predef_np(void) {
 }
 
 static void multi_init(void) {
-  ProcList *p;
-  Element *e;
+  models::ProcList *p;
+  models::Element *e;
   int i = nrRdy + 1;
   int init_value, j;
   int nrc = nclaims;
 
   fprintf(fd_tc, "#ifndef NOCLAIM\n");
   fprintf(fd_tc, "\tcase %d:	/* claim select */\n", i);
-  for (p = ready, j = 0; p; p = p->nxt, j++) {
-    if (p->b == N_CLAIM) {
+  for (p = ready, j = 0; p; p = p->next, j++) {
+    if (p->b == models::btypes::N_CLAIM) {
       e = p->s->frst;
       init_value = huntele(e, e->status, -1)->seqno;
 
@@ -1116,9 +1128,9 @@ static void multi_init(void) {
   fprintf(fd_tc, "#endif\n");
 }
 
-static void put_pinit(ProcList *P) {
+static void put_pinit(models::ProcList *P) {
   models::Lextok *fp, *fpt, *t;
-  Element *e = P->s->frst;
+  models::Element *e = P->s->frst;
   models::Symbol *s = P->n;
   models::Lextok *p = P->p;
   int i = P->tn;
@@ -1149,7 +1161,7 @@ static void put_pinit(ProcList *P) {
 
   fprintf(fd_tc, "#endif\n");
   fprintf(fd_tc, "\t\treached%d[%d]=1;\n", i, init_value);
-  if (P->b == N_CLAIM) {
+  if (P->b == models::btypes::N_CLAIM) {
     fprintf(fd_tc, "\t\tsrc_claim = src_ln%d;\n", i);
   }
 
@@ -1170,14 +1182,15 @@ static void put_pinit(ProcList *P) {
     for (fpt = fp->left; fpt; fpt = fpt->right, j++) {
       t = (fpt->node_type == ',') ? fpt->left : fpt;
       if (t->symbol->value_type > 1 || t->symbol->is_array) {
-        lineno = t->line_number;
+        file::LineNumber::Set(t->line_number);
+
         Fname = t->file_name;
         loger::fatal("array in parameter list, %s", t->symbol->name.c_str());
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->symbol->type == STRUCT) {
         if (full_name(fd_tc, t, t->symbol, 1)) {
-          lineno = t->line_number;
+          file::LineNumber::Set(t->line_number);
           Fname = t->file_name;
           loger::fatal("hidden_flags array in parameter %s",
                        t->symbol->name.c_str());
@@ -1187,10 +1200,10 @@ static void put_pinit(ProcList *P) {
       fprintf(fd_tc, " = par%d;\n", j);
     }
   fprintf(fd_tc, "\t\t/* locals: */\n");
-  k = dolocal(fd_tc, "", INIV, i, s->name.c_str(), P->b);
+  k = dolocal(fd_tc, "", models::INIV, i, s->name.c_str(), P->b);
   if (k > 0) {
     fprintf(fd_tc, "#ifdef VAR_RANGES\n");
-    (void)dolocal(fd_tc, "logval(\"", LOGV, i, s->name.c_str(), P->b);
+    (void)dolocal(fd_tc, "logval(\"", models::LOGV, i, s->name.c_str(), P->b);
     fprintf(fd_tc, "#endif\n");
   }
 
@@ -1202,31 +1215,33 @@ static void put_pinit(ProcList *P) {
   fprintf(fd_tc, "\t	break;\n");
 }
 
-Element *huntstart(Element *f) {
-  Element *e = f;
-  Element *elast = (Element *)0;
+models::Element *huntstart(models::Element *f) {
+  models::Element *e = f;
+  models::Element *elast = (models::Element *)0;
   int cnt = 0;
 
   while (elast != e && cnt++ < 200) /* new 4.0.8 */
   {
     elast = e;
     if (e->n) {
-      if (e->n->node_type == '.' && e->nxt)
-        e = e->nxt;
+      if (e->n->node_type == '.' && e->next)
+        e = e->next;
       else if (e->n->node_type == UNLESS)
         e = e->sub->this_sequence->frst;
     }
   }
 
   if (cnt >= 200 || !e) {
-    lineno = (f && f->n) ? f->n->line_number : lineno;
+    if (f && f->n) {
+      file::LineNumber::Set(f->n->line_number);
+    }
     loger::fatal("confusing control. structure");
   }
   return e;
 }
 
-Element *huntele(Element *f, unsigned int o, int stopat) {
-  Element *g, *e = f;
+models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
+  models::Element *g, *e = f;
   int cnt = 0; /* a precaution against loops */
 
   if (e)
@@ -1238,16 +1253,18 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       case GOTO:
         g = get_lab(e->n, 1);
         if (e == g) {
-          lineno = (f && f->n) ? f->n->line_number : lineno;
+          if (f && f->n) {
+            file::LineNumber::Set(f->n->line_number);
+          }
           loger::fatal("infinite goto loop");
         }
         cross_dsteps(e->n, g->n);
         break;
       case '.':
       case BREAK:
-        if (!e->nxt)
+        if (!e->next)
           return e;
-        g = e->nxt;
+        g = e->next;
         break;
       case UNLESS:
         g = huntele(e->sub->this_sequence->frst, o, stopat);
@@ -1266,7 +1283,9 @@ Element *huntele(Element *f, unsigned int o, int stopat) {
       e = g;
     }
   if (cnt >= 500 || !e) {
-    lineno = (f && f->n) ? f->n->line_number : lineno;
+    if (f && f->n) {
+      file::LineNumber::Set(f->n->line_number);
+    }
     loger::fatal("confusing control structure");
   }
   return e;
@@ -1359,7 +1378,7 @@ void qlen_type(int qmax) {
 void genaddqueue(void) {
   char buf0[256];
   int j, qmax = 0;
-  Queue *q;
+  models::Queue *q;
 
   ntimes(fd_tc, 0, 1, Addq0);
 
@@ -1368,11 +1387,11 @@ void genaddqueue(void) {
   else
     fprintf(fd_th, "#define NQS	%d\n", nrqs);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     if (q->nslots > qmax)
       qmax = q->nslots;
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     j = q->qid;
     fprintf(fd_tc, "\tcase %d: j = sizeof(Q%d);", j, j);
     fprintf(fd_tc, " q_flds[%d] = %d;", j, q->nflds);
@@ -1471,7 +1490,7 @@ void genaddqueue(void) {
   fprintf(fd_tc, ", int args_given)\n");
   ntimes(fd_tc, 0, 1, Addq11);
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     sprintf(buf0, "((Q%d *)z)->", q->qid);
     fprintf(fd_tc, "\tcase %d:%s\n", q->qid, (q->nslots) ? "" : " /* =rv= */");
     if (q->nslots == 0) /* reset handshake point */
@@ -1526,17 +1545,17 @@ void genaddqueue(void) {
   }
   ntimes(fd_tc, 0, 1, Addq2);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "\tcase %d: return %d;\n", q->qid, (!q->nslots));
 
   ntimes(fd_tc, 0, 1, Addq3);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "\tcase %d: return (q_sz(from) == %d);\n", q->qid,
             max(1, q->nslots));
 
   ntimes(fd_tc, 0, 1, Addq4);
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     sprintf(buf0, "((Q%d *)z)->", q->qid);
     fprintf(fd_tc, "	case %d:%s\n\t\t", q->qid,
             (q->nslots) ? "" : " /* =rv= */");
@@ -1577,7 +1596,7 @@ void genaddqueue(void) {
     fprintf(fd_tc, "\t\tbreak;\n");
   }
   ntimes(fd_tc, 0, 1, Addq5);
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "	case %d: j = sizeof(Q%d); break;\n", q->qid, q->qid);
   ntimes(fd_tc, 0, 1, R8b);
   ntimes(fd_th, 0, 1, Proto); /* function prototypes */

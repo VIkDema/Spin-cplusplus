@@ -242,7 +242,7 @@ static const char *Code2c[] = {
     "	volatile void	*dc_start;	/* where memory segment starts */",
     "	volatile void	*dc_id;		/* to attach, detach, remove shared "
     "memory segments */",
-    "	volatile sh_Allocater *nxt;	/* linked list of pools */",
+    "	volatile sh_Allocater *next;	/* linked list of pools */",
     "};",
     "DWORD		worker_pids[NCORE];	/* root mem of pids of all "
     "workers created */",
@@ -269,7 +269,7 @@ static const char *Code2c[] = {
     "	volatile char	*dc_start;	/* where memory segment starts */",
     "	volatile int	dc_id;		/* to attach, detach, remove shared "
     "memory segments */",
-    "	volatile sh_Allocater *nxt;	/* linked list of pools */",
+    "	volatile sh_Allocater *next;	/* linked list of pools */",
     "};",
     "",
     "int	worker_pids[NCORE];	/* root mem of pids of all workers "
@@ -504,7 +504,7 @@ static const char *Code2c[] = {
     "	}",
     "	for (last_pool = first_pool; last_pool != NULL; last_pool = nxt_pool)",
     "	{	shmid_M = (int) (last_pool->dc_id);",
-    "		nxt_pool = last_pool->nxt;	/* as a pre-caution only */",
+    "		nxt_pool = last_pool->next;	/* as a pre-caution only */",
     "		if (shmid_M != -1)",
     "		{	(void) shmctl(shmid_M, IPC_RMID, NULL);",
     "	}	}",
@@ -1324,12 +1324,12 @@ static const char *Code2c[] = {
     "			dc_shared->pattern   = 1234567; /* protection */",
     "			dc_shared->dc_size   = (long) get_mem - (long) (x - "
     "dc_mem_start);",
-    "			dc_shared->nxt       = (long) 0;",
+    "			dc_shared->next       = (long) 0;",
     "",
     "			if (last_pool == NULL)",
     "			{	first_pool = last_pool = dc_shared;",
     "			} else",
-    "			{	last_pool->nxt = dc_shared;",
+    "			{	last_pool->next = dc_shared;",
     "				last_pool = dc_shared;",
     "			}",
     "		} else if (first_pool == NULL)",
@@ -1389,7 +1389,7 @@ static const char *Code2c[] = {
     "		if (core_id == 0)",
     "		{	/* before detaching: */",
     "			for (nxt_pool = dc_shared; nxt_pool != NULL; nxt_pool "
-    "= nxt_pool->nxt)",
+    "= nxt_pool->next)",
     "			{	cnt += nxt_pool->dc_size;",
     "			}",
     "			if (verbose)",
@@ -1404,7 +1404,7 @@ static const char *Code2c[] = {
     "",
     "		for (last_pool = first_pool; last_pool != NULL; last_pool = "
     "nxt_pool)",
-    "		{	nxt_pool = last_pool->nxt;",
+    "		{	nxt_pool = last_pool->next;",
     "			if (shmdt((void *) last_pool->dc_start) != 0)",
     "			{	perror(\"shmdt detaching from shared state "
     "memory\");",
@@ -1515,7 +1515,7 @@ static const char *Code2c[] = {
     "my_size/(1048576));",
     "				break;",
     "			}",
-    "			ptr = ptr->nxt; /* local */",
+    "			ptr = ptr->next; /* local */",
     "		}",
     "		if (my_heap == NULL)",
     "		{	printf(\"cpu%%d: no local heap\\n\", core_id);",
@@ -1524,7 +1524,7 @@ static const char *Code2c[] = {
     "	#if defined(CYGWIN) || defined(__CYGWIN__)",
     "		ptr = first_pool;",
     "		for (i = 0; i < NCORE  && ptr != NULL; i++)",
-    "		{	ptr = ptr->nxt; /* local */",
+    "		{	ptr = ptr->next; /* local */",
     "		}",
     "		dc_shared = ptr; /* any remainder */",
     "	#else",
@@ -1611,9 +1611,9 @@ static const char *Code2c[] = {
     "			{ printf(\"Next Pool %%g Mb + %%d\\n\", "
     "memcnt/(1048576.), n);",
     "			}",
-    "			if (dc_shared->nxt == NULL",
-    "			||  dc_shared->nxt->dc_arena == NULL",
-    "			||  dc_shared->nxt->dc_size < n)",
+    "			if (dc_shared->next == NULL",
+    "			||  dc_shared->next->dc_arena == NULL",
+    "			||  dc_shared->next->dc_size < n)",
     "			{	printf(\"cpu%%d: memcnt %%g Mb + wanted %%d "
     "bytes more\\n\",",
     "					core_id, memcnt / (1048576.), n);",
@@ -1621,7 +1621,7 @@ static const char *Code2c[] = {
     "				sudden_stop(\"out of memory -- aborting\");",
     "				wrapup();	/* exits */",
     "			} else",
-    "			{	dc_shared = (sh_Allocater *) dc_shared->nxt;",
+    "			{	dc_shared = (sh_Allocater *) dc_shared->next;",
     "		}	}",
     "",
     "		rval = (char *) dc_shared->dc_arena;",
@@ -2984,7 +2984,7 @@ static const char *Code2c[] = {
     "		dc_shared->pattern   = 1234567;",
     "		dc_shared->dc_size   = (long) get_mem - (long) (x - "
     "dc_mem_start);",
-    "		dc_shared->nxt       = NULL;",
+    "		dc_shared->next       = NULL;",
     "	}",
     "#endif",
     "}",
