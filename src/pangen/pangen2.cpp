@@ -20,17 +20,18 @@ extern LaunchSettings launch_settings;
   {                                                                            \
     fprintf(fd, "\n");                                                         \
     if (!launch_settings.need_statemate_merging)                               \
-      fprintf(fd, "\t\t/* %s:%d */\n", e->n->file_name->name.c_str(), e->n->line_number);      \
+      fprintf(fd, "\t\t/* %s:%d */\n", e->n->file_name->name.c_str(),          \
+              e->n->line_number);                                              \
   }
 #define tr_map(m, e)                                                           \
   {                                                                            \
     if (!launch_settings.need_statemate_merging)                               \
       fprintf(fd_tt, "\t\ttr_2_src(%d, \"%s\", %d);\n", m,                     \
-              e->n->file_name->name.c_str(), e->n->line_number);                               \
+              e->n->file_name->name.c_str(), e->n->line_number);               \
   }
 
-extern ProcList *ready;
-extern RunList *run_lst;
+extern models::ProcList *ready;
+extern models::RunList *run_lst;
 extern models::Lextok *runstmnts;
 extern models::Symbol *Fname, *oFname, *context;
 extern char *claimproc, *eventmap;
@@ -87,32 +88,32 @@ static short evalindex = 0;    /* evaluate index of var names */
 extern int has_global(models::Lextok *);
 extern void check_mtypes(models::Lextok *, models::Lextok *);
 extern void walk2_struct(const std::string &, models::Symbol *);
-extern int find_min(Sequence *);
-extern int find_max(Sequence *);
+extern int find_min(models::Sequence *);
+extern int find_max(models::Sequence *);
 
 static int getweight(models::Lextok *);
-static int scan_seq(Sequence *);
+static int scan_seq(models::Sequence *);
 static void genconditionals(void);
-static void mark_seq(Sequence *);
-static void patch_atomic(Sequence *);
-static void put_seq(Sequence *, int, int);
-static void putproc(ProcList *);
+static void mark_seq(models::Sequence *);
+static void patch_atomic(models::Sequence *);
+static void put_seq(models::Sequence *, int, int);
+static void putproc(models::ProcList *);
 static void Tpe(models::Lextok *);
 extern void spit_recvs(FILE *, FILE *);
 
-static L_List *keep_track;
+static models::L_List *keep_track;
 
 void keep_track_off(models::Lextok *n) {
-  L_List *p;
+  models::L_List *p;
 
-  p = (L_List *)emalloc(sizeof(L_List));
+  p = (models::L_List *)emalloc(sizeof(models::L_List));
   p->n = n;
   p->nxt = keep_track;
   keep_track = p;
 }
 
 int check_track(models::Lextok *n) {
-  L_List *p;
+  models::L_List *p;
 
   for (p = keep_track; p; p = p->nxt) {
     if (p->n == n) {
@@ -123,7 +124,7 @@ int check_track(models::Lextok *n) {
 }
 
 static int fproc(const std::string &s) {
-  ProcList *p;
+  models::ProcList *p;
 
   for (p = ready; p; p = p->nxt)
     if (p->n->name.c_str() == s)
@@ -135,7 +136,7 @@ static int fproc(const std::string &s) {
 
 int pid_is_claim(int p) /* Pid_nr (p->tn) to type (p->b) */
 {
-  ProcList *r;
+  models::ProcList *r;
 
   for (r = ready; r; r = r->nxt) {
     if (r->tn == p)
@@ -145,7 +146,7 @@ int pid_is_claim(int p) /* Pid_nr (p->tn) to type (p->b) */
   return 0;
 }
 
-static void reverse_procs(RunList *q) {
+static void reverse_procs(models::RunList *q) {
   if (!q)
     return;
   reverse_procs(q->nxt);
@@ -153,7 +154,7 @@ static void reverse_procs(RunList *q) {
           q->priority < 1 ? 1 : q->priority);
 }
 
-static void forward_procs(RunList *q) {
+static void forward_procs(models::RunList *q) {
   if (!q)
     return;
   fprintf(fd_tc, "		Addproc(%d, %d);\n", q->tn,
@@ -199,7 +200,7 @@ static struct {
              {{"pan.b", "pan_s.b", "pan_t.b"}}};
 
 void gensrc(void) {
-  ProcList *p;
+  models::ProcList *p;
   int i;
 
   disambiguate(); /* avoid name-clashes between scopes */
@@ -333,7 +334,7 @@ void gensrc(void) {
 
   if (launch_settings.separate_version == 1 && !claimproc) {
     models::Symbol *n = (models::Symbol *)emalloc(sizeof(models::Symbol));
-    Sequence *s = (Sequence *)emalloc(sizeof(Sequence));
+    models::Sequence *s = (models::Sequence *)emalloc(sizeof(models::Sequence));
     s->minel = -1;
     claimproc = "_:never_template:_";
     n->name = "_:never_template:_";
@@ -806,7 +807,7 @@ doless:
 }
 
 static int find_id(models::Symbol *s) {
-  ProcList *p;
+  models::ProcList *p;
 
   if (s)
     for (p = ready; p; p = p->nxt)
@@ -991,7 +992,7 @@ static void genconditionals(void) {
   fprintf(fd_tc, "}\n");
 }
 
-static void putproc(ProcList *p) {
+static void putproc(models::ProcList *p) {
   Pid_nr = p->tn;
   Det = p->det;
 
@@ -1028,7 +1029,8 @@ static void putproc(ProcList *p) {
   fprintf(fd_th, "#define _endstate%d	%d\n", Pid_nr,
           p->s->last ? p->s->last->seqno : 0);
 
-  if (p->b == models::btypes::N_CLAIM || p->b == models::btypes::E_TRACE || p->b == models::btypes::N_TRACE) {
+  if (p->b == models::btypes::N_CLAIM || p->b == models::btypes::E_TRACE ||
+      p->b == models::btypes::N_TRACE) {
     fprintf(fd_tm, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
     fprintf(fd_tb, "\n		 /* CLAIM %s */\n", p->n->name.c_str());
   } else {
@@ -1063,9 +1065,9 @@ static void addTpe(int x) {
   TPE[(T_sum++) % 2] = x;
 }
 
-static void cnt_seq(Sequence *s) {
-  Element *f;
-  SeqList *h;
+static void cnt_seq(models::Sequence *s) {
+  models::Element *f;
+  models::SeqList *h;
 
   if (s)
     for (f = s->frst; f; f = f->nxt) {
@@ -1079,7 +1081,7 @@ static void cnt_seq(Sequence *s) {
     }
 }
 
-static void typ_seq(Sequence *s) {
+static void typ_seq(models::Sequence *s) {
   T_sum = 0;
   TPE[0] = 2;
   TPE[1] = 0;
@@ -1140,7 +1142,8 @@ static int getNid(models::Lextok *n) {
 
   if (!n->symbol || n->symbol->id == 0) {
     char *no_name = "no name";
-    loger::fatal("bad channel name '%s'", (n->symbol) ? n->symbol->name : no_name);
+    loger::fatal("bad channel name '%s'",
+                 (n->symbol) ? n->symbol->name : no_name);
   }
   return n->symbol->id;
 }
@@ -1208,9 +1211,9 @@ static void Tpe(models::Lextok *n) /* mixing in selections */
     EPT[1] = valTpe(Nn[1]);
 }
 
-static void put_escp(Element *e) {
+static void put_escp(models::Element *e) {
   int n;
-  SeqList *x;
+  models::SeqList *x;
 
   if (e->esc /* && e->n->node_type != GOTO */ && e->n->node_type != '.') {
     for (x = e->esc, n = 0; x; x = x->nxt, n++) {
@@ -1228,9 +1231,9 @@ static void put_escp(Element *e) {
   }
 }
 
-static void put_sub(Element *e, int Tt0, int Tt1) {
-  Sequence *s = e->n->seq_list->this_sequence;
-  Element *g = ZE;
+static void put_sub(models::Element *e, int Tt0, int Tt1) {
+  models::Sequence *s = e->n->seq_list->this_sequence;
+  models::Element *g = ZE;
   int a;
 
   patch_atomic(s);
@@ -1250,8 +1253,8 @@ static void put_sub(Element *e, int Tt0, int Tt1) {
   if (e->n->node_type == D_STEP) {
     int inherit = (e->status & (ATOM | L_ATOM));
     fprintf(fd_tm, "\tcase %d: ", uniq++);
-    fprintf(fd_tm, "// STATE %d - %s:%d - [", e->seqno, e->n->file_name->name.c_str(),
-            e->n->line_number);
+    fprintf(fd_tm, "// STATE %d - %s:%d - [", e->seqno,
+            e->n->file_name->name.c_str(), e->n->line_number);
     comment(fd_tm, e->n, 0);
     fprintf(fd_tm, "]\n\t\t");
 
@@ -1323,7 +1326,7 @@ static void put_sub(Element *e, int Tt0, int Tt1) {
 
 struct CaseCache {
   int m, b, owner;
-  Element *e;
+  models::Element *e;
   models::Lextok *n;
   models::FSM_use *u;
   struct CaseCache *nxt;
@@ -1337,8 +1340,9 @@ static int identical(models::Lextok *p, models::Lextok *q) {
   if (!p)
     return 1;
 
-  if (p->node_type != q->node_type || p->is_mtype_token != q->is_mtype_token || p->value != q->value ||
-      p->index_step != q->index_step || p->symbol != q->symbol || p->sequence != q->sequence ||
+  if (p->node_type != q->node_type || p->is_mtype_token != q->is_mtype_token ||
+      p->value != q->value || p->index_step != q->index_step ||
+      p->symbol != q->symbol || p->sequence != q->sequence ||
       p->seq_list != q->seq_list)
     return 0;
 
@@ -1354,8 +1358,8 @@ static int samedeads(models::FSM_use *a, models::FSM_use *b) {
   return (!p && !q);
 }
 
-static Element *findnext(Element *f) {
-  Element *g;
+static models::Element *findnext(models::Element *f) {
+  models::Element *g;
 
   if (f->n->node_type == GOTO) {
     g = get_lab(f->n, 1);
@@ -1364,8 +1368,8 @@ static Element *findnext(Element *f) {
   return f->nxt;
 }
 
-static Element *advance(Element *e, int stopat) {
-  Element *f = e;
+static models::Element *advance(models::Element *e, int stopat) {
+  models::Element *f = e;
 
   if (stopat)
     while (f && f->seqno != stopat) {
@@ -1383,11 +1387,11 @@ static Element *advance(Element *e, int stopat) {
         return f;
       }
     }
-  return (Element *)0;
+  return (models::Element *)0;
 }
 
-static int equiv_merges(Element *a, Element *b) {
-  Element *f, *g;
+static int equiv_merges(models::Element *a, models::Element *b) {
+  models::Element *f, *g;
   int stopat_a, stopat_b;
 
   if (a->merge_start)
@@ -1415,7 +1419,7 @@ static int equiv_merges(Element *a, Element *b) {
   return 0;
 }
 
-static CaseCache *prev_case(Element *e, int owner) {
+static CaseCache *prev_case(models::Element *e, int owner) {
   int j;
   CaseCache *nc;
 
@@ -1447,7 +1451,7 @@ static CaseCache *prev_case(Element *e, int owner) {
   return (CaseCache *)0;
 }
 
-static void new_case(Element *e, int m, int b, int owner) {
+static void new_case(models::Element *e, int m, int b, int owner) {
   int j;
   CaseCache *nc;
 
@@ -1482,7 +1486,7 @@ static void new_case(Element *e, int m, int b, int owner) {
   casing[j] = nc;
 }
 
-static int nr_bup(Element *e) {
+static int nr_bup(models::Element *e) {
   models::FSM_use *u;
   models::Lextok *v;
   int nr = 0;
@@ -1509,7 +1513,8 @@ static int nr_bup(Element *e) {
   for (u = e->dead; u; u = u->nxt) {
     switch (u->special) {
     case 2: /* dead after write */
-      if (e->n->node_type == ASGN && e->n->right->node_type == CONST && e->n->right->value == 0)
+      if (e->n->node_type == ASGN && e->n->right->node_type == CONST &&
+          e->n->right->value == 0)
         break;
       nr++;
       break;
@@ -1521,8 +1526,8 @@ static int nr_bup(Element *e) {
   return nr;
 }
 
-static int nrhops(Element *e) {
-  Element *f = e, *g;
+static int nrhops(models::Element *e) {
+  models::Element *f = e, *g;
   int cnt = 0;
   int stopat;
 
@@ -1564,7 +1569,7 @@ static void check_needed(void) {
   }
 }
 
-static void doforward(FILE *tm_fd, Element *e) {
+static void doforward(FILE *tm_fd, models::Element *e) {
   models::FSM_use *u;
 
   putstmnt(tm_fd, e->n, e->seqno);
@@ -1581,7 +1586,7 @@ static void doforward(FILE *tm_fd, Element *e) {
               u->var->name.c_str());
 
       switch (u->special) {
-      case 2:                   /* dead after write -- lval already bupped */
+      case 2: /* dead after write -- lval already bupped */
         if (e->n->node_type == ASGN) /* could be recv or asgn */
         {
           if (e->n->right->node_type == CONST && e->n->right->value == 0)
@@ -1597,7 +1602,7 @@ static void doforward(FILE *tm_fd, Element *e) {
         }     /* else fall through */
       case 1: /* dead after read -- add asgn of rval -- needs bup */
         YZ[YZmax].symbol = u->var; /* store for pan.b */
-        CnT[YZcnt]++;           /* this step added bups */
+        CnT[YZcnt]++;              /* this step added bups */
         if (multi_oval) {
           check_needed();
           fprintf(tm_fd, "(trpt+1)->bup.ovals[%d] = ", multi_oval - 1);
@@ -1616,7 +1621,7 @@ static void doforward(FILE *tm_fd, Element *e) {
   fprintf(tm_fd, ";\n\t\t");
 }
 
-static int dobackward(Element *e, int casenr) {
+static int dobackward(models::Element *e, int casenr) {
   if (!any_undo(e->n) && CnT[YZcnt] == 0) {
     YZcnt--;
     return 0;
@@ -1653,8 +1658,8 @@ static int dobackward(Element *e, int casenr) {
   return 1;
 }
 
-static void lastfirst(int stopat, Element *fin, int casenr) {
-  Element *f = fin, *g;
+static void lastfirst(int stopat, models::Element *fin, int casenr) {
+  models::Element *f = fin, *g;
 
   if (f->n->node_type == GOTO) {
     g = get_lab(f->n, 1);
@@ -1673,7 +1678,7 @@ static void lastfirst(int stopat, Element *fin, int casenr) {
 
 static int modifier;
 
-static void lab_transfer(Element *to, Element *from) {
+static void lab_transfer(models::Element *to, models::Element *from) {
   models::Symbol *ns, *s = has_lab(from, (1 | 2 | 4));
   models::Symbol *oc;
   int ltp, usedit = 0;
@@ -1702,10 +1707,10 @@ static void lab_transfer(Element *to, Element *from) {
   }
 }
 
-static int case_cache(Element *e, int a) {
+static int case_cache(models::Element *e, int a) {
   int bupcase = 0, casenr = uniq, fromcache = 0;
   CaseCache *Cached = (CaseCache *)0;
-  Element *f, *g;
+  models::Element *f, *g;
   int j, nrbups, mark, ntarget;
 
   mark = (e->status & ATOM); /* could lose atomicity in a merge chain */
@@ -1739,8 +1744,8 @@ static int case_cache(Element *e, int a) {
     casenr = Cached->m;
     fromcache = 1;
 
-    fprintf(fd_tm, "// STATE %d - %s:%d - [", e->seqno, e->n->file_name->name.c_str(),
-            e->n->line_number);
+    fprintf(fd_tm, "// STATE %d - %s:%d - [", e->seqno,
+            e->n->file_name->name.c_str(), e->n->line_number);
     comment(fd_tm, e->n, 0);
     fprintf(fd_tm, "] (%d:%d - %d) same as %d (%d:%d - %d)\n", e->merge_start,
             e->merge, e->merge_in, casenr, Cached->e->merge_start,
@@ -1849,7 +1854,8 @@ static int case_cache(Element *e, int a) {
   }
 out:
   fprintf(fd_tm, "_m = %d", getweight(e->n));
-  if (launch_settings.need_lose_msgs_sent_to_full_queues && e->n->node_type == 's')
+  if (launch_settings.need_lose_msgs_sent_to_full_queues &&
+      e->n->node_type == 's')
     fprintf(fd_tm, "+delta_m; delta_m = 0");
   fprintf(fd_tm, "; goto P999; /* %d */\n", YZcnt);
 
@@ -1899,9 +1905,9 @@ haveit:
   return (fromcache) ? 0 : casenr;
 }
 
-static void put_el(Element *e, int Tt0, int Tt1) {
+static void put_el(models::Element *e, int Tt0, int Tt1) {
   int a, casenr, Global_ref;
-  Element *g = ZE;
+  models::Element *g = ZE;
 
   if (e->n->node_type == GOTO) {
     g = get_lab(e->n, 1);
@@ -1945,7 +1951,8 @@ static void put_el(Element *e, int Tt0, int Tt1) {
     goto non_generic;
 #endif
   case 'c':
-    if (e->n->left->node_type == CONST && e->n->left->value == 1) /* skip or true */
+    if (e->n->left->node_type == CONST &&
+        e->n->left->value == 1) /* skip or true */
     {
       casenr = 1;
       putskip(e->seqno);
@@ -1984,8 +1991,8 @@ static void put_el(Element *e, int Tt0, int Tt1) {
   put_escp(e);
 }
 
-static void nested_unless(Element *e, Element *g) {
-  struct SeqList *y = e->esc, *z = g->esc;
+static void nested_unless(models::Element *e, models::Element *g) {
+  struct models::SeqList *y = e->esc, *z = g->esc;
 
   for (; y && z; y = y->nxt, z = z->nxt)
     if (z->this_sequence != y->this_sequence)
@@ -1995,7 +2002,8 @@ static void nested_unless(Element *e, Element *g) {
 
   if (g->n->node_type != GOTO && g->n->node_type != '.' && e->sub->nxt) {
     printf("error: (%s:%d) saw 'unless' on a guard:\n",
-           (e->n) ? e->n->file_name->name.c_str() : "-", (e->n) ? e->n->line_number : 0);
+           (e->n) ? e->n->file_name->name.c_str() : "-",
+           (e->n) ? e->n->line_number : 0);
     printf("=====>instead of\n");
     printf("	do (or if)\n");
     printf("	:: ...\n");
@@ -2010,9 +2018,9 @@ static void nested_unless(Element *e, Element *g) {
   }
 }
 
-static void put_seq(Sequence *s, int Tt0, int Tt1) {
-  SeqList *h;
-  Element *e, *g;
+static void put_seq(models::Sequence *s, int Tt0, int Tt1) {
+  models::SeqList *h;
+  models::Element *e, *g;
   int a, deadlink;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (0)
@@ -2062,7 +2070,8 @@ static void put_seq(Sequence *s, int Tt0, int Tt1) {
           deadlink = 1;
           if (verbose_flags.NeedToPrintVerbose())
             printf("spin: %s:%d, warning, condition is always false\n",
-                   g->n->file_name ? g->n->file_name->name.c_str() : "", g->n->line_number);
+                   g->n->file_name ? g->n->file_name->name.c_str() : "",
+                   g->n->line_number);
         } else
           deadlink = 0;
         if (0)
@@ -2105,10 +2114,11 @@ static void put_seq(Sequence *s, int Tt0, int Tt1) {
     printf("put_seq done\n");
 }
 
-static void patch_atomic(Sequence *s) /* catch goto's that break the chain */
+static void
+patch_atomic(models::Sequence *s) /* catch goto's that break the chain */
 {
-  Element *f, *g;
-  SeqList *h;
+  models::Element *f, *g;
+  models::SeqList *h;
 
   for (f = s->frst; f; f = f->nxt) {
     if (f->n && f->n->node_type == GOTO) {
@@ -2131,9 +2141,9 @@ static void patch_atomic(Sequence *s) /* catch goto's that break the chain */
   }
 }
 
-static void mark_seq(Sequence *s) {
-  Element *f;
-  SeqList *h;
+static void mark_seq(models::Sequence *s) {
+  models::Element *f;
+  models::SeqList *h;
 
   for (f = s->frst; f; f = f->nxt) {
     f->status |= I_GLOB;
@@ -2149,8 +2159,8 @@ static void mark_seq(Sequence *s) {
   }
 }
 
-static Element *find_target(Element *e) {
-  Element *f;
+static models::Element *find_target(models::Element *e) {
+  models::Element *f;
 
   if (!e)
     return e;
@@ -2177,7 +2187,7 @@ static Element *find_target(Element *e) {
   return f;
 }
 
-Element *target(Element *e) {
+models::Element *target(models::Element *e) {
   if (!e)
     return e;
   lineno = e->n->line_number;
@@ -2186,10 +2196,11 @@ Element *target(Element *e) {
   return find_target(e);
 }
 
-static int seq_has_el(Sequence *s, Element *g) /* new to version 5.0 */
+static int seq_has_el(models::Sequence *s,
+                      models::Element *g) /* new to version 5.0 */
 {
-  Element *f;
-  SeqList *h;
+  models::Element *f;
+  models::SeqList *h;
 
   for (f = s->frst; f; f = f->nxt) /* g in same atomic? */
   {
@@ -2209,14 +2220,14 @@ static int seq_has_el(Sequence *s, Element *g) /* new to version 5.0 */
   return 0;
 }
 
-static int scan_seq(Sequence *s) {
-  Element *f, *g;
-  SeqList *h;
+static int scan_seq(models::Sequence *s) {
+  models::Element *f, *g;
+  models::SeqList *h;
 
   for (f = s->frst; f; f = f->nxt) {
     if ((f->status & CHECK2) || has_global(f->n))
       return 1;
-    if (f->n->node_type == GOTO        /* may exit or reach other atomic */
+    if (f->n->node_type == GOTO   /* may exit or reach other atomic */
         && !(f->status & D_ATOM)) /* cannot jump from d_step */
     { /* consider jump from an atomic without globals into
        * an atomic with globals
@@ -2230,8 +2241,8 @@ static int scan_seq(Sequence *s) {
       if (g && !(f->status & L_ATOM) && !(g->status & (ATOM | L_ATOM)))
 #endif
       {
-        fprintf(fd_tt, "\t/* mark-down line %d status %d = %d */\n", f->n->line_number,
-                f->status, (f->status & D_ATOM));
+        fprintf(fd_tt, "\t/* mark-down line %d status %d = %d */\n",
+                f->n->line_number, f->status, (f->status & D_ATOM));
         return 1; /* assume worst case */
       }
     }
@@ -2260,7 +2271,7 @@ static int glob_args(models::Lextok *n) {
 }
 
 static int proc_is_safe(const models::Lextok *n) {
-  ProcList *p;
+  models::ProcList *p;
   /* not safe unless no local var inits are used */
   /* note that a local variable init could refer to a global */
 
@@ -2303,7 +2314,8 @@ int has_global(models::Lextok *n) {
   case 'r':
     return glob_args(n) != 0 || ((n->symbol->xu & (XR | XX)) != XR);
   case 'R':
-    return glob_args(n) != 0 || (((n->symbol->xu) & (XR | XS | XX)) != (XR | XS));
+    return glob_args(n) != 0 ||
+           (((n->symbol->xu) & (XR | XS | XX)) != (XR | XS));
   case NEMPTY:
     return ((n->symbol->xu & (XR | XX)) != XR);
   case NFULL:
@@ -2406,7 +2418,7 @@ static void Bailout(FILE *fd, char *str) {
 }
 
 #define cat0(x)                                                                \
-  putstmnt(fd, now->left, m);                                                   \
+  putstmnt(fd, now->left, m);                                                  \
   fprintf(fd, x);                                                              \
   putstmnt(fd, now->right, m)
 #define cat1(x)                                                                \
@@ -3035,7 +3047,8 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
         models::Lextok *w;
 
         for (v = now->right; v; v = v->right) {
-          if (v->left->node_type != CONST && v->left->node_type != EVAL && v->left->symbol &&
+          if (v->left->node_type != CONST && v->left->node_type != EVAL &&
+              v->left->symbol &&
               v->left->symbol->type != STRUCT /* not a struct */
               && (v->left->symbol->value_type == 1 &&
                   v->left->symbol->is_array == 0) /* not array */
@@ -3293,8 +3306,10 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
         cat3("(trpt+1)->bup.oval = ", now->left, ";\n\t\t");
       }
     }
-    if (now->left->symbol && now->left->symbol->type == models::SymbolType::kPredef &&
-        now->left->symbol->name != "_" && now->left->symbol->name != "_priority") {
+    if (now->left->symbol &&
+        now->left->symbol->type == models::SymbolType::kPredef &&
+        now->left->symbol->name != "_" &&
+        now->left->symbol->name != "_priority") {
       loger::fatal("invalid assignment to %s", now->left->symbol->name);
     }
 
@@ -3443,8 +3458,8 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     break;
 
   default:
-    printf("spin: error, %s:%d, bad node type %d (.m)\n", now->file_name->name.c_str(),
-           now->line_number, now->node_type);
+    printf("spin: error, %s:%d, bad node type %d (.m)\n",
+           now->file_name->name.c_str(), now->line_number, now->node_type);
     fflush(fd);
     MainProcessor::Exit(1);
   }
@@ -3563,7 +3578,8 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
       evalindex = 1;
     } else {
       if (terse ||
-          (n->left && n->left->node_type == CONST && n->left->value < s->value_type) ||
+          (n->left && n->left->node_type == CONST &&
+           n->left->value < s->value_type) ||
           (!n->left && s->value_type > 0)) {
         cat3("[", n->left, "]");
       } else { /* attempt to catch arrays that are indexed with an array element
@@ -3631,12 +3647,12 @@ void putremote(FILE *fd, models::Lextok *n, int m) /* remote reference */
     fprintf(fd, ")");
 }
 
-static int
-getweight(models::Lextok *n) { /* this piece of code is a remnant of early versions
-                        * of the verifier -- in the current version of Spin
-                        * only non-zero values matter - so this could probably
-                        * simply return 1 in all cases.
-                        */
+static int getweight(
+    models::Lextok *n) { /* this piece of code is a remnant of early versions
+                          * of the verifier -- in the current version of Spin
+                          * only non-zero values matter - so this could probably
+                          * simply return 1 in all cases.
+                          */
   switch (n->node_type) {
   case 'r':
     return 4;

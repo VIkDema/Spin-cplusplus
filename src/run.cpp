@@ -10,9 +10,9 @@
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
 
-extern RunList *X_lst, *run_lst;
+extern models::RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
-extern Element *LastStep;
+extern models::Element *LastStep;
 extern int Rvous, lineno, Tval, MadeChoice, Priority_Sum;
 extern int TstOnly, verbose, depth;
 extern int nproc, nstop;
@@ -20,7 +20,7 @@ extern short Have_claim;
 extern LaunchSettings launch_settings;
 static int E_Check = 0, Escape_Check = 0;
 
-static int eval_sync(Element *);
+static int eval_sync(models::Element *);
 static int pc_enabled(models::Lextok *n);
 static int get_priority(models::Lextok *n);
 static void set_priority(models::Lextok *n, models::Lextok *m);
@@ -36,8 +36,8 @@ long Rand(void) { /* CACM 31(10), Oct 1988 */
   return Seed;
 }
 
-Element *rev_escape(SeqList *e) {
-  Element *r = (Element *)0;
+models::Element *rev_escape(models::SeqList *e) {
+  models::Element *r = (models::Element *)0;
 
   if (e) {
     if ((r = rev_escape(e->nxt)) == ZE) /* reversed order */
@@ -49,9 +49,9 @@ Element *rev_escape(SeqList *e) {
   return r;
 }
 
-Element *eval_sub(Element *e) {
-  Element *f, *g;
-  SeqList *z;
+models::Element *eval_sub(models::Element *e) {
+  models::Element *f, *g;
+  models::SeqList *z;
   int i, j, k, only_pos;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -79,8 +79,8 @@ Element *eval_sub(Element *e) {
     return eval_sub(e->sub->this_sequence->frst);
   } else if (e->sub) /* true for IF, DO, and UNLESS */
   {
-    Element *has_else = ZE;
-    Element *bas_else = ZE;
+    models::Element *has_else = ZE;
+    models::Element *bas_else = ZE;
     int nr_else = 0, nr_choices = 0;
     only_pos = -1;
 
@@ -226,7 +226,7 @@ Element *eval_sub(Element *e) {
         return e->nxt;
       return eval_sub(e->nxt);
     } else {
-      SeqList *x;
+      models::SeqList *x;
       if (!(e->status & (D_ATOM)) && e->esc &&
           verbose_flags.NeedToPrintVerbose()) {
         printf("Stmnt [");
@@ -303,7 +303,7 @@ Element *eval_sub(Element *e) {
   return ZE; /* not reached */
 }
 
-static int eval_sync(Element *e) { /* allow only synchronous receives
+static int eval_sync(models::Element *e) { /* allow only synchronous receives
                                       and related node types    */
   models::Lextok *now = (e) ? e->n : ZN;
 
@@ -342,7 +342,7 @@ static int assign(models::Lextok *now) {
 
 static int nonprogress(void) /* np_ */
 {
-  RunList *r;
+  models::RunList *r;
 
   for (r = run_lst; r; r = r->nxt) {
     if (has_lab(r->pc, 4)) /* 4=progress */
@@ -716,8 +716,8 @@ static int Enabled1(models::Lextok *n) {
   return 0;
 }
 
-int Enabled0(Element *e) {
-  SeqList *z;
+int Enabled0(models::Element *e) {
+  models::SeqList *z;
 
   if (!e || !e->n)
     return 0;
@@ -757,7 +757,7 @@ int pc_enabled(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   int result = 0;
-  RunList *Y, *oX;
+  models::RunList *Y, *oX;
 
   if (pid == X_lst->pid)
     loger::fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
@@ -777,7 +777,7 @@ int pc_highest(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
   int target = 0, result = 1;
-  RunList *Y, *oX;
+  models::RunList *Y, *oX;
 
   if (X_lst->prov && !eval(X_lst->prov)) {
     return 0; /* can't be highest unless fully enabled */
@@ -819,7 +819,7 @@ int pc_highest(models::Lextok *n) {
 int get_priority(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
-  RunList *Y;
+  models::RunList *Y;
 
   if (launch_settings.need_revert_old_rultes_for_priority) {
     return 1;
@@ -836,7 +836,7 @@ int get_priority(models::Lextok *n) {
 void set_priority(models::Lextok *n, models::Lextok *p) {
   int i = nproc - nstop - Have_claim;
   int pid = eval(n);
-  RunList *Y;
+  models::RunList *Y;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (launch_settings.need_revert_old_rultes_for_priority) {

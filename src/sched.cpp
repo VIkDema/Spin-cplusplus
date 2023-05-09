@@ -25,23 +25,23 @@ extern LaunchSettings launch_settings;
 extern int pc_highest(models::Lextok *n);
 extern void putpostlude(void);
 
-RunList *X_lst = (RunList *)0;
-RunList *run_lst = (RunList *)0;
-RunList *LastX = (RunList *)0; /* previous executing proc */
-ProcList *ready = (ProcList *)0;
-Element *LastStep = ZE;
+models::RunList *X_lst = (models::RunList *)0;
+models::RunList *run_lst = (models::RunList *)0;
+models::RunList *LastX = (models::RunList *)0; /* previous executing proc */
+models::ProcList *ready = (models::ProcList *)0;
+models::Element *LastStep = ZE;
 int nproc = 0, nstop = 0, Tval = 0, Priority_Sum = 0;
 int Rvous = 0, depth = 0, nrRdy = 0, MadeChoice;
 short Have_claim = 0, Skip_claim = 0;
 
-static void setlocals(RunList *);
-static void setparams(RunList *, ProcList *, models::Lextok *);
-static void talk(RunList *);
+static void setlocals(models::RunList *);
+static void setparams(models::RunList *, models::ProcList *, models::Lextok *);
+static void talk(models::RunList *);
 
 extern std::string which_mtype(const std::string &);
 
-void runnable(ProcList *p, int weight, int noparams) {
-  RunList *r = (RunList *)emalloc(sizeof(RunList));
+void runnable(models::ProcList *p, int weight, int noparams) {
+  models::RunList *r = (models::RunList *)emalloc(sizeof(models::RunList));
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   r->n = p->n;
@@ -82,11 +82,11 @@ void runnable(ProcList *p, int weight, int noparams) {
   run_lst = r;
 }
 
-ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, Sequence *s, int det,
+models::ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, models::Sequence *s, int det,
                  models::Lextok *prov, models::btypes b)
 /* n=name, p=formals, s=body det=deterministic prov=provided */
 {
-  ProcList *r = (ProcList *)emalloc(sizeof(ProcList));
+  models::ProcList *r = (models::ProcList *)emalloc(sizeof(models::ProcList));
   models::Lextok *fp, *fpt;
   int j;
   extern int Npars;
@@ -118,7 +118,7 @@ ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, Sequence *s, int det,
 void check_mtypes(models::Lextok *pnm,
                   models::Lextok *args) /* proctype name, actual params */
 {
-  ProcList *p = NULL;
+  models::ProcList *p = NULL;
   models::Lextok *fp, *fpt, *at;
   std::string s, t;
 
@@ -167,7 +167,7 @@ void check_mtypes(models::Lextok *pnm,
 }
 
 int find_maxel(models::Symbol *s) {
-  ProcList *p;
+  models::ProcList *p;
 
   for (p = ready; p; p = p->nxt) {
     if (p->n == s) {
@@ -179,7 +179,7 @@ int find_maxel(models::Symbol *s) {
 }
 
 static void formdump(void) {
-  ProcList *p;
+  models::ProcList *p;
   models::Lextok *f, *t;
   int count;
 
@@ -239,7 +239,7 @@ constexpr int kMaxNrOfProcesses =
     255; /* matches max nr of processes in verifier */
 
 int enable(models::Lextok *m) {
-  ProcList *p;
+  models::ProcList *p;
   models::Symbol *s = m->symbol; /* proctype name */
   models::Lextok *n = m->left;   /* actual parameters */
 
@@ -264,7 +264,7 @@ int enable(models::Lextok *m) {
 }
 
 void check_param_count(int i, models::Lextok *m) {
-  ProcList *p;
+  models::ProcList *p;
   models::Symbol *s = m->symbol; /* proctype name */
   models::Lextok *f, *t;         /* formal pars */
   int count = 0;
@@ -291,8 +291,8 @@ void check_param_count(int i, models::Lextok *m) {
 }
 
 void start_claim(int n) {
-  ProcList *p;
-  RunList *r, *q = (RunList *)0;
+  models::ProcList *p;
+  models::RunList *r, *q = (models::RunList *)0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (p = ready; p; p = p->nxt)
@@ -330,7 +330,7 @@ found:
   q = run_lst;
   run_lst = run_lst->nxt;
   q->pid = 0;
-  q->nxt = (RunList *)0; /* remove */
+  q->nxt = (models::RunList *)0; /* remove */
 done:
   Have_claim = 1;
   for (r = run_lst; r; r = r->nxt) {
@@ -343,7 +343,7 @@ done:
 }
 
 int f_pid(const std::string &n) {
-  RunList *r;
+  models::RunList *r;
   int rval = -1;
 
   for (r = run_lst; r; r = r->nxt) {
@@ -405,8 +405,8 @@ static int p_blocked(int p) {
   return 0;
 }
 
-static Element *silent_moves(Element *e) {
-  Element *f;
+static models::Element *silent_moves(models::Element *e) {
+  models::Element *f;
 
   if (e->n)
     switch (e->n->node_type) {
@@ -450,10 +450,10 @@ static int x_can_run(void) /* the currently selected process in X_lst can run */
   return 1;
 }
 
-static RunList *pickproc(RunList *Y) {
+static models::RunList *pickproc(models::RunList *Y) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
-  SeqList *z;
-  Element *has_else;
+  models::SeqList *z;
+  models::Element *has_else;
   short Choices[256];
   int j, k, nr_else = 0;
 
@@ -543,7 +543,7 @@ static RunList *pickproc(RunList *Y) {
         proc_no_ch = no_choice;
         proc_k = k;
         for (z = X_lst->pc->sub, j = 0; z; z = z->nxt) {
-          Element *y = silent_moves(z->this_sequence->frst);
+          models::Element *y = silent_moves(z->this_sequence->frst);
           int unex;
           if (!y)
             continue;
@@ -635,7 +635,7 @@ static RunList *pickproc(RunList *Y) {
 }
 
 void multi_claims(void) {
-  ProcList *p, *q = NULL;
+  models::ProcList *p, *q = NULL;
 
   if (nclaims > 1) {
     printf("  the model contains %d never claims:", nclaims);
@@ -656,9 +656,9 @@ void multi_claims(void) {
 }
 
 void sched(void) {
-  Element *e;
-  RunList *Y = NULL; /* previous process in run queue */
-  RunList *oX;
+  models::Element *e;
+  models::RunList *Y = NULL; /* previous process in run queue */
+  models::RunList *oX;
   int go, notbeyond = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -800,7 +800,7 @@ void sched(void) {
           }
           if (!Tval && depth >= launch_settings.count_of_skipping_steps) {
             oX = X_lst;
-            X_lst = (RunList *)0; /* to suppress indent */
+            X_lst = (models::RunList *)0; /* to suppress indent */
             dotag(stdout, "timeout\n");
             X_lst = oX;
             Tval = 1;
@@ -820,9 +820,9 @@ void sched(void) {
 }
 
 int complete_rendez(void) {
-  RunList *orun = X_lst, *tmp;
-  Element *s_was = LastStep;
-  Element *e;
+  models::RunList *orun = X_lst, *tmp;
+  models::Element *s_was = LastStep;
+  models::Element *e;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   int j;
   bool ointer = launch_settings.need_to_run_in_interactive_mode;
@@ -889,7 +889,7 @@ int complete_rendez(void) {
 
 /***** Runtime - Local Variables *****/
 
-static void addsymbol(RunList *r, models::Symbol *s) {
+static void addsymbol(models::RunList *r, models::Symbol *s) {
   models::Symbol *t;
   int i;
 
@@ -930,10 +930,10 @@ static void addsymbol(RunList *r, models::Symbol *s) {
   r->symtab = t;
 }
 
-static void setlocals(RunList *r) {
+static void setlocals(models::RunList *r) {
   models::Ordered *walk;
   models::Symbol *sp;
-  RunList *oX = X_lst;
+  models::RunList *oX = X_lst;
 
   X_lst = r;
   for (walk = all_names; walk; walk = walk->next) {
@@ -954,11 +954,11 @@ static void setlocals(RunList *r) {
   X_lst = oX;
 }
 
-static void oneparam(RunList *r, models::Lextok *t, models::Lextok *a,
-                     ProcList *p) {
+static void oneparam(models::RunList *r, models::Lextok *t, models::Lextok *a,
+                     models::ProcList *p) {
   int k;
   int at, ft;
-  RunList *oX = X_lst;
+  models::RunList *oX = X_lst;
 
   if (!a)
     loger::fatal("missing actual parameters: '%s'", p->n->name);
@@ -985,7 +985,7 @@ static void oneparam(RunList *r, models::Lextok *t, models::Lextok *a,
   X_lst = oX;
 }
 
-static void setparams(RunList *r, ProcList *p, models::Lextok *q) {
+static void setparams(models::RunList *r, models::ProcList *p, models::Lextok *q) {
   models::Lextok *f, *a; /* formal and actual pars */
   models::Lextok *t;     /* list of pars of 1 type */
 
@@ -1081,7 +1081,7 @@ void whoruns(int lnr) {
   }
 }
 
-static void talk(RunList *r) {
+static void talk(models::RunList *r) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (verbose_flags.NeedToPrintVerbose() ||
       verbose_flags.NeedToPrintAllProcessActions()) {
@@ -1093,7 +1093,7 @@ static void talk(RunList *r) {
       dumplocal(r, 1);
   }
 }
-void p_talk(Element *e, int lnr) {
+void p_talk(models::Element *e, int lnr) {
   static int lastnever = -1;
   static std::string nbuf;
   int newnever = -1;
@@ -1150,7 +1150,7 @@ int remotelab(models::Lextok *n) {
 
 int remotevar(models::Lextok *n) {
   int prno, i, added = 0;
-  RunList *Y, *oX;
+  models::RunList *Y, *oX;
   models::Lextok *onl;
   models::Symbol *os;
 

@@ -65,8 +65,8 @@ void LaunchSettings::SetOptimizationsOptions(int value) {
 }
 
 std::string LaunchSettings::BuildPanRuntime() {
-  extern QH *qh_lst;
-  QH *j;
+  extern models::QH *qh_lst;
+  models::QH *j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   auto &seed = utils::seed::Seed::getInstance();
 

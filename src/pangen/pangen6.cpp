@@ -28,7 +28,7 @@ struct Pair {
 };
 
 struct AST {
-  ProcList *p; /* proctype decl */
+  models::ProcList *p; /* proctype decl */
   int i_st;    /* start state */
   int nstates, nwords;
   int relevant;
@@ -163,7 +163,7 @@ static void name_def_use(models::Lextok *n, int code) {
     u = use_free;
     use_free = use_free->nxt;
   } else
-    u = (FSM_use *)emalloc(sizeof(FSM_use));
+    u = (models::FSM_use *)emalloc(sizeof(models::FSM_use));
 
   u->n = n;
   u->special = code;
@@ -377,7 +377,7 @@ static void AST_findrun(std::string &s, int parno) {
 }
 
 static void AST_par_chans(
-    ProcList *p) /* find local chan's init'd to chan passed as param */
+    models::ProcList *p) /* find local chan's init'd to chan passed as param */
 {
   models::Ordered *walk;
   models::Symbol *sp;
@@ -397,7 +397,7 @@ static void AST_par_chans(
   }
 }
 
-static void AST_para(ProcList *p) {
+static void AST_para(models::ProcList *p) {
   models::Lextok *f, *t, *c;
   int cnt = 0;
 
@@ -574,7 +574,7 @@ static void AST_aliases(void) {
   printf("\n");
 }
 
-static void AST_indirect(models::FSM_use *uin, FSM_trans *t, const std::string &cause,
+static void AST_indirect(models::FSM_use *uin, models::FSM_trans *t, const std::string &cause,
                          const std::string &pn) {
   models::FSM_use *u;
 
@@ -802,7 +802,7 @@ static void AST_tagruns(void) {
         }
 }
 
-static void AST_report(AST *a, Element *e) /* ALSO deduce irrelevant vars */
+static void AST_report(AST *a, models::Element *e) /* ALSO deduce irrelevant vars */
 {
   if (!(a->relevant & 2)) {
     a->relevant |= 2;
@@ -1704,7 +1704,7 @@ void AST_slice(void) {
     show_expl();
 }
 
-void AST_store(ProcList *p, int start_state) {
+void AST_store(models::ProcList *p, int start_state) {
   AST *n_ast;
 
   if (p->b != models::btypes::N_CLAIM && p->b != models::btypes::E_TRACE &&
@@ -1726,7 +1726,7 @@ static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
 
   e->to = 0;              /* or start_state ? */
   e->relevant = 0;        /* to be determined */
-  e->step = (Element *)0; /* left blank */
+  e->step = (models::Element *)0; /* left blank */
   e->Val[0] = e->Val[1] = nullptr;
 
   cur_t = e;

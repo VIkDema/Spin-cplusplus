@@ -107,7 +107,7 @@ void unskip(int m) /* a state that needs to be reached after all */
   }
 }
 
-void putsrc(Element *e) /* match states to source lines */
+void putsrc(models::Element *e) /* match states to source lines */
 {
   SRC *tmp, *lst = (SRC *)0;
   int n, m;

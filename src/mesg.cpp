@@ -13,7 +13,7 @@
 constexpr int kMaxQueueSize = 2500; 
 
 
-extern RunList *X_lst;
+extern models::RunList *X_lst;
 extern models::Symbol *Fname;
 extern int TstOnly;
 extern int lineno, depth;
@@ -22,7 +22,7 @@ extern short Have_claim;
 
 extern LaunchSettings launch_settings;
 
-QH *qh_lst;
+models::QH *qh_lst;
 models::Queue *qtab = nullptr; /* linked list of queues */
 models::Queue *ltab[kMaxQueueSize];        /* linear list of queues */
 int nrqs = 0, firstrow = 1, has_stdin = 0;
@@ -466,7 +466,7 @@ try_slot:
 static int s_snd(models::Queue *q, models::Lextok *n) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   models::Lextok *m;
-  RunList *rX, *sX = X_lst; /* rX=recvr, sX=sendr */
+  models::RunList *rX, *sX = X_lst; /* rX=recvr, sX=sendr */
   int i, j = 0;             /* q field# */
 
   for (m = n->right; m && j < q->nflds; m = m->right, j++) {
@@ -629,14 +629,14 @@ static void docolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *
 }
 
 void qhide(int q) {
-  QH *p = (QH *)emalloc(sizeof(QH));
+  models::QH *p = (models::QH *)emalloc(sizeof(models::QH));
   p->n = q;
   p->nxt = qh_lst;
   qh_lst = p;
 }
 
 int qishidden(int q) {
-  QH *p;
+  models::QH *p;
   for (p = qh_lst; p; p = p->nxt)
     if (p->n == q)
       return 1;
@@ -720,7 +720,7 @@ void sr_mesg(FILE *fd, int v, int j, const std::string &s) {
   fprintf(fd, GBuf, (char *)0); /* prevent compiler warning */
 }
 
-void doq(models::Symbol *s, int n, RunList *r) {
+void doq(models::Symbol *s, int n, models::RunList *r) {
   models::Queue *q;
   int j, k;
 

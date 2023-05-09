@@ -14,7 +14,7 @@ int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
 static int Tojump[kMaxDstep], Jumpto[kMaxDstep], Special[kMaxDstep];
-static void putCode(FILE *, Element *, Element *, Element *, int);
+static void putCode(FILE *, models::Element *, models::Element *, models::Element *, int);
 
 extern int Pid_nr, OkBreak;
 
@@ -91,14 +91,14 @@ static int FirstTime(int n) {
   return 1;
 }
 
-static void illegal(Element *e, char *str) {
+static void illegal(models::Element *e, char *str) {
   printf("illegal operator in 'd_step:' '");
   comment(stdout, e->n, 0);
   printf("'\n");
   loger::fatal("'%s'", str);
 }
 
-static void filterbad(Element *e) {
+static void filterbad(models::Element *e) {
   switch (e->n->node_type) {
   case ASSERT:
   case PRINT:
@@ -132,9 +132,9 @@ static void filterbad(Element *e) {
   }
 }
 
-static int CollectGuards(FILE *fd, Element *e, int inh) {
-  SeqList *h;
-  Element *ee;
+static int CollectGuards(FILE *fd, models::Element *e, int inh) {
+  models::SeqList *h;
+  models::Element *ee;
 
   for (h = e->sub; h; h = h->nxt) {
     ee = huntstart(h->this_sequence->frst);
@@ -205,7 +205,7 @@ static int CollectGuards(FILE *fd, Element *e, int inh) {
   return inh;
 }
 
-int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
+int putcode(FILE *fd, models::Sequence *s, models::Element *nxt, int justguards, int ln,
             int seqno) {
   int isg = 0;
   static std::string buf;
@@ -330,10 +330,10 @@ int putcode(FILE *fd, Sequence *s, Element *nxt, int justguards, int ln,
   return LastGoto;
 }
 
-static void putCode(FILE *fd, Element *f, Element *last, Element *next,
+static void putCode(FILE *fd, models::Element *f, models::Element *last, models::Element *next,
                     int isguard) {
-  Element *e, *N;
-  SeqList *h;
+  models::Element *e, *N;
+  models::SeqList *h;
   int i;
   std::string NextOpt;
   static int bno = 0;

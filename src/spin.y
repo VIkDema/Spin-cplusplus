@@ -139,7 +139,7 @@ proc	: inst		/* optional instantiator */
 			}
 	  Opt_priority
 	  Opt_enabler
-	  body		{ ProcList *rl;
+	  body		{ models::ProcList *rl;
 			  if ($1 != ZN && $1->value > 0)
 			  {	int j;
 				rl = mk_rdy($3->symbol, $6, $11->sequence, $2->value, $10, models::btypes::A_PROC);
@@ -192,7 +192,7 @@ init	: INIT		{
 	context = $1->symbol;
 	 }
 	  Opt_priority
-	  body		{ ProcList *rl;
+	  body		{ models::ProcList *rl;
 			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN,    models::btypes::I_PROC);
 			  runnable(rl, $3?$3->value:1, 1);
 			  announce(":root:");

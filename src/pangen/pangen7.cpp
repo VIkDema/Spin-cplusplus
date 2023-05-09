@@ -14,8 +14,8 @@
 
 extern LaunchSettings launch_settings;
 
-extern ProcList *ready;
-extern Element *Al_El;
+extern models::ProcList *ready;
+extern models::Element *Al_El;
 extern int nclaims, verbose;
 extern short has_accept;
 
@@ -65,11 +65,11 @@ static int
     is_accept; /* remember if the current state is accepting in any claim */
 static int not_printing; /* set during explore_product */
 
-static Element ****matrix; /* n x two-dimensional arrays state x state */
-static Element **Selfs;    /* self-loop states at end of claims */
+static models::Element ****matrix; /* n x two-dimensional arrays state x state */
+static models::Element **Selfs;    /* self-loop states at end of claims */
 
-static void get_seq(int, Sequence *);
-static void set_el(int n, Element *e);
+static void get_seq(int, models::Sequence *);
+static void set_el(int n, models::Element *e);
 static void gen_product(void);
 static void print_state_nm(char *, int *, char *);
 static SQueue *find_state(int *);
@@ -228,7 +228,7 @@ static void state_body(OneState *s, Guard *guard) {
     once = 0;
 
     for (i = 0; i < nclaims; i++) {
-      Element *e;
+      models::Element *e;
       e = matrix[i][s->combo[i]][sl->s->state.combo[i]];
 
       /* if one of the claims has a DO or IF move
@@ -278,10 +278,10 @@ static struct X_tbl {
 };
 
 static int slcnt;
-extern Label *labtab;
+extern models::Label *labtab;
 
-static ProcList *locate_claim(int n) {
-  ProcList *p;
+static models::ProcList *locate_claim(int n) {
+  models::ProcList *p;
   int i;
 
   for (p = ready, i = 0; p; p = p->nxt, i++) /* find claim name */
@@ -295,8 +295,8 @@ static ProcList *locate_claim(int n) {
   return p;
 }
 
-static void elim_lab(Element *e) {
-  Label *l, *lst;
+static void elim_lab(models::Element *e) {
+  models::Label *l, *lst;
 
   for (l = labtab, lst = NULL; l; lst = l, l = l->nxt) {
     if (l->e == e) {
@@ -310,8 +310,8 @@ static void elim_lab(Element *e) {
   }
 }
 
-static int claim_has_accept(ProcList *p) {
-  Label *l;
+static int claim_has_accept(models::ProcList *p) {
+  models::Label *l;
 
   for (l = labtab; l; l = l->nxt) {
     if (l->c->name == p->n->name && l->s->name.substr(0, 6) == "accept") {
@@ -336,15 +336,15 @@ static void prune_accept(void) {
   }
 }
 
-static void mk_accepting(int n, Element *e) {
-  ProcList *p;
-  Label *l;
+static void mk_accepting(int n, models::Element *e) {
+  models::ProcList *p;
+  models::Label *l;
   int i;
 
   assert(!Selfs[n]);
   Selfs[n] = e;
 
-  l = (Label *)emalloc(sizeof(Label));
+  l = (models::Label *)emalloc(sizeof(models::Label));
   l->s = (models::Symbol *)emalloc(sizeof(models::Symbol));
   l->s->name = "accept00";
   l->c = (models::Symbol *)emalloc(sizeof(models::Symbol));
@@ -367,8 +367,8 @@ static void mk_accepting(int n, Element *e) {
 }
 
 static void check_special(int *nrs) {
-  ProcList *p;
-  Label *l;
+  models::ProcList *p;
+  models::Label *l;
   int i, j, nmatches;
   int any_accepts = 0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -599,8 +599,8 @@ static void print_raw(void) {
 }
 
 void sync_product(void) {
-  ProcList *p;
-  Element *e;
+  models::ProcList *p;
+  models::Element *e;
   int n, i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -613,8 +613,8 @@ void sync_product(void) {
   Nacc = (int *)emalloc(sizeof(int) * nclaims);
   Nst = (int *)emalloc(sizeof(int) * nclaims);
   reached = (int **)emalloc(sizeof(int *) * nclaims);
-  Selfs = (Element **)emalloc(sizeof(Element *) * nclaims);
-  matrix = (Element ****)emalloc(sizeof(Element ***) * nclaims); /* claims */
+  Selfs = (models::Element **)emalloc(sizeof(models::Element *) * nclaims);
+  matrix = (models::Element ****)emalloc(sizeof(models::Element ***) * nclaims); /* claims */
 
   for (p = ready, i = 0; p; p = p->nxt, i++) {
     if (p->b == models::btypes::N_CLAIM) {
@@ -625,10 +625,10 @@ void sync_product(void) {
 
   for (n = 0; n < nclaims; n++) {
     reached[n] = (int *)emalloc(sizeof(int) * nst);
-    matrix[n] = (Element ***)emalloc(sizeof(Element **) * nst); /* rows */
+    matrix[n] = (models::Element ***)emalloc(sizeof(models::Element **) * nst); /* rows */
     for (i = 0; i < nst; i++)                                   /* cols */
     {
-      matrix[n][i] = (Element **)emalloc(sizeof(Element *) * nst);
+      matrix[n][i] = (models::Element **)emalloc(sizeof(models::Element *) * nst);
     }
   }
 
@@ -824,7 +824,7 @@ static void gen_product(void) {
   }
 }
 
-static void t_record(int n, Element *e, Element *g) {
+static void t_record(int n, models::Element *e, models::Element *g) {
   int from = e->seqno, upto = g ? g->seqno : 0;
 
   assert(from >= 0 && from < nst);
@@ -834,7 +834,7 @@ static void t_record(int n, Element *e, Element *g) {
   reached[n][upto] |= 1;
 }
 
-static void get_sub(int n, Element *e) {
+static void get_sub(int n, models::Element *e) {
   if (e->n->node_type == D_STEP || e->n->node_type == ATOMIC) {
     loger::fatal("atomic or d_step in never claim product");
   }
@@ -845,8 +845,8 @@ static void get_sub(int n, Element *e) {
   t_record(n, e, e->n->seq_list->this_sequence->frst);
 }
 
-static void set_el(int n, Element *e) {
-  Element *g;
+static void set_el(int n, models::Element *e) {
+  models::Element *g;
 
   if (e->n->node_type == '@') /* change to self-loop */
   {
@@ -869,9 +869,9 @@ static void set_el(int n, Element *e) {
   t_record(n, e, g);
 }
 
-static void get_seq(int n, Sequence *s) {
-  SeqList *h;
-  Element *e;
+static void get_seq(int n, models::Sequence *s) {
+  models::SeqList *h;
+  models::Element *e;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   e = huntele(s->frst, s->frst->status, -1);

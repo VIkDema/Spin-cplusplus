@@ -17,7 +17,7 @@ extern int nproc, nstop;
 extern int lineno, depth, verbose, limited_vis, Pid_nr;
 extern models::Lextok *Xu_List;
 extern models::Ordered *all_names;
-extern RunList *X_lst, *LastX;
+extern models::RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
 extern models::Symbol *Fname;
 
@@ -326,7 +326,7 @@ void dumpglobals(void) {
   }
 }
 
-void dumplocal(RunList *r, int final) {
+void dumplocal(models::RunList *r, int final) {
   static models::Lextok *dummy = ZN;
   models::Symbol *z, *s;
   int i;

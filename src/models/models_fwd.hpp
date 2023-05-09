@@ -1,8 +1,5 @@
 #pragma once
 
-struct Sequence;
-struct SeqList;
-
 namespace models {
 
 enum { INIV, PUTV, LOGV }; /* used in pangen1.c */
@@ -16,5 +13,11 @@ struct Ordered;
 struct FSM_state;
 struct FSM_trans;
 struct FSM_use;
+struct Element;
+struct Sequence;
+struct SeqList;
+struct ProcList;
+struct RunList;
+struct QH;
 
 } // namespace models

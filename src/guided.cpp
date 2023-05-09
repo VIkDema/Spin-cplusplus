@@ -13,8 +13,8 @@
 
 extern LaunchSettings launch_settings;
 
-extern RunList *run_lst, *X_lst;
-extern Element *Al_El;
+extern models::RunList *run_lst, *X_lst;
+extern models::Element *Al_El;
 extern models::Symbol *Fname, *oFname;
 extern int lineno, depth;
 extern int nproc, nstop, Tval;
@@ -29,7 +29,7 @@ static FILE *fd;
 static void lost_trail(void);
 
 static void whichproc(int p) {
-  RunList *oX;
+  models::RunList *oX;
 
   for (oX = run_lst; oX; oX = oX->nxt)
     if (oX->pid == p) {
@@ -54,7 +54,7 @@ bool newer(const std::string &f1, const std::string &f2) {
 }
 
 void hookup(void) {
-  Element *e;
+  models::Element *e;
 
   for (e = Al_El; e; e = e->Nxt)
     if (e->n && (e->n->node_type == ATOMIC || e->n->node_type == NON_ATOMIC ||
@@ -67,9 +67,9 @@ int not_claim(void) { return (!Have_claim || !X_lst || X_lst->pid != 0); }
 int globmin = INT_MAX;
 int globmax = 0;
 
-int find_min(Sequence *s) {
-  SeqList *l;
-  Element *e;
+int find_min(models::Sequence *s) {
+  models::SeqList *l;
+  models::Element *e;
 
   if (s->minel < 0) {
     s->minel = INT_MAX;
@@ -102,7 +102,7 @@ int find_min(Sequence *s) {
   return s->minel;
 }
 
-int find_max(Sequence *s) {
+int find_max(models::Sequence *s) {
   if (s->last->Seqno > globmax) {
     globmax = s->last->Seqno;
   }
@@ -111,7 +111,7 @@ int find_max(Sequence *s) {
 
 void match_trail(void) {
   int i, a, nst;
-  Element *dothis;
+  models::Element *dothis;
 
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -315,7 +315,7 @@ okay:
     Fname = dothis->n->file_name;
 
     if (dothis->n->node_type == D_STEP) {
-      Element *g, *og = dothis;
+      models::Element *g, *og = dothis;
       do {
         g = eval_sub(og);
         if (g && depth >= launch_settings.count_of_skipping_steps &&
@@ -423,7 +423,7 @@ static void lost_trail(void) {
 int pc_value(models::Lextok *n) {
   int i = nproc - nstop;
   int pid = eval(n);
-  RunList *Y;
+  models::RunList *Y;
 
   for (Y = run_lst; Y; Y = Y->nxt) {
     if (--i == pid)

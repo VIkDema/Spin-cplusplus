@@ -18,9 +18,9 @@
 extern LaunchSettings launch_settings;
 
 extern FILE *fd_tc, *fd_th, *fd_tt;
-extern Label *labtab;
+extern models::Label *labtab;
 extern models::Ordered *all_names;
-extern ProcList *ready;
+extern models::ProcList *ready;
 extern models::Queue *qtab;
 extern models::Symbol *Fname;
 extern int lineno, verbose, Pid_nr, nclaims;
@@ -45,19 +45,19 @@ static void do_init(FILE *, models::Symbol *);
 static void end_labs(models::Symbol *, int);
 static void put_ptype(const std::string &, int, int, int, models::btypes);
 static void tc_predef_np(void);
-static void put_pinit(ProcList *);
+static void put_pinit(models::ProcList *);
 static void multi_init(void);
 
 void walk_struct(FILE *, int, const std::string &, models::Symbol *,
                  const std::string &, const std::string &, const std::string &);
 
-static void reverse_names(ProcList *p) {
+static void reverse_names(models::ProcList *p) {
   if (!p)
     return;
   reverse_names(p->nxt);
   fprintf(fd_tc, "   \"%s\",\n", p->n->name.c_str());
 }
-static void reverse_types(ProcList *p) {
+static void reverse_types(models::ProcList *p) {
   if (!p)
     return;
   reverse_types(p->nxt);
@@ -76,7 +76,7 @@ static int blog(int n) /* for small log2 without rounding problems */
 }
 
 void genheader(void) {
-  ProcList *p;
+  models::ProcList *p;
   int i;
 
   if (launch_settings.separate_version == 2) {
@@ -259,7 +259,7 @@ here:
 }
 
 void genaddproc(void) {
-  ProcList *p;
+  models::ProcList *p;
   int i = 0;
 
   if (launch_settings.separate_version == 2)
@@ -327,7 +327,7 @@ shortcut:
 }
 
 void do_locinits(FILE *fd) {
-  ProcList *p;
+  models::ProcList *p;
 
   /* the locinit functions may refer to pptr or qptr */
   fprintf(fd, "#if VECTORSZ>32000\n");
@@ -343,7 +343,7 @@ void do_locinits(FILE *fd) {
 }
 
 void genother(void) {
-  ProcList *p;
+  models::ProcList *p;
 
   switch (launch_settings.separate_version) {
   case 2:
@@ -454,7 +454,7 @@ static struct {
 static void end_labs(models::Symbol *s, int i) {
   int oln = lineno;
   models::Symbol *ofn = Fname;
-  Label *l;
+  models::Label *l;
   int j;
   char foo[128];
 
@@ -522,7 +522,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
 
   if (sp->hidden_flags & 16) /* formal parameter */
   {
-    ProcList *p;
+    models::ProcList *p;
     models::Lextok *f, *t;
     int posnr = 0;
     for (p = ready; p; p = p->nxt)
@@ -746,7 +746,7 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
   }
 }
 
-int c_splurge_any(ProcList *p) {
+int c_splurge_any(models::ProcList *p) {
   models::Ordered *walk;
   models::Symbol *sp;
 
@@ -764,7 +764,7 @@ int c_splurge_any(ProcList *p) {
   return 0;
 }
 
-void c_splurge(FILE *fd, ProcList *p) {
+void c_splurge(FILE *fd, models::ProcList *p) {
   models::Ordered *walk;
   models::Symbol *sp;
   char pref[64];
@@ -786,7 +786,7 @@ void c_splurge(FILE *fd, ProcList *p) {
 void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 {
   models::Ordered *walk;
-  ProcList *p;
+  models::ProcList *p;
   models::Symbol *sp;
   models::Mtypes_t *lst;
   models::Lextok *n;
@@ -1083,8 +1083,8 @@ static void tc_predef_np(void) {
 }
 
 static void multi_init(void) {
-  ProcList *p;
-  Element *e;
+  models::ProcList *p;
+  models::Element *e;
   int i = nrRdy + 1;
   int init_value, j;
   int nrc = nclaims;
@@ -1124,9 +1124,9 @@ static void multi_init(void) {
   fprintf(fd_tc, "#endif\n");
 }
 
-static void put_pinit(ProcList *P) {
+static void put_pinit(models::ProcList *P) {
   models::Lextok *fp, *fpt, *t;
-  Element *e = P->s->frst;
+  models::Element *e = P->s->frst;
   models::Symbol *s = P->n;
   models::Lextok *p = P->p;
   int i = P->tn;
@@ -1210,9 +1210,9 @@ static void put_pinit(ProcList *P) {
   fprintf(fd_tc, "\t	break;\n");
 }
 
-Element *huntstart(Element *f) {
-  Element *e = f;
-  Element *elast = (Element *)0;
+models::Element *huntstart(models::Element *f) {
+  models::Element *e = f;
+  models::Element *elast = (models::Element *)0;
   int cnt = 0;
 
   while (elast != e && cnt++ < 200) /* new 4.0.8 */
@@ -1233,8 +1233,8 @@ Element *huntstart(Element *f) {
   return e;
 }
 
-Element *huntele(Element *f, unsigned int o, int stopat) {
-  Element *g, *e = f;
+models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
+  models::Element *g, *e = f;
   int cnt = 0; /* a precaution against loops */
 
   if (e)

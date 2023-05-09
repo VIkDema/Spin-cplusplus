@@ -8,7 +8,7 @@
 #include <optional>
 #include <sstream>
 
-extern ProcList *ready;
+extern models::ProcList *ready;
 
 namespace format {
 
@@ -21,11 +21,11 @@ void PreprocessedFileViewer::doindent() {
 }
 
 //TODO: fix name variable
-void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
+void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence) {
   models::Symbol *v;
-  SeqList *h;
+  models::SeqList *h;
 
-  for (Element *element = sequence->frst; element; element = element->nxt) {
+  for (models::Element *element = sequence->frst; element; element = element->nxt) {
     v = has_lab(element, 0);
     if (v) {
       std::cout << fmt::format("{}:", v->name) << std::endl;
@@ -101,7 +101,7 @@ void PreprocessedFileViewer::recursive_view_sequence(Sequence *sequence) {
   }
 }
 
-void PreprocessedFileViewer::recursive_view(ProcList *node) {
+void PreprocessedFileViewer::recursive_view(models::ProcList *node) {
   if (!node)
     return;
   if (node->nxt) {
@@ -124,7 +124,7 @@ void PreprocessedFileViewer::recursive_view(ProcList *node) {
   std::cout << "}" << std::endl;
 }
 
-void PreprocessedFileViewer::recursive_view_element(Element *element) {
+void PreprocessedFileViewer::recursive_view_element(models::Element *element) {
   doindent();
   switch (element->n->node_type) {
   case D_STEP:

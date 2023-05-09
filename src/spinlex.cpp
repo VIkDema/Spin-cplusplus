@@ -42,8 +42,8 @@ struct C_Added {
   struct C_Added *nxt;
 };
 
-extern RunList *X_lst;
-extern ProcList *ready;
+extern models::RunList *X_lst;
+extern models::ProcList *ready;
 extern models::Symbol *Fname, *oFname;
 extern models::Symbol *context, *owner;
 extern YYSTYPE yylval;
@@ -719,7 +719,7 @@ void plunk_c_fcts(FILE *fd) {
 
 static void check_inline(IType *tmp) {
   char buf[128];
-  ProcList *p;
+  models::ProcList *p;
 
   if (!X_lst)
     return;

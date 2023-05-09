@@ -481,7 +481,7 @@ void c_struct(FILE *fd, const std::string &ipref, models::Symbol *z) {
           c_var(fd, eprefix, tl->symbol);
       }
 }
-void dump_struct(models::Symbol *z, const std::string &prefix, RunList *r) {
+void dump_struct(models::Symbol *z, const std::string &prefix, models::RunList *r) {
   models::Lextok *fp, *tl;
   std::string eprefix;
   int ix, jx;

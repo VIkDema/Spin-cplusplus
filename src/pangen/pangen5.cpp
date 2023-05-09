@@ -14,9 +14,9 @@ struct BuildStack {
   struct BuildStack *nxt;
 };
 
-extern ProcList *ready;
+extern models::ProcList *ready;
 extern int verbose, eventmapnr, claimnr, u_sync;
-extern Element *Al_El;
+extern models::Element *Al_El;
 
 static models::FSM_state *fsm_free;
 static models::FSM_trans *trans_free;
@@ -28,11 +28,11 @@ models::FSM_state *fsmx;
 models::FSM_state **fsm_tbl;
 models::FSM_use *use_free;
 
-static void ana_seq(Sequence *);
+static void ana_seq(models::Sequence *);
 static void ana_stmnt(models::FSM_trans *, models::Lextok *, int);
 
 extern void AST_slice(void);
-extern void AST_store(ProcList *, int);
+extern void AST_store(models::ProcList *, int);
 extern int has_global(models::Lextok *);
 extern void exit(int);
 
@@ -92,7 +92,7 @@ static void new_dfs(void) {
       fsm_tbl[i]->seen = 0;
 }
 
-static int good_dead(Element *e, models::FSM_use *u) {
+static int good_dead(models::Element *e, models::FSM_use *u) {
   switch (u->special) {
   case 2: /* ok if it's a receive */
     if (e->n->node_type == ASGN && e->n->right->node_type == CONST && e->n->right->value == 0)
@@ -107,7 +107,7 @@ static int good_dead(Element *e, models::FSM_use *u) {
 }
 
 static int eligible(models::FSM_trans *v) {
-  Element *el = ZE;
+  models::Element *el = ZE;
   models::Lextok *lt = ZN;
 
   if (v)
@@ -142,7 +142,7 @@ static int eligible(models::FSM_trans *v) {
 }
 
 static int canfill_in(models::FSM_trans *v) {
-  Element *el = v->step;
+  models::Element *el = v->step;
   models::Lextok *lt = v->step->n;
 
   if (!lt                       /* dead end */
@@ -158,7 +158,7 @@ static int canfill_in(models::FSM_trans *v) {
   return 1;
 }
 
-static int pushbuild(FSM_trans *v) {
+static int pushbuild(models::FSM_trans *v) {
   BuildStack *b;
 
   for (b = bs; b; b = b->nxt)
@@ -187,7 +187,7 @@ static void popbuild(void) {
 
 static int build_step(models::FSM_trans *v) {
   models::FSM_state *f;
-  Element *el;
+  models::Element *el;
   int st;
   int r;
 
@@ -366,7 +366,7 @@ static void rel_trans(models::FSM_trans *t) {
   trans_free = t;
 }
 
-static void rel_state(FSM_state *f) {
+static void rel_state(models::FSM_state *f) {
   if (!f)
     return;
   rel_state(f->nxt);
@@ -381,7 +381,7 @@ static void FSM_DEL(void) {
   fsmx = (models::FSM_state *)0;
 }
 
-static FSM_state *mkstate(int s) {
+static models::FSM_state *mkstate(int s) {
   models::FSM_state *f;
 
   /* fsm_tbl isn't allocated yet */
@@ -419,7 +419,7 @@ static models::FSM_trans *get_trans(int to) {
   return t;
 }
 
-static void FSM_EDGE(int from, int to, Element *e) {
+static void FSM_EDGE(int from, int to, models::Element *e) {
   models::FSM_state *f;
   models::FSM_trans *t;
 
@@ -449,7 +449,7 @@ static void FSM_EDGE(int from, int to, Element *e) {
 #define RVAL 0
 
 static void ana_var(models::FSM_trans *t, models::Lextok *now, int usage) {
-  FSM_use *u, *v;
+  models::FSM_use *u, *v;
 
   if (!t || !now || !now->symbol)
     return;
@@ -631,8 +631,8 @@ static void ana_stmnt(models::FSM_trans *t, models::Lextok *now, int usage) {
 
 void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 {
-  ProcList *p;
-  Element *e;
+  models::ProcList *p;
+  models::Element *e;
   for (p = ready; p; p = p->nxt) {
     ana_seq(p->s);
     fsm_table();
@@ -668,8 +668,8 @@ void ana_src(int dataflow, int merger) /* called from main.c and guided.c */
 
 void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
 {
-  Element *e;
-  Sequence *s;
+  models::Element *e;
+  models::Sequence *s;
   extern int Unique;
 
   fprintf(f1, "unsigned char Is_Recv[%d];\n", Unique);
@@ -714,10 +714,10 @@ void spit_recvs(FILE *f1, FILE *f2) /* called from pangen2.c */
   }
 }
 
-static void ana_seq(Sequence *s) {
-  SeqList *h;
-  Sequence *t;
-  Element *e, *g;
+static void ana_seq(models::Sequence *s) {
+  models::SeqList *h;
+  models::Sequence *t;
+  models::Element *e, *g;
   int From, To;
 
   for (e = s->frst; e; e = e->nxt) {
