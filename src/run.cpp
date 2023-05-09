@@ -2,13 +2,13 @@
 
 #include "fatal/fatal.hpp"
 #include "main/launch_settings.hpp"
+#include "main/main_processor.hpp"
+#include "models/lextok.hpp"
 #include "spin.hpp"
 #include "utils/seed/seed.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
-#include "main/main_processor.hpp"
-#include "models/lextok.hpp"
 
 extern models::RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
@@ -25,16 +25,6 @@ static int pc_enabled(models::Lextok *n);
 static int get_priority(models::Lextok *n);
 static void set_priority(models::Lextok *n, models::Lextok *m);
 extern void sr_buf(int, int, const std::string &);
-
-long Rand(void) { /* CACM 31(10), Oct 1988 */
-  auto &seed = utils::seed::Seed::getInstance();
-  auto Seed = seed.GetSeed();
-
-  Seed = 16807 * (Seed % 127773) - 2836 * (Seed / 127773);
-  if (Seed <= 0)
-    Seed += 2147483647;
-  return Seed;
-}
 
 models::Element *rev_escape(models::SeqList *e) {
   models::Element *r = (models::Element *)0;
@@ -162,14 +152,16 @@ models::Element *eval_sub(models::Element *e) {
     } else {
       if (e->n && e->n->index_step >= 0)
         k = 0; /* select 1st executable guard */
-      else
-        k = Rand() % j; /* nondeterminism */
+      else {
+        k = utils::seed::Seed::Rand() % j; /* nondeterminism */
+      }
     }
 
     has_else = ZE;
     bas_else = ZE;
     for (i = 0, z = e->sub; i < j + k; i++) {
-      if (z->this_sequence->frst && z->this_sequence->frst->n->node_type == ELSE) {
+      if (z->this_sequence->frst &&
+          z->this_sequence->frst->n->node_type == ELSE) {
         bas_else = z->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
         if (!launch_settings.need_to_run_in_interactive_mode ||
@@ -182,8 +174,8 @@ models::Element *eval_sub(models::Element *e) {
       if (z->this_sequence->frst &&
           ((z->this_sequence->frst->n->node_type == ATOMIC ||
             z->this_sequence->frst->n->node_type == D_STEP) &&
-           z->this_sequence->frst->n->seq_list->this_sequence->frst->n->node_type ==
-               ELSE)) {
+           z->this_sequence->frst->n->seq_list->this_sequence->frst->n
+                   ->node_type == ELSE)) {
         bas_else = z->this_sequence->frst->n->seq_list->this_sequence->frst;
         has_else = (Rvous) ? ZE : bas_else->nxt;
         if (!launch_settings.need_to_run_in_interactive_mode ||
@@ -251,7 +243,8 @@ models::Element *eval_sub(models::Element *e) {
             if (verbose_flags.NeedToPrintAllProcessActions()) {
               printf("\tEscape taken (-J) ");
               if (g->n && g->n->file_name)
-                printf("%s:%d", g->n->file_name->name.c_str(), g->n->line_number);
+                printf("%s:%d", g->n->file_name->name.c_str(),
+                       g->n->line_number);
               printf("\n");
             }
             Escape_Check--;
@@ -263,7 +256,8 @@ models::Element *eval_sub(models::Element *e) {
               if (verbose_flags.NeedToPrintAllProcessActions()) {
                 printf("\tEscape taken ");
                 if (g->n && g->n->file_name)
-                  printf("%s:%d", g->n->file_name->name.c_str(), g->n->line_number);
+                  printf("%s:%d", g->n->file_name->name.c_str(),
+                         g->n->line_number);
                 printf("\n");
               }
               Escape_Check--;
@@ -417,7 +411,8 @@ int eval(models::Lextok *now) {
     case RSHIFT:
       return (eval(now->left) >> eval(now->right));
     case '?':
-      return (eval(now->left) ? eval(now->right->left) : eval(now->right->right));
+      return (eval(now->left) ? eval(now->right->left)
+                              : eval(now->right->right));
 
     case 'p':
       return remotevar(now); /* _p for remote reference */
@@ -449,7 +444,7 @@ int eval(models::Lextok *now) {
     case EVAL:
       if (now->left->node_type == ',') {
         models::Lextok *fix = now->left;
-        do {                       /* new */
+        do {                        /* new */
           if (eval(fix->left) == 0) /* usertype6 */
           {
             return 0;

@@ -4,7 +4,7 @@
 
 namespace models {
 
-struct models::ProcList {
+struct ProcList {
   Symbol *n;      /* name       */
   Lextok *p;      /* parameters */
   Sequence *s;            /* body       */

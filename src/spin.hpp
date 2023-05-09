@@ -115,7 +115,6 @@ models::Symbol *prep_inline(models::Symbol *, models::Lextok *);
 char *put_inline(FILE *, const std::string &);
 char *emalloc(size_t);
 char *erealloc(void *, size_t, size_t);
-long Rand(void);
 
 int any_oper(models::Lextok *, int);
 int any_undo(models::Lextok *);

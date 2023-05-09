@@ -7,6 +7,7 @@
 #include "models/lextok.hpp"
 #include "spin.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "utils/seed/seed.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
@@ -466,7 +467,7 @@ static models::RunList *pickproc(models::RunList *Y) {
     if (lexer_.GetHasPriority() &&
         !launch_settings.need_revert_old_rultes_for_priority) /* new 6.3.2 */
     {
-      j = Rand() % (nproc - nstop);
+      j = utils::seed::Seed::Rand() % (nproc - nstop);
       for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
         if (j-- <= 0)
           break;
@@ -486,7 +487,7 @@ static models::RunList *pickproc(models::RunList *Y) {
     }
     if (Priority_Sum < nproc - nstop)
       loger::fatal("cannot happen - weights");
-    j = (int)Rand() % Priority_Sum;
+    j = (int)utils::seed::Seed::Rand() % Priority_Sum;
 
     while (j - X_lst->priority >= 0) {
       j -= X_lst->priority;
@@ -834,7 +835,7 @@ int complete_rendez(void) {
   Rvous = 1;
   launch_settings.need_to_run_in_interactive_mode = false;
 
-  j = (int)Rand() % Priority_Sum; /* randomize start point */
+  j = (int)utils::seed::Seed::Rand() % Priority_Sum; /* randomize start point */
   X_lst = run_lst;
   while (j - X_lst->priority >= 0) {
     j -= X_lst->priority;

@@ -4,7 +4,7 @@
 
 namespace models {
 
-struct models::RunList {
+struct RunList {
   Symbol *n;      /* name            */
   int tn;         /* ordinal of type */
   int pid;        /* process id      */
