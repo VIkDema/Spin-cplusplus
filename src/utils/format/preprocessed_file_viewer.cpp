@@ -25,7 +25,7 @@ void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence)
   models::Symbol *v;
   models::SeqList *h;
 
-  for (models::Element *element = sequence->frst; element; element = element->nxt) {
+  for (models::Element *element = sequence->frst; element; element = element->next) {
     v = has_lab(element, 0);
     if (v) {
       std::cout << fmt::format("{}:", v->name) << std::endl;
@@ -36,7 +36,7 @@ void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence)
       recursive_view_sequence(element->n->seq_list->this_sequence);
       doindent();
       std::cout << "} unless {" << std::endl;
-      recursive_view_sequence(element->n->seq_list->nxt->this_sequence);
+      recursive_view_sequence(element->n->seq_list->next->this_sequence);
       doindent();
       std::cout << "}; /* end unless */" << std::endl;
     } else if (element->sub) {
@@ -54,7 +54,7 @@ void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence)
         break;
       }
 
-      for (h = element->sub; h; h = h->nxt) {
+      for (h = element->sub; h; h = h->next) {
         decrease_indentation();
         doindent();
         increase_indentation();
@@ -104,8 +104,8 @@ void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence)
 void PreprocessedFileViewer::recursive_view(models::ProcList *node) {
   if (!node)
     return;
-  if (node->nxt) {
-    recursive_view(node->nxt);
+  if (node->next) {
+    recursive_view(node->next);
   }
 
   if (node->det) {

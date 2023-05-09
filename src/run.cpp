@@ -30,7 +30,7 @@ models::Element *rev_escape(models::SeqList *e) {
   models::Element *r = (models::Element *)0;
 
   if (e) {
-    if ((r = rev_escape(e->nxt)) == ZE) /* reversed order */
+    if ((r = rev_escape(e->next)) == ZE) /* reversed order */
     {
       r = eval_sub(e->this_sequence->frst);
     }
@@ -86,7 +86,7 @@ models::Element *eval_sub(models::Element *e) {
         only_pos = 0;
       }
     }
-    for (z = e->sub, j = 0; z; z = z->nxt) {
+    for (z = e->sub, j = 0; z; z = z->next) {
       j++;
       if (launch_settings.need_to_run_in_interactive_mode && !MadeChoice &&
           !E_Check && !Escape_Check && !(e->status & (D_ATOM)) &&
@@ -95,7 +95,7 @@ models::Element *eval_sub(models::Element *e) {
           (verbose_flags.NeedToPrintVerbose() ||
            Enabled0(z->this_sequence->frst))) {
         if (z->this_sequence->frst->n->node_type == ELSE) {
-          has_else = (Rvous) ? ZE : z->this_sequence->frst->nxt;
+          has_else = (Rvous) ? ZE : z->this_sequence->frst->next;
           nr_else = j;
           continue;
         }
@@ -163,11 +163,11 @@ models::Element *eval_sub(models::Element *e) {
       if (z->this_sequence->frst &&
           z->this_sequence->frst->n->node_type == ELSE) {
         bas_else = z->this_sequence->frst;
-        has_else = (Rvous) ? ZE : bas_else->nxt;
+        has_else = (Rvous) ? ZE : bas_else->next;
         if (!launch_settings.need_to_run_in_interactive_mode ||
             depth < launch_settings.count_of_skipping_steps || Escape_Check ||
             (e->status & (D_ATOM))) {
-          z = (z->nxt) ? z->nxt : e->sub;
+          z = (z->next) ? z->next : e->sub;
           continue;
         }
       }
@@ -177,11 +177,11 @@ models::Element *eval_sub(models::Element *e) {
            z->this_sequence->frst->n->seq_list->this_sequence->frst->n
                    ->node_type == ELSE)) {
         bas_else = z->this_sequence->frst->n->seq_list->this_sequence->frst;
-        has_else = (Rvous) ? ZE : bas_else->nxt;
+        has_else = (Rvous) ? ZE : bas_else->next;
         if (!launch_settings.need_to_run_in_interactive_mode ||
             depth < launch_settings.count_of_skipping_steps || Escape_Check ||
             (e->status & (D_ATOM))) {
-          z = (z->nxt) ? z->nxt : e->sub;
+          z = (z->next) ? z->next : e->sub;
           continue;
         }
       }
@@ -196,7 +196,7 @@ models::Element *eval_sub(models::Element *e) {
           return ZE;
         }
       }
-      z = (z->nxt) ? z->nxt : e->sub;
+      z = (z->next) ? z->next : e->sub;
     }
     LastStep = bas_else;
     return has_else;
@@ -204,19 +204,19 @@ models::Element *eval_sub(models::Element *e) {
     if (e->n->node_type == ATOMIC || e->n->node_type == D_STEP) {
       f = e->n->seq_list->this_sequence->frst;
       g = e->n->seq_list->this_sequence->last;
-      g->nxt = e->nxt;
+      g->next = e->next;
       if (!(g = eval_sub(f))) /* atomic guard */
         return ZE;
       return g;
     } else if (e->n->node_type == NON_ATOMIC) {
       f = e->n->seq_list->this_sequence->frst;
       g = e->n->seq_list->this_sequence->last;
-      g->nxt = e->nxt; /* close it */
+      g->next = e->next; /* close it */
       return eval_sub(f);
     } else if (e->n->node_type == '.') {
       if (!Rvous)
-        return e->nxt;
-      return eval_sub(e->nxt);
+        return e->next;
+      return eval_sub(e->next);
     } else {
       models::SeqList *x;
       if (!(e->status & (D_ATOM)) && e->esc &&
@@ -224,7 +224,7 @@ models::Element *eval_sub(models::Element *e) {
         printf("Stmnt [");
         comment(stdout, e->n, 0);
         printf("] has escape(s): ");
-        for (x = e->esc; x; x = x->nxt) {
+        for (x = e->esc; x; x = x->next) {
           printf("[");
           g = x->this_sequence->frst;
           if (g->n->node_type == ATOMIC || g->n->node_type == NON_ATOMIC)
@@ -251,7 +251,7 @@ models::Element *eval_sub(models::Element *e) {
             return g;
           }
         } else {
-          for (x = e->esc; x; x = x->nxt) {
+          for (x = e->esc; x; x = x->next) {
             if ((g = eval_sub(x->this_sequence->frst)) != ZE) {
               if (verbose_flags.NeedToPrintAllProcessActions()) {
                 printf("\tEscape taken ");
@@ -289,9 +289,9 @@ models::Element *eval_sub(models::Element *e) {
         break;
       }
       if (Rvous) {
-        return (eval_sync(e)) ? e->nxt : ZE;
+        return (eval_sync(e)) ? e->next : ZE;
       }
-      return (eval(e->n)) ? e->nxt : ZE;
+      return (eval(e->n)) ? e->next : ZE;
     }
   }
   return ZE; /* not reached */
@@ -338,7 +338,7 @@ static int nonprogress(void) /* np_ */
 {
   models::RunList *r;
 
-  for (r = run_lst; r; r = r->nxt) {
+  for (r = run_lst; r; r = r->next) {
     if (has_lab(r->pc, 4)) /* 4=progress */
       return 0;
   }
@@ -736,12 +736,12 @@ int Enabled0(models::Element *e) {
   }
   if (e->sub) /* true for IF, DO, and UNLESS */
   {
-    for (z = e->sub; z; z = z->nxt)
+    for (z = e->sub; z; z = z->next)
       if (Enabled0(z->this_sequence->frst))
         return 1;
     return 0;
   }
-  for (z = e->esc; z; z = z->nxt) {
+  for (z = e->esc; z; z = z->next) {
     if (Enabled0(z->this_sequence->frst))
       return 1;
   }
@@ -757,7 +757,7 @@ int pc_enabled(models::Lextok *n) {
   if (pid == X_lst->pid)
     loger::fatal("used: enabled(pid=thisproc) [%s]", X_lst->n->name);
 
-  for (Y = run_lst; Y; Y = Y->nxt)
+  for (Y = run_lst; Y; Y = Y->next)
     if (--i == pid) {
       oX = X_lst;
       X_lst = Y;
@@ -778,7 +778,7 @@ int pc_highest(models::Lextok *n) {
     return 0; /* can't be highest unless fully enabled */
   }
 
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     if (--i == pid) {
       target = Y->priority;
       break;
@@ -789,7 +789,7 @@ int pc_highest(models::Lextok *n) {
 
   oX = X_lst;
   i = nproc - nstop;
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     i--;
     if (0)
       printf("	pid %d @ priority %d\t", Y->pid, Y->priority);
@@ -820,7 +820,7 @@ int get_priority(models::Lextok *n) {
     return 1;
   }
 
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     if (--i == pid) {
       return Y->priority;
     }
@@ -837,7 +837,7 @@ void set_priority(models::Lextok *n, models::Lextok *p) {
   if (launch_settings.need_revert_old_rultes_for_priority) {
     return;
   }
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     if (--i == pid) {
       Priority_Sum -= Y->priority;
       Y->priority = eval(p);
@@ -850,7 +850,7 @@ void set_priority(models::Lextok *n, models::Lextok *p) {
   }
   if (verbose_flags.NeedToPrintVerbose()) {
     printf("\tPid\tName\tPriority\n");
-    for (Y = run_lst; Y; Y = Y->nxt) {
+    for (Y = run_lst; Y; Y = Y->next) {
       printf("\t%d\t%s\t%d\n", Y->pid, Y->n->name.c_str(), Y->priority);
     }
   }

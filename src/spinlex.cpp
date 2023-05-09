@@ -30,7 +30,7 @@ struct IType {
   int is_expr;               /* c_expr in an ltl formula */
   int dln, cln;              /* def and call linenr */
   models::Symbol *dfn, *cfn; /* def and call filename */
-  struct IType *nxt;         /* linked list */
+  struct IType *next;         /* linked list */
 };
 
 struct C_Added {
@@ -39,7 +39,7 @@ struct C_Added {
   models::Symbol *ival;
   models::Symbol *file_name;
   int opt_line_number;
-  struct C_Added *nxt;
+  struct C_Added *next;
 };
 
 extern models::RunList *X_lst;
@@ -70,7 +70,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
   char *nw = (char *)emalloc(strlen(ptr) + 1);
   strcpy(nw, ptr);
 
-  for (tmp = seqnames; tmp; cnt++, tmp = tmp->nxt)
+  for (tmp = seqnames; tmp; cnt++, tmp = tmp->next)
     if (s->name != tmp->nm->name) {
       loger::non_fatal("procedure name %s redefined", tmp->nm->name);
       tmp->cn = (models::Lextok *)nw;
@@ -90,7 +90,7 @@ static void def_inline(models::Symbol *s, int ln, char *ptr, char *prc,
   tmp->dln = ln;
   tmp->dfn = Fname;
   tmp->uiid = cnt + 1; /* so that 0 means: not an inline */
-  tmp->nxt = seqnames;
+  tmp->next = seqnames;
   seqnames = tmp;
 }
 
@@ -107,7 +107,7 @@ void gencodetable(FILE *fd) {
   fprintf(fd, "} code_lookup[] = {\n");
 
   if (lexer_.GetHasCode())
-    for (tmp = seqnames; tmp; tmp = tmp->nxt)
+    for (tmp = seqnames; tmp; tmp = tmp->next)
       if (tmp->nm->type == CODE_FRAG || tmp->nm->type == CODE_DECL) {
         fprintf(fd, "\t{ \"%s\", ", tmp->nm->name.c_str());
         q = (char *)tmp->cn;
@@ -149,7 +149,7 @@ void gencodetable(FILE *fd) {
 bool IsEqname(const std::string &value) {
   IType *tmp;
 
-  for (tmp = seqnames; tmp; tmp = tmp->nxt) {
+  for (tmp = seqnames; tmp; tmp = tmp->next) {
     if (value == std::string(tmp->nm->name)) {
       return true;
     }
@@ -180,7 +180,7 @@ int is_inline(void) {
 IType *find_inline(const std::string &s) {
   IType *tmp;
 
-  for (tmp = seqnames; tmp; tmp = tmp->nxt)
+  for (tmp = seqnames; tmp; tmp = tmp->next)
     if (s == tmp->nm->name) {
       break;
     }
@@ -201,7 +201,7 @@ void c_state(models::Symbol *s, models::Symbol *t,
   r->ival = ival;
   r->opt_line_number = lineno;
   r->file_name = Fname;
-  r->nxt = c_added;
+  r->next = c_added;
 
   if (strncmp(r->s->name.c_str(), "\"unsigned unsigned", 18) == 0) {
     int i;
@@ -222,7 +222,7 @@ void c_track(models::Symbol *s, models::Symbol *t,
   r->s = s;
   r->t = t;
   r->ival = stackonly; /* abuse of name */
-  r->nxt = c_tracked;
+  r->next = c_tracked;
   r->file_name = Fname;
   r->opt_line_number = lineno;
   c_tracked = r;
@@ -317,7 +317,7 @@ void c_add_globinit(FILE *fd) {
   std::string p;
 
   fprintf(fd, "void\nglobinit(void)\n{\n");
-  for (r = c_added; r; r = r->nxt) {
+  for (r = c_added; r; r = r->next) {
     if (r->ival == ZS)
       continue;
 
@@ -364,7 +364,7 @@ void c_add_locinit(FILE *fd, int tpnr, const std::string &pnm) {
   int frst = 1;
 
   fprintf(fd, "void\nlocinit%d(int h)\n{\n", tpnr);
-  for (r = c_added; r; r = r->nxt)
+  for (r = c_added; r; r = r->next)
     if (r->ival != ZS &&
         r->t->name.compare(0, strlen(" Local"), " Local") == 0) {
       q = r->ival->name;
@@ -411,7 +411,7 @@ void c_preview(void) {
   if (c_tracked)
     hastrack = 1;
   else
-    for (r = c_added; r; r = r->nxt)
+    for (r = c_added; r; r = r->next)
       if (r->t->name.substr(0, 8) != " Global " &&
           r->t->name.substr(0, 8) != " Hidden " &&
           r->t->name.substr(0, 6) != " Local") {
@@ -428,18 +428,18 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
   if (!c_added && !c_tracked)
     return 0;
 
-  for (r = c_added; r; r = r->nxt) /* pickup global decls */
+  for (r = c_added; r; r = r->next) /* pickup global decls */
     if (r->t->name.substr(0, 8) == " Global ")
       fprintf(fd, "	%s;\n", r->s->name.c_str());
 
-  for (r = c_added; r; r = r->nxt)
+  for (r = c_added; r; r = r->next)
     if (r->t->name.substr(0, 8) != " Global " &&
         r->t->name.substr(0, 8) != " Hidden " &&
         r->t->name.substr(0, 6) != " Local") {
       cnt++; /* obsolete use */
     }
 
-  for (r = c_tracked; r; r = r->nxt)
+  for (r = c_tracked; r; r = r->next)
     cnt++; /* preferred use */
 
   if (cnt == 0)
@@ -447,7 +447,7 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
 
   cnt = 0;
   fprintf(fd, "	uchar c_state[");
-  for (r = c_added; r; r = r->nxt)
+  for (r = c_added; r; r = r->next)
     if (r->t->name.substr(0, 8) != " Global " &&
         r->t->name.substr(0, 8) != " Hidden " &&
         r->t->name.substr(0, 6) != " Local") {
@@ -455,7 +455,7 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
       cnt++;
     }
 
-  for (r = c_tracked; r; r = r->nxt) {
+  for (r = c_tracked; r; r = r->next) {
     if (r->ival != ZS)
       continue;
 
@@ -473,7 +473,7 @@ void c_stack_size(FILE *fd) {
   C_Added *r;
   int cnt = 0;
 
-  for (r = c_tracked; r; r = r->nxt)
+  for (r = c_tracked; r; r = r->next)
     if (r->ival != ZS) {
       fprintf(fd, "%s%s", (cnt == 0) ? "" : "+", r->t->name.c_str());
       cnt++;
@@ -491,7 +491,7 @@ void c_add_stack(FILE *fd) {
     return;
   }
 
-  for (r = c_tracked; r; r = r->nxt)
+  for (r = c_tracked; r; r = r->next)
     if (r->ival != ZS) {
       cnt++;
     }
@@ -504,7 +504,7 @@ void c_add_stack(FILE *fd) {
 void c_add_hidden(FILE *fd) {
   C_Added *r;
 
-  for (r = c_added; r; r = r->nxt) /* pickup hidden_flags decls */
+  for (r = c_added; r; r = r->next) /* pickup hidden_flags decls */
     if (r->t->name.compare(0, 6, "Hidden") == 0) {
       r->s->name.back() = ' ';
       fprintf(fd, "%s;	/* Hidden */\n", r->s->name.substr(1).c_str());
@@ -523,7 +523,7 @@ void c_add_loc(FILE *fd, const std::string &s) {
 
   strcpy(buf, s.c_str());
   strcat(buf, " ");
-  for (r = c_added; r; r = r->nxt) {
+  for (r = c_added; r; r = r->next) {
     if (strncmp(r->t->name.c_str(), " Local", strlen(" Local")) == 0) {
       p = r->t->name.c_str() + strlen(" Local");
       fprintf(fd, "/* XXX p=<%s>, s=<%s>, buf=<%s> r->s->name=<%s>XXX */\n", p,
@@ -544,7 +544,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   C_Added *r;
 
   fprintf(fd, "#if defined(C_States) && (HAS_TRACK==1)\n");
-  for (r = c_added; r; r = r->nxt) {
+  for (r = c_added; r; r = r->next) {
     r->s->name.back() = ' ';
     r->s->name.front() = ' ';
 
@@ -561,7 +561,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
 
     fprintf(fd, "extern %s %s;\n", r->t->name.c_str(), r->s->name.c_str());
   }
-  for (r = c_tracked; r; r = r->nxt) {
+  for (r = c_tracked; r; r = r->next) {
     r->s->name.back() = ' ';
     r->s->name.front() = ' ';
 
@@ -580,7 +580,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
     fprintf(fd, "#ifdef VERBOSE\n");
     fprintf(fd, "	cpu_printf(\"c_stack %%u\\n\", p_t_r);\n");
     fprintf(fd, "#endif\n");
-    for (r = c_tracked; r; r = r->nxt) {
+    for (r = c_tracked; r; r = r->next) {
       if (r->ival == ZS)
         continue;
 
@@ -598,7 +598,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "#ifdef VERBOSE\n");
   fprintf(fd, "	printf(\"c_update %%p\\n\", p_t_r);\n");
   fprintf(fd, "#endif\n");
-  for (r = c_added; r; r = r->nxt) {
+  for (r = c_added; r; r = r->next) {
     if (r->t->name.substr(0, 8) == " Global " &&
         r->t->name.substr(0, 8) == " Hidden " &&
         r->t->name.substr(0, 6) == " Local")
@@ -609,7 +609,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
     fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name.c_str());
   }
 
-  for (r = c_tracked; r; r = r->nxt) {
+  for (r = c_tracked; r; r = r->next) {
     if (r->ival)
       continue;
 
@@ -628,7 +628,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
     fprintf(fd, "#ifdef VERBOSE\n");
     fprintf(fd, "	cpu_printf(\"c_unstack %%u\\n\", p_t_r);\n");
     fprintf(fd, "#endif\n");
-    for (r = c_tracked; r; r = r->nxt) {
+    for (r = c_tracked; r; r = r->next) {
       if (r->ival == ZS)
         continue;
 
@@ -644,7 +644,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "#ifdef VERBOSE\n");
   fprintf(fd, "	printf(\"c_revert %%p\\n\", p_t_r);\n");
   fprintf(fd, "#endif\n");
-  for (r = c_added; r; r = r->nxt) {
+  for (r = c_added; r; r = r->next) {
     if (r->t->name.substr(0, 8) == " Global " &&
         r->t->name.substr(0, 8) == " Hidden " &&
         r->t->name.substr(0, 6) == " Local")
@@ -654,7 +654,7 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
             r->t->name.c_str());
     fprintf(fd, "\tp_t_r += sizeof(%s);\n", r->t->name.c_str());
   }
-  for (r = c_tracked; r; r = r->nxt) {
+  for (r = c_tracked; r; r = r->next) {
     if (r->ival != ZS)
       continue;
 
@@ -673,7 +673,7 @@ void plunk_reverse(FILE *fd, IType *p, int matchthis) {
 
   if (!p)
     return;
-  plunk_reverse(fd, p->nxt, matchthis);
+  plunk_reverse(fd, p->next, matchthis);
 
   if (!p->nm->context && p->nm->type == matchthis && p->is_expr == 0) {
     fprintf(fd, "\n/* start of %s */\n", p->nm->name.c_str());
@@ -724,7 +724,7 @@ static void check_inline(IType *tmp) {
   if (!X_lst)
     return;
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     if (p->n->name == X_lst->n->name) {
       continue;
     }

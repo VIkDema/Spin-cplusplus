@@ -14,7 +14,7 @@ struct Sequence {
 
 struct SeqList {
   Sequence *this_sequence; /* one sequence */
-  SeqList *nxt;            /* linked list  */
+  SeqList *next;            /* linked list  */
 };
 
 } // namespace models

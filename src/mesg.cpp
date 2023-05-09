@@ -95,7 +95,7 @@ int qmake(models::Symbol *s) {
       q->fld_width[i++] = m->node_type;
     }
   }
-  q->nxt = qtab;
+  q->next = qtab;
   qtab = q;
   ltab[q->qid - 1] = q;
 
@@ -631,13 +631,13 @@ static void docolumns(models::Lextok *n, char *tr, int v, int j, models::Queue *
 void qhide(int q) {
   models::QH *p = (models::QH *)emalloc(sizeof(models::QH));
   p->n = q;
-  p->nxt = qh_lst;
+  p->next = qh_lst;
   qh_lst = p;
 }
 
 int qishidden(int q) {
   models::QH *p;
-  for (p = qh_lst; p; p = p->nxt)
+  for (p = qh_lst; p; p = p->next)
     if (p->n == q)
       return 1;
   return 0;
@@ -726,7 +726,7 @@ void doq(models::Symbol *s, int n, models::RunList *r) {
 
   if (!s->value.empty()) /* uninitialized queue */
     return;
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     if (q->qid == s->value[n]) {
       if (q->nslots == 0) {
         continue; /* rv q always empty */
@@ -828,7 +828,7 @@ void nochan_manip(models::Lextok *p, models::Lextok *n, int d) /* p=lhs n=rhs */
 struct BaseName {
   char *str;
   int cnt;
-  struct BaseName *nxt;
+  struct BaseName *next;
 };
 
 static BaseName *bsn;
@@ -837,7 +837,7 @@ void newbasename(const std::string &s) {
   BaseName *b;
 
   /*	printf("+++++++++%s\n", s);	*/
-  for (b = bsn; b; b = b->nxt)
+  for (b = bsn; b; b = b->next)
     if (strcmp(b->str, s.c_str()) == 0) {
       b->cnt++;
       return;
@@ -846,21 +846,21 @@ void newbasename(const std::string &s) {
   b->str = emalloc(s.length() + 1);
   b->cnt = 1;
   strcpy(b->str, s.c_str());
-  b->nxt = bsn;
+  b->next = bsn;
   bsn = b;
 }
 
 void delbasename(const std::string &s) {
   BaseName *b, *prv = (BaseName *)0;
 
-  for (b = bsn; b; prv = b, b = b->nxt) {
+  for (b = bsn; b; prv = b, b = b->next) {
     if (strcmp(b->str, s.c_str()) == 0) {
       b->cnt--;
       if (b->cnt == 0) {
         if (prv) {
-          prv->nxt = b->nxt;
+          prv->next = b->next;
         } else {
-          bsn = b->nxt;
+          bsn = b->next;
         }
       }
       /*	printf("---------%s\n", s);	*/
@@ -873,7 +873,7 @@ void checkindex(std::string &s, std::string &t) {
   BaseName *b;
 
   /*	printf("xxx Check %s (%s)\n", s, t);	*/
-  for (b = bsn; b; b = b->nxt) {
+  for (b = bsn; b; b = b->next) {
     /*		printf("	%s\n", b->str);	*/
     if (strcmp(b->str, s.c_str()) == 0) {
       loger::non_fatal("do not index an array with itself (%s)", t.c_str());

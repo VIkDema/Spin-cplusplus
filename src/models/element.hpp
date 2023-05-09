@@ -18,6 +18,6 @@ struct Element {
   SeqList *sub;        /* subsequences, for compounds */
   SeqList *esc;        /* zero or more escape sequences */
   Element *Nxt;        /* linked list - for global lookup */
-  Element *nxt;        /* linked list - program structure */
+  Element *next;        /* linked list - program structure */
 };
 } // namespace models

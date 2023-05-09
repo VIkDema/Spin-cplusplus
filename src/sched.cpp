@@ -70,7 +70,7 @@ void runnable(models::ProcList *p, int weight, int noparams) {
   if (p->s->last)
     p->s->last->status |= ENDSTATE; /* normal end state */
 
-  r->nxt = run_lst;
+  r->next = run_lst;
   r->prov = p->prov;
   if (weight < 1 || weight > 255) {
     loger::fatal("bad process priority, valid range: 1..255");
@@ -104,7 +104,7 @@ models::ProcList *mk_rdy(models::Symbol *n, models::Lextok *p, models::Sequence 
     fprintf(stderr, "spin: bad value for det (cannot happen)\n");
   }
   r->det = (unsigned char)det;
-  r->nxt = ready;
+  r->next = ready;
   ready = r;
 
   for (fp = p, j = 0; fp; fp = fp->right)
@@ -124,7 +124,7 @@ void check_mtypes(models::Lextok *pnm,
   std::string s, t;
 
   if (pnm && pnm->symbol) {
-    for (p = ready; p; p = p->nxt) {
+    for (p = ready; p; p = p->next) {
       if (pnm->symbol->name == p->n->name) { /* found */
         break;
       }
@@ -170,7 +170,7 @@ void check_mtypes(models::Lextok *pnm,
 int find_maxel(models::Symbol *s) {
   models::ProcList *p;
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     if (p->n == s) {
       return p->s->maxel++;
     }
@@ -184,7 +184,7 @@ static void formdump(void) {
   models::Lextok *f, *t;
   int count;
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     if (!p->p)
       continue;
     count = -1;
@@ -247,7 +247,7 @@ int enable(models::Lextok *m) {
   if (m->value < 1) {
     m->value = 1; /* minimum priority */
   }
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     if (s->name == p->n->name) {
       if (nproc - nstop >= kMaxNrOfProcesses) {
         printf("spin: too many processes (%d max)\n", kMaxNrOfProcesses);
@@ -270,7 +270,7 @@ void check_param_count(int i, models::Lextok *m) {
   models::Lextok *f, *t;         /* formal pars */
   int count = 0;
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     if (s->name == p->n->name) {
       if (m->left) /* actual param list */
       {
@@ -296,14 +296,14 @@ void start_claim(int n) {
   models::RunList *r, *q = (models::RunList *)0;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (p = ready; p; p = p->nxt)
+  for (p = ready; p; p = p->next)
     if (p->tn == n && p->b == models::btypes::N_CLAIM) {
       runnable(p, 1, 1);
       goto found;
     }
   printf("spin: couldn't find claim %d (ignored)\n", n);
   if (verbose_flags.NeedToPrintVerbose()) {
-    for (p = ready; p; p = p->nxt) {
+    for (p = ready; p; p = p->next) {
       printf("\t%d = %s\n", p->tn, p->n->name.c_str());
     }
   }
@@ -317,7 +317,7 @@ found:
     depth = 0;
     sprintf(GBuf, "%d:%s", 0, p->n->name.c_str());
     pstext(0, GBuf);
-    for (r = run_lst; r; r = r->nxt) {
+    for (r = run_lst; r; r = r->next) {
       if (r->b != models::btypes::N_CLAIM) {
         sprintf(GBuf, "%d:%s", r->pid + 1, r->n->name.c_str());
         pstext(r->pid + 1, GBuf);
@@ -329,15 +329,15 @@ found:
     return; /* it is the first process started */
 
   q = run_lst;
-  run_lst = run_lst->nxt;
+  run_lst = run_lst->next;
   q->pid = 0;
-  q->nxt = (models::RunList *)0; /* remove */
+  q->next = (models::RunList *)0; /* remove */
 done:
   Have_claim = 1;
-  for (r = run_lst; r; r = r->nxt) {
+  for (r = run_lst; r; r = r->next) {
     r->pid = r->pid + Have_claim; /* adjust */
-    if (!r->nxt) {
-      r->nxt = q;
+    if (!r->next) {
+      r->next = q;
       break;
     }
   }
@@ -347,7 +347,7 @@ int f_pid(const std::string &n) {
   models::RunList *r;
   int rval = -1;
 
-  for (r = run_lst; r; r = r->nxt) {
+  for (r = run_lst; r; r = r->next) {
     if (n == r->n->name) {
       if (rval >= 0) {
         printf("spin: remote ref to proctype %s, ", n.c_str());
@@ -378,7 +378,7 @@ void wrapup(int fini) {
     printf("#processes: %d\n", nproc - nstop - Have_claim + Skip_claim);
     verbose_flags.Clean();
     dumpglobals();
-    for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt)
+    for (X_lst = run_lst; X_lst; X_lst = X_lst->next)
       talk(X_lst);
     verbose_flags.Activate();
   }
@@ -422,10 +422,10 @@ static models::Element *silent_moves(models::Element *e) {
     case NON_ATOMIC:
     case ATOMIC:
     case D_STEP:
-      e->n->seq_list->this_sequence->last->nxt = e->nxt;
+      e->n->seq_list->this_sequence->last->next = e->next;
       return silent_moves(e->n->seq_list->this_sequence->frst);
     case '.':
-      return silent_moves(e->nxt);
+      return silent_moves(e->next);
     }
   return e;
 }
@@ -468,7 +468,7 @@ static models::RunList *pickproc(models::RunList *Y) {
         !launch_settings.need_revert_old_rultes_for_priority) /* new 6.3.2 */
     {
       j = utils::seed::Seed::Rand() % (nproc - nstop);
-      for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
+      for (X_lst = run_lst; X_lst; X_lst = X_lst->next) {
         if (j-- <= 0)
           break;
       }
@@ -481,7 +481,7 @@ static models::RunList *pickproc(models::RunList *Y) {
           Y = X_lst;
           break;
         }
-        X_lst = (X_lst->nxt) ? X_lst->nxt : run_lst;
+        X_lst = (X_lst->next) ? X_lst->next : run_lst;
       }
       return Y;
     }
@@ -492,7 +492,7 @@ static models::RunList *pickproc(models::RunList *Y) {
     while (j - X_lst->priority >= 0) {
       j -= X_lst->priority;
       Y = X_lst;
-      X_lst = X_lst->nxt;
+      X_lst = X_lst->next;
       if (!X_lst) {
         Y = NULL;
         X_lst = run_lst;
@@ -507,7 +507,7 @@ static models::RunList *pickproc(models::RunList *Y) {
   try_again:
     printf("Select a statement\n");
   try_more:
-    for (X_lst = run_lst, k = 1; X_lst; X_lst = X_lst->nxt) {
+    for (X_lst = run_lst, k = 1; X_lst; X_lst = X_lst->next) {
       if (X_lst->pid > 255)
         break;
 
@@ -543,7 +543,7 @@ static models::RunList *pickproc(models::RunList *Y) {
         has_else = ZE;
         proc_no_ch = no_choice;
         proc_k = k;
-        for (z = X_lst->pc->sub, j = 0; z; z = z->nxt) {
+        for (z = X_lst->pc->sub, j = 0; z; z = z->next) {
           models::Element *y = silent_moves(z->this_sequence->frst);
           int unex;
           if (!y)
@@ -624,9 +624,9 @@ static models::RunList *pickproc(models::RunList *Y) {
     }
     MadeChoice = 0;
     Y = NULL;
-    for (X_lst = run_lst; X_lst; Y = X_lst, X_lst = X_lst->nxt) {
-      if (!X_lst->nxt || X_lst->nxt->pid > 255 ||
-          j < Choices[X_lst->nxt->pid]) {
+    for (X_lst = run_lst; X_lst; Y = X_lst, X_lst = X_lst->next) {
+      if (!X_lst->next || X_lst->next->pid > 255 ||
+          j < Choices[X_lst->next->pid]) {
         MadeChoice = 1 + j - Choices[X_lst->pid];
         break;
       }
@@ -640,7 +640,7 @@ void multi_claims(void) {
 
   if (nclaims > 1) {
     printf("  the model contains %d never claims:", nclaims);
-    for (p = ready; p; p = p->nxt) {
+    for (p = ready; p; p = p->next) {
       if (p->b == models::btypes::N_CLAIM) {
         printf("%s%s", q ? ", " : " ", p->n->name.c_str());
         q = p;
@@ -777,9 +777,9 @@ void sched(void) {
       if (X_lst->pc && X_lst->pc->n && X_lst->pc->n->node_type == '@' &&
           X_lst->pid == (nproc - nstop - 1)) {
         if (X_lst != run_lst && Y != NULL)
-          Y->nxt = X_lst->nxt;
+          Y->next = X_lst->next;
         else
-          run_lst = X_lst->nxt;
+          run_lst = X_lst->next;
         nstop++;
         Priority_Sum -= X_lst->priority;
         if (verbose_flags.NeedToPrintAllProcessActions()) {
@@ -793,7 +793,7 @@ void sched(void) {
           break;
         memset(is_blocked, 0, 256);
         /* proc X_lst is no longer in runlist */
-        X_lst = (X_lst->nxt) ? X_lst->nxt : run_lst;
+        X_lst = (X_lst->next) ? X_lst->next : run_lst;
       } else {
         if (p_blocked(X_lst->pid)) {
           if (Tval && !has_stdin) {
@@ -839,7 +839,7 @@ int complete_rendez(void) {
   X_lst = run_lst;
   while (j - X_lst->priority >= 0) {
     j -= X_lst->priority;
-    X_lst = X_lst->nxt;
+    X_lst = X_lst->next;
     if (!X_lst)
       X_lst = run_lst;
   }
@@ -878,7 +878,7 @@ int complete_rendez(void) {
       return 1;
     }
 
-    X_lst = X_lst->nxt;
+    X_lst = X_lst->next;
     if (!X_lst)
       X_lst = run_lst;
   }
@@ -892,7 +892,6 @@ int complete_rendez(void) {
 
 static void addsymbol(models::RunList *r, models::Symbol *s) {
   models::Symbol *t;
-  int i;
 
   for (t = r->symtab; t; t = t->next)
     if (t->name == s->name && (launch_settings.need_old_scope_rules ||
@@ -1172,7 +1171,7 @@ int remotevar(models::Lextok *n) {
     return 0; /* non-existing process */
   }
   i = nproc - nstop + Skip_claim; /* 6.0: added Skip_claim */
-  for (Y = run_lst; Y; Y = Y->nxt)
+  for (Y = run_lst; Y; Y = Y->next)
     if (--i == prno) {
       if (Y->n->name != n->left->symbol->name) {
         printf("spin: remote reference error on '%s[%d]'\n",
@@ -1215,7 +1214,7 @@ int remotevar(models::Lextok *n) {
   loger::non_fatal("%s not found", n->symbol->name);
   printf("have only:\n");
   i = nproc - nstop - 1;
-  for (Y = run_lst; Y; Y = Y->nxt, i--)
+  for (Y = run_lst; Y; Y = Y->next, i--)
     if (Y->n->name == n->left->symbol->name) {
       printf("\t%d\t%s\n", i, Y->n->name.c_str());
     }

@@ -6,7 +6,7 @@ namespace models {
 
 struct QH {
   int n;
-  struct QH *nxt;
+  struct QH *next;
 };
 
 } // namespace models

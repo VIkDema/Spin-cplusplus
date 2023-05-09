@@ -85,7 +85,7 @@ std::string LaunchSettings::BuildPanRuntime() {
     pan_runtime_ += pre_arg + " ";
   }
 
-  for (j = qh_lst; j; j = j->nxt) {
+  for (j = qh_lst; j; j = j->next) {
     pan_runtime_ += fmt::format("-q{} ", j->n);
   }
   if (!pre_proc_processor.IsDefault()) {

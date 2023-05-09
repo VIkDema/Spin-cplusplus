@@ -14,7 +14,7 @@ struct RunList {
   Sequence *ps;   /* used by analyzer generator */
   Lextok *prov;   /* provided clause */
   Symbol *symtab; /* local variables */
-  RunList *nxt;   /* linked list */
+  RunList *next;   /* linked list */
 };
 
 } // namespace models

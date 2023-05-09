@@ -12,7 +12,7 @@ extern int eventmapnr, in_settr;
 struct SRC {
   int line_number, st;         /* linenr, statenr */
   models::Symbol *file_name; /* filename */
-  struct SRC *nxt;
+  struct SRC *next;
 };
 
 static int col;
@@ -55,7 +55,7 @@ static SRC *newsrc(int m, SRC *n) {
   SRC *tmp;
   tmp = (SRC *)emalloc(sizeof(SRC));
   tmp->st = m;
-  tmp->nxt = n;
+  tmp->next = n;
   return tmp;
 }
 
@@ -63,7 +63,7 @@ void putskip(int m) /* states that need not be reached */
 {
   SRC *tmp, *lst = (SRC *)0;
   /* 6.4.0: now an ordered list */
-  for (tmp = skip; tmp; lst = tmp, tmp = tmp->nxt) {
+  for (tmp = skip; tmp; lst = tmp, tmp = tmp->next) {
     if (tmp->st == m) {
       return;
     }
@@ -74,15 +74,15 @@ void putskip(int m) /* states that need not be reached */
         skip = tmp;
       } else {
         assert(lst);
-        tmp = newsrc(m, lst->nxt);
-        lst->nxt = tmp;
+        tmp = newsrc(m, lst->next);
+        lst->next = tmp;
       }
       return;
     }
   }
   /* insert at the end */
   if (lst) {
-    lst->nxt = newsrc(m, 0);
+    lst->next = newsrc(m, 0);
   } else /* empty list */
   {
     skip = newsrc(m, 0);
@@ -93,12 +93,12 @@ void unskip(int m) /* a state that needs to be reached after all */
 {
   SRC *tmp, *lst = (SRC *)0;
 
-  for (tmp = skip; tmp; lst = tmp, tmp = tmp->nxt) {
+  for (tmp = skip; tmp; lst = tmp, tmp = tmp->next) {
     if (tmp->st == m) {
       if (tmp == skip)
-        skip = skip->nxt;
+        skip = skip->next;
       else if (lst) /* always true, but helps coverity */
-        lst->nxt = tmp->nxt;
+        lst->next = tmp->next;
       break;
     }
     if (tmp->st > m) {
@@ -118,7 +118,7 @@ void putsrc(models::Element *e) /* match states to source lines */
   n = e->n->line_number;
   m = e->seqno;
   /* 6.4.0: now an ordered list */
-  for (tmp = frst; tmp; lst = tmp, tmp = tmp->nxt) {
+  for (tmp = frst; tmp; lst = tmp, tmp = tmp->next) {
     if (tmp->st == m) {
       if (tmp->line_number != n || tmp->file_name != e->n->file_name)
         printf("putsrc mismatch seqno %d, line %d - %d, file %s\n", m, n,
@@ -132,8 +132,8 @@ void putsrc(models::Element *e) /* match states to source lines */
         frst = tmp;
       } else {
         assert(lst);
-        tmp = newsrc(m, lst->nxt);
-        lst->nxt = tmp;
+        tmp = newsrc(m, lst->next);
+        lst->next = tmp;
       }
       tmp->line_number = n;
       tmp->file_name = e->n->file_name;
@@ -141,11 +141,11 @@ void putsrc(models::Element *e) /* match states to source lines */
     }
   }
   /* insert at the end */
-  tmp = newsrc(m, lst ? lst->nxt : 0);
+  tmp = newsrc(m, lst ? lst->next : 0);
   tmp->line_number = n;
   tmp->file_name = e->n->file_name;
   if (lst) {
-    lst->nxt = tmp;
+    lst->next = tmp;
   } else {
     frst = tmp;
   }
@@ -160,13 +160,13 @@ static void dumpskip(int n, int m) {
   tmp = skip;
   lst = (SRC *)0;
   for (j = 0, col = 0; j <= n; j++) { /* find j in the sorted list */
-    for (; tmp; lst = tmp, tmp = tmp->nxt) {
+    for (; tmp; lst = tmp, tmp = tmp->next) {
       if (tmp->st == j) {
         putnr(1);
         if (lst)
-          lst->nxt = tmp->nxt;
+          lst->next = tmp->next;
         else
-          skip = tmp->nxt;
+          skip = tmp->next;
         break;
       }
       if (tmp->st > j) {
@@ -197,7 +197,7 @@ void dumpsrc(int n, int m) {
   fprintf(tz, "\nshort src_ln%d [] = {\n\t", m);
   tmp = frst;
   for (j = 0, col = 0; j <= n; j++) {
-    for (; tmp; tmp = tmp->nxt) {
+    for (; tmp; tmp = tmp->next) {
       if (tmp->st == j) {
         putnr(tmp->line_number);
         break;
@@ -219,13 +219,13 @@ void dumpsrc(int n, int m) {
   tmp = frst;
   lst = (SRC *)0;
   for (j = 0, col = 0; j <= n; j++) {
-    for (; tmp; lst = tmp, tmp = tmp->nxt) {
+    for (; tmp; lst = tmp, tmp = tmp->next) {
       if (tmp->st == j) {
         putfnm(j, tmp->file_name);
         if (lst)
-          lst->nxt = tmp->nxt;
+          lst->next = tmp->next;
         else
-          frst = tmp->nxt;
+          frst = tmp->next;
         break;
       }
       if (tmp->st > j) {

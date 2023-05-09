@@ -10,7 +10,7 @@
 struct UType {
   models::Symbol *nm; /* name of the type */
   models::Lextok *cn;         /* contents */
-  struct UType *nxt;  /* linked list */
+  struct UType *next;  /* linked list */
 };
 
 extern models::Symbol *Fname;
@@ -32,7 +32,7 @@ void setuname(models::Lextok *n) {
   if (!owner)
     loger::fatal("illegal reference inside typedef");
 
-  for (tmp = Unames; tmp; tmp = tmp->nxt)
+  for (tmp = Unames; tmp; tmp = tmp->next)
     if (owner->name != tmp->nm->name) {
       loger::non_fatal("typename %s was defined before", tmp->nm->name);
       return;
@@ -41,7 +41,7 @@ void setuname(models::Lextok *n) {
   tmp = (UType *)emalloc(sizeof(UType));
   tmp->nm = owner;
   tmp->cn = n;
-  tmp->nxt = Unames;
+  tmp->next = Unames;
   Unames = tmp;
 }
 
@@ -50,7 +50,7 @@ static void putUname(FILE *fd, UType *tmp) {
 
   if (!tmp)
     return;
-  putUname(fd, tmp->nxt); /* postorder */
+  putUname(fd, tmp->next); /* postorder */
   fprintf(fd, "struct %s { /* user defined type */\n", tmp->nm->name.c_str());
   for (fp = tmp->cn; fp; fp = fp->right)
     for (tl = fp->left; tl; tl = tl->right)
@@ -63,7 +63,7 @@ void putunames(FILE *fd) { putUname(fd, Unames); }
 bool IsUtype(const std::string &value) {
   UType *tmp;
 
-  for (tmp = Unames; tmp; tmp = tmp->nxt) {
+  for (tmp = Unames; tmp; tmp = tmp->next) {
     if (value == tmp->nm->name) {
       return true;
     }
@@ -74,7 +74,7 @@ bool IsUtype(const std::string &value) {
 models::Lextok *getuname(models::Symbol *t) {
   UType *tmp;
 
-  for (tmp = Unames; tmp; tmp = tmp->nxt) {
+  for (tmp = Unames; tmp; tmp = tmp->next) {
     if (t->name == tmp->nm->name) {
       return tmp->cn;
     }
@@ -656,21 +656,21 @@ models::Lextok *tail_add(models::Lextok *a, models::Lextok *b) {
 void setpname(models::Lextok *n) {
   UType *tmp;
 
-  for (tmp = Pnames; tmp; tmp = tmp->nxt)
+  for (tmp = Pnames; tmp; tmp = tmp->next)
     if (n->symbol->name == tmp->nm->name) {
       loger::non_fatal("proctype %s redefined", n->symbol->name);
       return;
     }
   tmp = (UType *)emalloc(sizeof(UType));
   tmp->nm = n->symbol;
-  tmp->nxt = Pnames;
+  tmp->next = Pnames;
   Pnames = tmp;
 }
 
 bool IsProctype(const std::string &value) {
   UType *tmp;
 
-  for (tmp = Pnames; tmp; tmp = tmp->nxt) {
+  for (tmp = Pnames; tmp; tmp = tmp->next) {
     if (value == tmp->nm->name) {
       return true;
     }

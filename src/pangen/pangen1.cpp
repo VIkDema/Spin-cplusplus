@@ -54,13 +54,13 @@ void walk_struct(FILE *, int, const std::string &, models::Symbol *,
 static void reverse_names(models::ProcList *p) {
   if (!p)
     return;
-  reverse_names(p->nxt);
+  reverse_names(p->next);
   fprintf(fd_tc, "   \"%s\",\n", p->n->name.c_str());
 }
 static void reverse_types(models::ProcList *p) {
   if (!p)
     return;
-  reverse_types(p->nxt);
+  reverse_types(p->next);
   fprintf(fd_tc, "   %d,	/* %s */\n", p->b, p->n->name.c_str());
 }
 
@@ -101,7 +101,7 @@ void genheader(void) {
   putunames(fd_th);
 
   fprintf(fd_tc, "\nshort Air[] = { ");
-  for (p = ready, i = 0; p; p = p->nxt, i++)
+  for (p = ready, i = 0; p; p = p->next, i++)
     fprintf(fd_tc, "%s (short) Air%d", (p != ready) ? "," : "", i);
   fprintf(fd_tc, ", (short) Air%d", i); /* np_ */
   if (nclaims > 1) {
@@ -131,7 +131,7 @@ void genheader(void) {
   fprintf(fd_tc, "};\n\n");
 
 here:
-  for (p = ready; p; p = p->nxt)
+  for (p = ready; p; p = p->next)
     put_ptype(p->n->name, p->tn, mstp, nrRdy + 1, p->b);
   /* +1 for np_ */
   put_ptype("np_", nrRdy, mstp, nrRdy + 1, static_cast<models::btypes>(0));
@@ -242,7 +242,7 @@ here:
   fprintf(fd_th, "#endif\n");
   fprintf(fd_th, "	short psize;\n");
   fprintf(fd_th, "	short parent_pid;\n");
-  fprintf(fd_th, "	struct TRIX_v6 *nxt;\n");
+  fprintf(fd_th, "	struct TRIX_v6 *next;\n");
   fprintf(fd_th, "} TRIX_v6;\n");
   fprintf(fd_th, "#endif\n\n");
 
@@ -305,7 +305,7 @@ shortcut:
     multi_init();
   }
   tc_predef_np();
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     Pid_nr = p->tn;
     put_pinit(p);
   }
@@ -337,7 +337,7 @@ void do_locinits(FILE *fd) {
   fprintf(fd, "#endif\n");
   fprintf(fd, "	*proc_offset, *q_offset;\n");
 
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     c_add_locinit(fd, p->tn, p->n->name);
   }
 }
@@ -348,7 +348,7 @@ void genother(void) {
   switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
-      for (p = ready; p; p = p->nxt) {
+      for (p = ready; p; p = p->next) {
         if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0); /* claims only */
           fprintf(fd_tc, "#ifdef HAS_CODE\n");
@@ -360,7 +360,7 @@ void genother(void) {
     break;
   case 1:
     ntimes(fd_tc, 0, 1, Code0);
-    for (p = ready; p; p = p->nxt) {
+    for (p = ready; p; p = p->next) {
       if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0); /* all except claims */
         fprintf(fd_tc, "#ifdef HAS_CODE\n");
@@ -387,13 +387,13 @@ void genother(void) {
     fprintf(fd_tc, "\t	Maxbody += WS - (Maxbody %% WS);\n\n");
   }
 
-  for (p = ready; p; p = p->nxt)
+  for (p = ready; p; p = p->next)
     end_labs(p->n, p->tn);
 
   switch (launch_settings.separate_version) {
   case 2:
     if (nclaims > 0) {
-      for (p = ready; p; p = p->nxt) {
+      for (p = ready; p; p = p->next) {
         if (p->b == models::btypes::N_CLAIM) {
           ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* claims only */
         }
@@ -401,7 +401,7 @@ void genother(void) {
     }
     return;
   case 1:
-    for (p = ready; p; p = p->nxt) {
+    for (p = ready; p; p = p->next) {
       if (p->b != models::btypes::N_CLAIM) {
         ntimes(fd_tc, p->tn, p->tn + 1, R0a); /* all except claims */
       }
@@ -462,7 +462,7 @@ static void end_labs(models::Symbol *s, int i) {
       (!pid_is_claim(i) && launch_settings.separate_version == 2))
     return;
 
-  for (l = labtab; l; l = l->nxt)
+  for (l = labtab; l; l = l->next)
     for (j = 0; ln[j].n; j++) {
       if (strncmp(l->s->name.c_str(), ln[j].s, ln[j].n) == 0 &&
           l->c->name == s->name) {
@@ -484,7 +484,7 @@ static void end_labs(models::Symbol *s, int i) {
       }
     }
   /* visible states -- through remote refs: */
-  for (l = labtab; l; l = l->nxt)
+  for (l = labtab; l; l = l->next)
     if (l->visible && l->s->context->name == s->name)
       fprintf(fd_tc, "\tvisstate[%d][%d] = 1;\n", i, l->e->seqno);
 
@@ -525,7 +525,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
     models::ProcList *p;
     models::Lextok *f, *t;
     int posnr = 0;
-    for (p = ready; p; p = p->nxt)
+    for (p = ready; p; p = p->next)
       if (!p->n->name.empty() && s == p->n->name) {
         break;
       }
@@ -649,7 +649,7 @@ void c_chandump(FILE *fd) {
   fprintf(fd, "	z = qptr(from);\n");
   fprintf(fd, "	switch (((Q0 *)z)->_t) {\n");
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     fprintf(fd, "	case %d:\n\t\t", q->qid);
     sprintf(buf, "((Q%d *)z)->", q->qid);
 
@@ -805,7 +805,7 @@ void c_wrapper(FILE *fd) /* allow pan.c to print out global sv entries */
 
   fprintf(fd, "void\nc_locals(int pid, int tp)\n{\t/* int i; */\n");
   fprintf(fd, "	switch(tp) {\n");
-  for (p = ready; p; p = p->nxt) {
+  for (p = ready; p; p = p->next) {
     fprintf(fd, "	case %d:\n", p->tn);
     if (c_splurge_any(p)) {
       fprintf(fd, "	\tprintf(\"local vars proc %%d (%s):\\n\", pid);\n",
@@ -1091,7 +1091,7 @@ static void multi_init(void) {
 
   fprintf(fd_tc, "#ifndef NOCLAIM\n");
   fprintf(fd_tc, "\tcase %d:	/* claim select */\n", i);
-  for (p = ready, j = 0; p; p = p->nxt, j++) {
+  for (p = ready, j = 0; p; p = p->next, j++) {
     if (p->b == models::btypes::N_CLAIM) {
       e = p->s->frst;
       init_value = huntele(e, e->status, -1)->seqno;
@@ -1219,8 +1219,8 @@ models::Element *huntstart(models::Element *f) {
   {
     elast = e;
     if (e->n) {
-      if (e->n->node_type == '.' && e->nxt)
-        e = e->nxt;
+      if (e->n->node_type == '.' && e->next)
+        e = e->next;
       else if (e->n->node_type == UNLESS)
         e = e->sub->this_sequence->frst;
     }
@@ -1253,9 +1253,9 @@ models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
         break;
       case '.':
       case BREAK:
-        if (!e->nxt)
+        if (!e->next)
           return e;
-        g = e->nxt;
+        g = e->next;
         break;
       case UNLESS:
         g = huntele(e->sub->this_sequence->frst, o, stopat);
@@ -1376,11 +1376,11 @@ void genaddqueue(void) {
   else
     fprintf(fd_th, "#define NQS	%d\n", nrqs);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     if (q->nslots > qmax)
       qmax = q->nslots;
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     j = q->qid;
     fprintf(fd_tc, "\tcase %d: j = sizeof(Q%d);", j, j);
     fprintf(fd_tc, " q_flds[%d] = %d;", j, q->nflds);
@@ -1479,7 +1479,7 @@ void genaddqueue(void) {
   fprintf(fd_tc, ", int args_given)\n");
   ntimes(fd_tc, 0, 1, Addq11);
 
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     sprintf(buf0, "((Q%d *)z)->", q->qid);
     fprintf(fd_tc, "\tcase %d:%s\n", q->qid, (q->nslots) ? "" : " /* =rv= */");
     if (q->nslots == 0) /* reset handshake point */
@@ -1534,17 +1534,17 @@ void genaddqueue(void) {
   }
   ntimes(fd_tc, 0, 1, Addq2);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "\tcase %d: return %d;\n", q->qid, (!q->nslots));
 
   ntimes(fd_tc, 0, 1, Addq3);
 
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "\tcase %d: return (q_sz(from) == %d);\n", q->qid,
             max(1, q->nslots));
 
   ntimes(fd_tc, 0, 1, Addq4);
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     sprintf(buf0, "((Q%d *)z)->", q->qid);
     fprintf(fd_tc, "	case %d:%s\n\t\t", q->qid,
             (q->nslots) ? "" : " /* =rv= */");
@@ -1585,7 +1585,7 @@ void genaddqueue(void) {
     fprintf(fd_tc, "\t\tbreak;\n");
   }
   ntimes(fd_tc, 0, 1, Addq5);
-  for (q = qtab; q; q = q->nxt)
+  for (q = qtab; q; q = q->next)
     fprintf(fd_tc, "	case %d: j = sizeof(Q%d); break;\n", q->qid, q->qid);
   ntimes(fd_tc, 0, 1, R8b);
   ntimes(fd_th, 0, 1, Proto); /* function prototypes */

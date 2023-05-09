@@ -13,7 +13,7 @@ struct Queue {
   int *contents;     /* the values stored */
   int *stepnr;       /* depth when each msg was sent */
   char **mtp;        /* if mtype, name of list, else 0 */
-  struct Queue *nxt; /* linked list */
+  struct Queue *next; /* linked list */
 };
 
 } // namespace models

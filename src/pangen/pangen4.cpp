@@ -282,7 +282,7 @@ void genunio(void) {
   int i;
 
   ntimes(fd_tc, 0, 1, R13_);
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     fprintf(fd_tc, "\tcase %d:\n", q->qid);
 
     if (has_sorted) {
@@ -312,7 +312,7 @@ void genunio(void) {
     fprintf(fd_tc, "\t\tbreak;\n");
   }
   ntimes(fd_tc, 0, 1, R14_);
-  for (q = qtab; q; q = q->nxt) {
+  for (q = qtab; q; q = q->next) {
     buf1 = fmt::format("((Q{} *)z)->contents", q->qid);
     fprintf(fd_tc, "	case %d:\n", q->qid);
     if (q->nslots == 0)

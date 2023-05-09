@@ -14,6 +14,6 @@ struct IType {
   int is_expr;       /* c_expr in an ltl formula */
   int dln, cln;      /* def and call linenr */
   models::Symbol *dfn, *cfn; /* def and call filename */
-  struct IType *nxt; /* linked list */
+  struct IType *next; /* linked list */
 };
 } // namespace models

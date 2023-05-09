@@ -31,7 +31,7 @@ static void lost_trail(void);
 static void whichproc(int p) {
   models::RunList *oX;
 
-  for (oX = run_lst; oX; oX = oX->nxt)
+  for (oX = run_lst; oX; oX = oX->next)
     if (oX->pid == p) {
       printf("(%s) ", oX->n->name.c_str());
       break;
@@ -73,7 +73,7 @@ int find_min(models::Sequence *s) {
 
   if (s->minel < 0) {
     s->minel = INT_MAX;
-    for (e = s->frst; e; e = e->nxt) {
+    for (e = s->frst; e; e = e->next) {
       if (e->status & 512) {
         continue;
       }
@@ -88,7 +88,7 @@ int find_min(models::Sequence *s) {
       } else if (e->Seqno < s->minel) {
         s->minel = e->Seqno;
       }
-      for (l = e->sub; l; l = l->nxt) {
+      for (l = e->sub; l; l = l->next) {
         int n = find_min(l->this_sequence);
         if (n < s->minel) {
           s->minel = n;
@@ -249,7 +249,7 @@ okay:
 
     if (dothis->n->node_type == '@') {
       if (prno == i - 1) {
-        run_lst = run_lst->nxt;
+        run_lst = run_lst->next;
         nstop++;
         if (verbose_flags.NeedToPrintAllProcessActions()) {
           if (launch_settings.need_generate_mas_flow_tcl_tk) {
@@ -272,7 +272,7 @@ okay:
     }
 
 
-    for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
+    for (X_lst = run_lst; X_lst; X_lst = X_lst->next) {
       if (--i == prno)
         break;
     }
@@ -284,7 +284,7 @@ okay:
         printf(" max %d (%d - %d + %d) claim %d ", nproc - nstop + Skip_claim,
                nproc, nstop, Skip_claim, Have_claim);
         printf("active processes:\n");
-        for (X_lst = run_lst; X_lst; X_lst = X_lst->nxt) {
+        for (X_lst = run_lst; X_lst; X_lst = X_lst->next) {
           printf("\tpid %d\tproctype %s\n", X_lst->pid, X_lst->n->name.c_str());
         }
         printf("\n");
@@ -337,7 +337,7 @@ okay:
             dumplocal(X_lst, 0);
         }
         og = g;
-      } while (g && g != dothis->nxt);
+      } while (g && g != dothis->next);
       if (X_lst != NULL) {
         X_lst->pc = g ? huntele(g, 0, -1) : g;
       }
@@ -425,7 +425,7 @@ int pc_value(models::Lextok *n) {
   int pid = eval(n);
   models::RunList *Y;
 
-  for (Y = run_lst; Y; Y = Y->nxt) {
+  for (Y = run_lst; Y; Y = Y->next) {
     if (--i == pid)
       return Y->pc->seqno;
   }

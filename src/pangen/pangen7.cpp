@@ -27,7 +27,7 @@ struct Guard;
 
 struct Succ_List {
   SQueue *s;
-  Succ_List *nxt;
+  Succ_List *next;
 };
 
 struct OneState {
@@ -37,17 +37,17 @@ struct OneState {
 
 struct SQueue {
   OneState state;
-  SQueue *nxt;
+  SQueue *next;
 };
 
 struct State_Stack {
   int *n;
-  State_Stack *nxt;
+  State_Stack *next;
 };
 
 struct Guard {
   models::Lextok *t;
-  Guard *nxt;
+  Guard *next;
 };
 
 static SQueue *sq, *sd,
@@ -89,7 +89,7 @@ static int same_state(int *a, int *b) {
 static int in_stack(SQueue *s, SQueue *in) {
   SQueue *q;
 
-  for (q = in; q; q = q->nxt) {
+  for (q = in; q; q = q->next) {
     if (same_state(q->state.combo, s->state.combo)) {
       return 1;
     }
@@ -107,12 +107,12 @@ static void to_render(SQueue *s) {
     reached[n][s->state.combo[n]] |= 2;
   }
 
-  for (q = render; q; q = q->nxt) {
+  for (q = render; q; q = q->next) {
     if (same_state(q->state.combo, s->state.combo)) {
       return;
     }
   }
-  for (q = holding; q; q = q->nxt) {
+  for (q = holding; q; q = q->next) {
     if (same_state(q->state.combo, s->state.combo)) {
       return;
     }
@@ -120,20 +120,20 @@ static void to_render(SQueue *s) {
 
   a = sd;
 more:
-  for (q = a, last = 0; q; last = q, q = q->nxt) {
+  for (q = a, last = 0; q; last = q, q = q->next) {
     if (same_state(q->state.combo, s->state.combo)) {
       if (!last) {
         if (a == sd) {
-          sd = q->nxt;
+          sd = q->next;
         } else if (a == sq) {
-          sq = q->nxt;
+          sq = q->next;
         } else {
-          holding = q->nxt;
+          holding = q->next;
         }
       } else {
-        last->nxt = q->nxt;
+        last->next = q->next;
       }
-      q->nxt = render;
+      q->next = render;
       render = q;
       return;
     }
@@ -160,11 +160,11 @@ static State_Stack *push_dsts(int *n) {
   int i;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (s = dsts; s; s = s->nxt) {
+  for (s = dsts; s; s = s->next) {
     if (same_state(s->n, n)) {
       if (verbose_flags.NeedToPrintVeryVerbose()) {
         printf("\n");
-        for (s = dsts; s; s = s->nxt) {
+        for (s = dsts; s; s = s->next) {
           print_state_nm("\t", s->n, "\n");
         }
         print_state_nm("\t", n, "\n");
@@ -177,14 +177,14 @@ static State_Stack *push_dsts(int *n) {
   s->n = (int *)emalloc(nclaims * sizeof(int));
   for (i = 0; i < nclaims; i++)
     s->n[i] = n[i];
-  s->nxt = dsts;
+  s->next = dsts;
   dsts = s;
   return 0;
 }
 
 static void pop_dsts(void) {
   assert(dsts != NULL);
-  dsts = dsts->nxt;
+  dsts = dsts->next;
 }
 
 static void complete_transition(Succ_List *sl, Guard *g) {
@@ -192,7 +192,7 @@ static void complete_transition(Succ_List *sl, Guard *g) {
   int cnt = 0;
 
   printf("	:: ");
-  for (w = g; w; w = w->nxt) {
+  for (w = g; w; w = w->next) {
     if (w->t->node_type == CONST && w->t->value == 1) {
       continue;
     } else if (w->t->node_type == 'c' && w->t->left->node_type == CONST &&
@@ -224,7 +224,7 @@ static void state_body(OneState *s, Guard *guard) {
   Guard *g;
   int i, once;
 
-  for (sl = s->succ; sl; sl = sl->nxt) {
+  for (sl = s->succ; sl; sl = sl->next) {
     once = 0;
 
     for (i = 0; i < nclaims; i++) {
@@ -245,7 +245,7 @@ static void state_body(OneState *s, Guard *guard) {
             state_body(s, guard);
           }
           pop_dsts();
-        } else if (!y->nxt) /* self-loop transition */
+        } else if (!y->next) /* self-loop transition */
         {
           if (!not_printing)
             printf(" /* self-loop */\n");
@@ -255,7 +255,7 @@ static void state_body(OneState *s, Guard *guard) {
       } else {
         g = (Guard *)emalloc(sizeof(Guard));
         g->t = e->n;
-        g->nxt = guard;
+        g->next = guard;
         guard = g;
       }
     }
@@ -284,7 +284,7 @@ static models::ProcList *locate_claim(int n) {
   models::ProcList *p;
   int i;
 
-  for (p = ready, i = 0; p; p = p->nxt, i++) /* find claim name */
+  for (p = ready, i = 0; p; p = p->next, i++) /* find claim name */
   {
     if (i == n) {
       break;
@@ -298,12 +298,12 @@ static models::ProcList *locate_claim(int n) {
 static void elim_lab(models::Element *e) {
   models::Label *l, *lst;
 
-  for (l = labtab, lst = NULL; l; lst = l, l = l->nxt) {
+  for (l = labtab, lst = NULL; l; lst = l, l = l->next) {
     if (l->e == e) {
       if (lst) {
-        lst->nxt = l->nxt;
+        lst->next = l->next;
       } else {
-        labtab = l->nxt;
+        labtab = l->next;
       }
       break;
     }
@@ -313,7 +313,7 @@ static void elim_lab(models::Element *e) {
 static int claim_has_accept(models::ProcList *p) {
   models::Label *l;
 
-  for (l = labtab; l; l = l->nxt) {
+  for (l = labtab; l; l = l->next) {
     if (l->c->name == p->n->name && l->s->name.substr(0, 6) == "accept") {
       return 1;
     }
@@ -350,7 +350,7 @@ static void mk_accepting(int n, models::Element *e) {
   l->c = (models::Symbol *)emalloc(sizeof(models::Symbol));
   l->opt_inline_id = 0; /* this is not in an inline */
 
-  for (p = ready, i = 0; p; p = p->nxt, i++) /* find claim name */
+  for (p = ready, i = 0; p; p = p->next, i++) /* find claim name */
   {
     if (i == n) {
       l->c->name = p->n->name;
@@ -362,7 +362,7 @@ static void mk_accepting(int n, models::Element *e) {
   has_accept = 1;
 
   l->e = e;
-  l->nxt = labtab;
+  l->next = labtab;
   labtab = l;
 }
 
@@ -381,7 +381,7 @@ static void check_special(int *nrs) {
   for (j = 0; spl[j].n; j++) /* 2 special label prefixes */
   {
     nmatches = 0;
-    for (p = ready, i = 0; p; p = p->nxt, i++) /* check each claim */
+    for (p = ready, i = 0; p; p = p->next, i++) /* check each claim */
     {
       if (p->b != models::btypes::N_CLAIM) {
         continue;
@@ -398,7 +398,7 @@ static void check_special(int *nrs) {
         }
         goto is_accepting;
       }
-      for (l = labtab; l; l = l->nxt) /* check its labels */
+      for (l = labtab; l; l = l->next) /* check its labels */
       {
         if (l->c->name == p->n->name /* right claim */
             && l->e->seqno == nrs[i] /* right state */
@@ -477,12 +477,12 @@ static void explore_product(void) {
   /* all states are in the sd queue */
 
   q = retrieve_state(Ist); /* retrieve from the sd q */
-  q->nxt = render;         /* put in render q */
+  q->next = render;         /* put in render q */
   render = q;
   do {
     q = render;
-    render = render->nxt;
-    q->nxt = 0; /* remove from render q */
+    render = render->next;
+    q->next = 0; /* remove from render q */
 
     if (verbose_flags.NeedToPrintVeryVerbose()) {
       print_state_nm("explore: ", q->state.combo, "\n");
@@ -493,7 +493,7 @@ static void explore_product(void) {
     not_printing = 0;
 
     if (lasthold) {
-      lasthold->nxt = q;
+      lasthold->next = q;
       lasthold = q;
     } else {
       holding = lasthold = q;
@@ -511,7 +511,7 @@ static void print_product(void) {
     printf("never Product {\n"); /* name expected by iSpin */
     q = find_state(Ist);         /* should find it in the holding q */
     assert(q != NULL);
-    q->nxt = holding; /* put it at the front */
+    q->next = holding; /* put it at the front */
     holding = q;
   }
   render = holding;
@@ -521,15 +521,15 @@ static void print_product(void) {
   cnt = 0;
   do {
     q = render;
-    render = render->nxt;
-    q->nxt = 0;
+    render = render->next;
+    q->next = 0;
     if (verbose_flags.NeedToPrintVeryVerbose()) {
       print_state_nm("print: ", q->state.combo, "\n");
     }
     cnt += render_state(q);
 
     if (lasthold) {
-      lasthold->nxt = q;
+      lasthold->next = q;
       lasthold = q;
     } else {
       holding = lasthold = q;
@@ -554,17 +554,17 @@ static void prune_dead(void) {
   do {
     cnt = 0;
     for (q = sd; q;
-         q = q->nxt) { /* if successor is deadend, remove it
+         q = q->next) { /* if successor is deadend, remove it
                         * unless it's a move to the end-state of the claim
                         */
       last = (Succ_List *)0;
-      for (sl = q->state.succ; sl; last = sl, sl = sl->nxt) {
+      for (sl = q->state.succ; sl; last = sl, sl = sl->next) {
         if (!sl->s->state.succ) /* no successor */
         {
           if (!last) {
-            q->state.succ = sl->nxt;
+            q->state.succ = sl->next;
           } else {
-            last->nxt = sl->nxt;
+            last->next = sl->next;
           }
           cnt++;
         }
@@ -616,7 +616,7 @@ void sync_product(void) {
   Selfs = (models::Element **)emalloc(sizeof(models::Element *) * nclaims);
   matrix = (models::Element ****)emalloc(sizeof(models::Element ***) * nclaims); /* claims */
 
-  for (p = ready, i = 0; p; p = p->nxt, i++) {
+  for (p = ready, i = 0; p; p = p->next, i++) {
     if (p->b == models::btypes::N_CLAIM) {
       nst = max(p->s->maxel, nst);
       Nacc[i] = claim_has_accept(p);
@@ -636,7 +636,7 @@ void sync_product(void) {
     e->status &= ~DONE;
   }
 
-  for (p = ready, n = 0; p; p = p->nxt, n++) {
+  for (p = ready, n = 0; p; p = p->next, n++) {
     if (p->b == models::btypes::N_CLAIM) { /* fill in matrix[n] */
       e = p->s->frst;
       Ist[n] = huntele(e, e->status, -1)->seqno;
@@ -706,7 +706,7 @@ static void create_transition(OneState *s, SQueue *it) {
 
   sl = (Succ_List *)emalloc(sizeof(Succ_List));
   sl->s = it;
-  sl->nxt = s->succ;
+  sl->next = s->succ;
   s->succ = sl;
 done:
   if (verbose_flags.NeedToPrintVeryVerbose()) {
@@ -719,7 +719,7 @@ static SQueue *find_state(int *cs) {
   int i;
 
 again: /* check in nq, sq, and then in the render q */
-  for (nq = a; nq; nq = nq->nxt) {
+  for (nq = a; nq; nq = nq->next) {
     if (same_state(nq->state.combo, cs)) {
       return nq; /* found */
     }
@@ -737,7 +737,7 @@ again: /* check in nq, sq, and then in the render q */
   for (i = 0; i < nclaims; i++) {
     nq->state.combo[i] = cs[i];
   }
-  nq->nxt = sq; /* add to sq stack */
+  nq->next = sq; /* add to sq stack */
   sq = nq;
 
   return nq;
@@ -746,12 +746,12 @@ again: /* check in nq, sq, and then in the render q */
 static SQueue *retrieve_state(int *s) {
   SQueue *nq, *last = NULL;
 
-  for (nq = sd; nq; last = nq, nq = nq->nxt) {
+  for (nq = sd; nq; last = nq, nq = nq->next) {
     if (same_state(nq->state.combo, s)) {
       if (last) {
-        last->nxt = nq->nxt;
+        last->next = nq->next;
       } else {
-        sd = nq->nxt; /* 6.4.0: was sd = nq */
+        sd = nq->next; /* 6.4.0: was sd = nq */
       }
       return nq; /* found */
     }
@@ -788,14 +788,14 @@ static void gen_product(void) {
 
   while (sq) {
     if (in_stack(sq, sd)) {
-      sq = sq->nxt;
+      sq = sq->next;
       continue;
     }
     cur_st = &(sq->state);
 
     q = sq;
-    sq = sq->nxt; /* delete from sq stack */
-    q->nxt = sd;  /* and move to done stack */
+    sq = sq->next; /* delete from sq stack */
+    q->next = sd;  /* and move to done stack */
     sd = q;
 
     all_successors(0, cur_st);
@@ -839,7 +839,7 @@ static void get_sub(int n, models::Element *e) {
     loger::fatal("atomic or d_step in never claim product");
   }
   /* NON_ATOMIC */
-  e->n->seq_list->this_sequence->last->nxt = e->nxt;
+  e->n->seq_list->this_sequence->last->next = e->next;
   get_seq(n, e->n->seq_list->this_sequence);
 
   t_record(n, e, e->n->seq_list->this_sequence->frst);
@@ -852,7 +852,7 @@ static void set_el(int n, models::Element *e) {
   {
     e->n->node_type = CONST;
     e->n->value = 1; /* true */
-    e->nxt = e;
+    e->next = e;
     g = e;
     mk_accepting(n, e);
   } else
@@ -860,8 +860,8 @@ static void set_el(int n, models::Element *e) {
       if (e->n->node_type == GOTO) {
     g = get_lab(e->n, 1);
     g = huntele(g, e->status, -1);
-  } else if (e->nxt) {
-    g = huntele(e->nxt, e->status, -1);
+  } else if (e->next) {
+    g = huntele(e->next, e->status, -1);
   } else {
     g = NULL;
   }
@@ -875,7 +875,7 @@ static void get_seq(int n, models::Sequence *s) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   e = huntele(s->frst, s->frst->status, -1);
-  for (; e; e = e->nxt) {
+  for (; e; e = e->next) {
     if (e->status & DONE) {
       goto checklast;
     }
@@ -891,7 +891,7 @@ static void get_seq(int n, models::Sequence *s) {
       models::Lextok *y = NULL;
       models::Lextok *haselse = NULL;
 
-      for (h = e->sub; h; h = h->nxt) {
+      for (h = e->sub; h; h = h->next) {
         models::Lextok *t = h->this_sequence->frst->n;
         if (t->node_type == ELSE) {
           if (verbose_flags.NeedToPrintVeryVerbose())
@@ -928,7 +928,7 @@ static void get_seq(int n, models::Sequence *s) {
         haselse->left = y;
       }
 
-      for (h = e->sub; h; h = h->nxt) {
+      for (h = e->sub; h; h = h->next) {
         t_record(n, e, h->this_sequence->frst);
         get_seq(n, h->this_sequence);
       }

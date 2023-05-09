@@ -24,7 +24,7 @@ extern void rel_use(models::FSM_use *);
 struct Pair {
   models::FSM_state *h;
   int b;
-  struct Pair *nxt;
+  struct Pair *next;
 };
 
 struct AST {
@@ -34,25 +34,25 @@ struct AST {
   int relevant;
   Pair *pairs;            /* entry and exit nodes of proper subgraphs */
   models::FSM_state *fsm; /* proctype body */
-  struct AST *nxt;        /* linked list */
+  struct AST *next;        /* linked list */
 };
 
 struct RPN { /* relevant proctype names */
   models::Symbol *rn;
-  struct RPN *nxt;
+  struct RPN *next;
 };
 
 struct ALIAS {         /* channel aliasing info */
   models::Lextok *cnm; /* this chan */
   int origin;          /* debugging - origin of the alias */
   struct ALIAS *alias; /* can be an alias for these other chans */
-  struct ALIAS *nxt;   /* linked list */
+  struct ALIAS *next;   /* linked list */
 };
 
 struct ChanList {
   models::Lextok *s;    /* containing stmnt */
   models::Lextok *n;    /* point of reference - could be struct */
-  struct ChanList *nxt; /* linked list */
+  struct ChanList *next; /* linked list */
 };
 
 /* a chan alias can be created in one of three ways:
@@ -155,19 +155,19 @@ static void name_def_use(models::Lextok *n, int code) {
     }
   }
 
-  for (u = cur_t->Val[0]; u; u = u->nxt)
+  for (u = cur_t->Val[0]; u; u = u->next)
     if (AST_mutual(n, u->n, 1) && u->special == code)
       return;
 
   if (use_free) {
     u = use_free;
-    use_free = use_free->nxt;
+    use_free = use_free->next;
   } else
     u = (models::FSM_use *)emalloc(sizeof(models::FSM_use));
 
   u->n = n;
   u->special = code;
-  u->nxt = cur_t->Val[0];
+  u->next = cur_t->Val[0];
   cur_t->Val[0] = u;
 
   name_def_indices(n, USE | (code & (~DEF))); /* not def, but perhaps deref */
@@ -327,7 +327,7 @@ static int AST_add_alias(models::Lextok *n, int nr) {
   ALIAS *ca;
   int res;
 
-  for (ca = chalcur->alias; ca; ca = ca->nxt)
+  for (ca = chalcur->alias; ca; ca = ca->next)
     if (AST_mutual(ca->cnm, n, 1)) {
       res = (ca->origin & nr);
       ca->origin |= nr;  /* 1, 2, or 4 - run, asgn, or rcv */
@@ -337,7 +337,7 @@ static int AST_add_alias(models::Lextok *n, int nr) {
   ca = (ALIAS *)emalloc(sizeof(ALIAS));
   ca->cnm = n;
   ca->origin = nr;
-  ca->nxt = chalcur->alias;
+  ca->next = chalcur->alias;
   chalcur->alias = ca;
   return 1;
 }
@@ -367,9 +367,9 @@ static void AST_findrun(std::string &s, int parno) {
   models::FSM_trans *t;
   AST *a;
 
-  for (a = ast; a; a = a->nxt)      /* automata       */
-    for (f = a->fsm; f; f = f->nxt) /* control states */
-      for (t = f->t; t; t = t->nxt) /* transitions    */
+  for (a = ast; a; a = a->next)      /* automata       */
+    for (f = a->fsm; f; f = f->next) /* control states */
+      for (t = f->t; t; t = t->next) /* transitions    */
       {
         if (t->step)
           AST_run_alias(s, t->step->n, parno);
@@ -415,7 +415,7 @@ static void AST_para(models::ProcList *p) {
         ALIAS *na = (ALIAS *)emalloc(sizeof(ALIAS));
 
         na->cnm = c;
-        na->nxt = chalias;
+        na->next = chalias;
         chalcur = chalias = na;
         AST_findrun(p->n->name, cnt);
       }
@@ -490,7 +490,7 @@ static void AST_setcur(models::Lextok *n) /* set chalcur */
 {
   ALIAS *ca;
 
-  for (ca = chalias; ca; ca = ca->nxt)
+  for (ca = chalias; ca; ca = ca->next)
     if (AST_mutual(ca->cnm, n, 1)) /* if same chan */
     {
       chalcur = ca;
@@ -499,7 +499,7 @@ static void AST_setcur(models::Lextok *n) /* set chalcur */
 
   ca = (ALIAS *)emalloc(sizeof(ALIAS));
   ca->cnm = n;
-  ca->nxt = chalias;
+  ca->next = chalias;
   chalcur = chalias = ca;
 }
 
@@ -510,9 +510,9 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
   models::FSM_use *u;
   ChanList *cl;
 
-  for (f = a->fsm; f; f = f->nxt)                        /* control states */
-    for (t = f->t; t; t = t->nxt)                        /* transitions    */
-      for (u = t->Val[0]; u; u = u->nxt)                 /* def/use info   */
+  for (f = a->fsm; f; f = f->next)                        /* control states */
+    for (t = f->t; t; t = t->next)                        /* transitions    */
+      for (u = t->Val[0]; u; u = u->next)                 /* def/use info   */
         if (Sym_typ(u->n) == CHAN && (u->special & DEF)) /* def of chan-name  */
         {
           AST_setcur(u->n);
@@ -522,7 +522,7 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
             break;
           case 'r':
             /* guess sends where name may originate */
-            for (cl = chanlist; cl; cl = cl->nxt) /* all sends */
+            for (cl = chanlist; cl; cl = cl->next) /* all sends */
             {
               int aa = AST_nrpar(cl->s);
               int bb = AST_nrpar(t->step->n);
@@ -548,11 +548,11 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
 static void AST_aliases(void) {
   ALIAS *na, *ca;
 
-  for (na = chalias; na; na = na->nxt) {
+  for (na = chalias; na; na = na->next) {
     printf("\npossible aliases of ");
     AST_var(na->cnm, na->cnm->symbol, 1);
     printf("\n\t");
-    for (ca = na->alias; ca; ca = ca->nxt) {
+    for (ca = na->alias; ca; ca = ca->next) {
       if (!ca->cnm->symbol)
         printf("no valid name ");
       else
@@ -566,7 +566,7 @@ static void AST_aliases(void) {
         printf("RCV ");
       printf("[%s]", AST_isini(ca->cnm) ? "Initzd" : "Name");
       printf(">");
-      if (ca->nxt)
+      if (ca->next)
         printf(", ");
     }
     printf("\n");
@@ -598,7 +598,7 @@ static void AST_indirect(models::FSM_use *uin, models::FSM_trans *t, const std::
     }
     printf("\n");
   }
-  for (u = t->Val[0]; u; u = u->nxt)
+  for (u = t->Val[0]; u; u = u->next)
     if (u != uin && (u->special & (USE | DEREF_USE))) {
       if (verbose_flags.NeedToPrintVerbose()) {
         printf("\t\t\tuses(%d): ", u->special);
@@ -621,7 +621,7 @@ static void def_relevant(const std::string &pn, models::FSM_trans *t, models::Le
    */
 
   if (n->node_type != ELSE)
-    for (u = t->Val[0]; u; u = u->nxt) {
+    for (u = t->Val[0]; u; u = u->next) {
       chanref = (Sym_typ(u->n) == CHAN);
 
       if (ischan != chanref                     /* no possible match  */
@@ -634,10 +634,10 @@ static void def_relevant(const std::string &pn, models::FSM_trans *t, models::Le
       }
 
       if (chanref)
-        for (na = chalias; na; na = na->nxt) {
+        for (na = chalias; na; na = na->next) {
           if (!AST_mutual(u->n, na->cnm, 1))
             continue;
-          for (ca = na->alias; ca; ca = ca->nxt)
+          for (ca = na->alias; ca; ca = ca->next)
             if (AST_mutual(ca->cnm, n, 1) && AST_isini(ca->cnm)) {
               AST_indirect(u, t, "(alias match)", pn);
               break;
@@ -670,24 +670,24 @@ static void AST_relevant(models::Lextok *n) {
     printf(">>\n");
   }
 
-  for (t = expl_par; t; t = t->nxt) /* param assignments */
+  for (t = expl_par; t; t = t->next) /* param assignments */
   {
     if (!(t->relevant & 1))
       def_relevant(":params:", t, n, ischan);
   }
 
-  for (t = expl_var; t; t = t->nxt) {
+  for (t = expl_var; t; t = t->next) {
     if (!(t->relevant & 1)) /* var inits */
       def_relevant(":vars:", t, n, ischan);
   }
 
-  for (a = ast; a; a = a->nxt) /* all other stmnts */
+  for (a = ast; a; a = a->next) /* all other stmnts */
   {
     if (a->p->b != models::btypes::N_CLAIM &&
         a->p->b != models::btypes::E_TRACE &&
         a->p->b != models::btypes::N_TRACE)
-      for (f = a->fsm; f; f = f->nxt)
-        for (t = f->t; t; t = t->nxt) {
+      for (f = a->fsm; f; f = f->next)
+        for (t = f->t; t; t = t->next) {
           if (!(t->relevant & 1))
             def_relevant(a->p->n->name, t, n, ischan);
         }
@@ -700,9 +700,9 @@ static int AST_relpar(const std::string &s) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (T = expl_par; T; T = (T == expl_par) ? expl_var : nullptr)
-    for (t = T; t; t = t->nxt) {
+    for (t = T; t; t = t->next) {
       if (t->relevant & 1)
-        for (u = t->Val[0]; u; u = u->nxt) {
+        for (u = t->Val[0]; u; u = u->next) {
           if (u->n->symbol->type && u->n->symbol->context &&
               u->n->symbol->context->name == s) {
             if (verbose_flags.NeedToPrintVerbose()) {
@@ -721,8 +721,8 @@ static void AST_dorelevant(void) {
   AST *a;
   RPN *r;
 
-  for (r = rpn; r; r = r->nxt) {
-    for (a = ast; a; a = a->nxt)
+  for (r = rpn; r; r = r->next) {
+    for (a = ast; a; a = a->next)
       if (a->p->n->name == r->rn->name) {
         a->relevant |= 1;
         break;
@@ -734,19 +734,19 @@ static void AST_dorelevant(void) {
 
 static void AST_procisrelevant(models::Symbol *s) {
   RPN *r;
-  for (r = rpn; r; r = r->nxt)
+  for (r = rpn; r; r = r->next)
     if (r->rn->name == s->name)
       return;
   r = (RPN *)emalloc(sizeof(RPN));
   r->rn = s;
-  r->nxt = rpn;
+  r->next = rpn;
   rpn = r;
 }
 
 static int AST_proc_isrel(const std::string &s) {
   AST *a;
 
-  for (a = ast; a; a = a->nxt)
+  for (a = ast; a; a = a->next)
     if (a->p->n->name == s)
       return (a->relevant & 1);
   loger::non_fatal("cannot happen, missing proc in ast");
@@ -772,7 +772,7 @@ static void AST_tagruns(void) {
    * then so are all the run statements on that proctype
    */
 
-  for (a = ast; a; a = a->nxt) {
+  for (a = ast; a; a = a->next) {
     if (a->p->b == models::btypes::N_CLAIM ||
         a->p->b == models::btypes::I_PROC ||
         a->p->b == models::btypes::E_TRACE ||
@@ -783,8 +783,8 @@ static void AST_tagruns(void) {
     if (AST_relpar(a->p->n->name))
       a->relevant |= 1;
     else {
-      for (f = a->fsm; f; f = f->nxt)
-        for (t = f->t; t; t = t->nxt)
+      for (f = a->fsm; f; f = f->next)
+        for (t = f->t; t; t = t->next)
           if (t->relevant)
             goto yes;
     yes:
@@ -793,9 +793,9 @@ static void AST_tagruns(void) {
     }
   }
 
-  for (a = ast; a; a = a->nxt)
-    for (f = a->fsm; f; f = f->nxt)
-      for (t = f->t; t; t = t->nxt)
+  for (a = ast; a; a = a->next)
+    for (f = a->fsm; f; f = f->next)
+      for (t = f->t; t; t = t->next)
         if (t->step && AST_scoutrun(t->step->n)) {
           AST_indirect((models::FSM_use *)0, t, ":run:", a->p->n->name);
           /* BUT, not all actual params are relevant */
@@ -831,7 +831,7 @@ static void AST_edge_dump(AST *a, models::FSM_state *f) {
   models::FSM_use *u;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (t = f->t; t; t = t->nxt) /* edges */
+  for (t = f->t; t; t = t->next) /* edges */
   {
     if (t->step && AST_always(t->step->n))
       t->relevant |= 1; /* always relevant */
@@ -861,7 +861,7 @@ static void AST_edge_dump(AST *a, models::FSM_state *f) {
       else
         printf("Unless");
 
-      for (u = t->Val[0]; u; u = u->nxt) {
+      for (u = t->Val[0]; u; u = u->next) {
         printf(" <");
         AST_var(u->n, u->n->symbol, 1);
         printf(":%d>", u->special);
@@ -905,7 +905,7 @@ static void AST_dfs(AST *a, int s, int vis) {
   if (vis)
     AST_edge_dump(a, f);
 
-  for (t = f->t; t; t = t->nxt)
+  for (t = f->t; t; t = t->next)
     AST_dfs(a, t->to, vis);
 }
 
@@ -913,7 +913,7 @@ static void AST_dump(AST *a) {
   models::FSM_state *f;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     f->seen = 0;
     fsm_tbl[f->from] = f;
   }
@@ -930,17 +930,17 @@ static void AST_sends(AST *a) {
   models::FSM_use *u;
   ChanList *cl;
 
-  for (f = a->fsm; f; f = f->nxt) /* control states */
-    for (t = f->t; t; t = t->nxt) /* transitions    */
+  for (f = a->fsm; f; f = f->next) /* control states */
+    for (t = f->t; t; t = t->next) /* transitions    */
     {
       if (t->step && t->step->n && t->step->n->node_type == 's')
-        for (u = t->Val[0]; u; u = u->nxt) {
+        for (u = t->Val[0]; u; u = u->next) {
           if (Sym_typ(u->n) == CHAN &&
               ((u->special & USE) && !(u->special & DEREF_USE))) {
             cl = (ChanList *)emalloc(sizeof(ChanList));
             cl->s = t->step->n;
             cl->n = u->n;
-            cl->nxt = chanlist;
+            cl->next = chanlist;
             chanlist = cl;
           }
         }
@@ -950,7 +950,7 @@ static void AST_sends(AST *a) {
 static ALIAS *AST_alfind(models::Lextok *n) {
   ALIAS *na;
 
-  for (na = chalias; na; na = na->nxt)
+  for (na = chalias; na; na = na->next)
     if (AST_mutual(na->cnm, n, 1))
       return na;
   return (ALIAS *)0;
@@ -962,12 +962,12 @@ static void AST_trans(void) {
 
   do {
     nchanges = 0;
-    for (na = chalias; na; na = na->nxt) {
+    for (na = chalias; na; na = na->next) {
       chalcur = na;
-      for (ca = na->alias; ca; ca = ca->nxt) {
+      for (ca = na->alias; ca; ca = ca->next) {
         da = AST_alfind(ca->cnm);
         if (da)
-          for (ea = da->alias; ea; ea = ea->nxt) {
+          for (ea = da->alias; ea; ea = ea->next) {
             nchanges += AST_add_alias(ea->cnm, ea->origin | ca->origin);
           }
       }
@@ -981,8 +981,8 @@ static void AST_def_use(AST *a) {
   models::FSM_state *f;
   models::FSM_trans *t;
 
-  for (f = a->fsm; f; f = f->nxt) /* control states */
-    for (t = f->t; t; t = t->nxt) /* all edges */
+  for (f = a->fsm; f; f = f->next) /* control states */
+    for (t = f->t; t; t = t->next) /* all edges */
     {
       cur_t = t;
       rel_use(t->Val[0]); /* redo Val; doesn't cover structs */
@@ -1221,11 +1221,11 @@ static void AST_suggestions(void) {
 
   /* look for source and sink processes */
 
-  for (a = ast; a; a = a->nxt) /* automata       */
+  for (a = ast; a; a = a->next) /* automata       */
   {
     banner = 0;
-    for (f = a->fsm; f; f = f->nxt) /* control states */
-      for (t = f->t; t; t = t->nxt) /* transitions    */
+    for (f = a->fsm; f; f = f->next) /* control states */
+      for (t = f->t; t; t = t->next) /* transitions    */
       {
         if (t->step)
           switch (t->step->n->node_type) {
@@ -1338,7 +1338,7 @@ static int AST_blockable(AST *a, int s) {
 
   f = fsm_tbl[s];
 
-  for (t = f->t; t; t = t->nxt) {
+  for (t = f->t; t; t = t->next) {
     if (t->relevant & 2)
       return 1;
 
@@ -1374,7 +1374,7 @@ static void AST_spread(AST *a, int s) {
 
   f = fsm_tbl[s];
 
-  for (t = f->t; t; t = t->nxt) {
+  for (t = f->t; t; t = t->next) {
     if (t->relevant & 2)
       continue;
 
@@ -1424,7 +1424,7 @@ static int AST_suspect(models::FSM_trans *t) {
   /* check for possible overkill */
   if (!t || !t->step || !AST_withchan(t->step->n))
     return 0;
-  for (u = t->Val[0]; u; u = u->nxt)
+  for (u = t->Val[0]; u; u = u->next)
     if (AST_notrelevant(u->n))
       return 1;
   return 0;
@@ -1435,7 +1435,7 @@ static void AST_shouldconsider(AST *a, int s) {
   models::FSM_trans *t;
 
   f = fsm_tbl[s];
-  for (t = f->t; t; t = t->nxt) {
+  for (t = f->t; t; t = t->next) {
     if (t->step && t->step->n)
       switch (t->step->n->node_type) {
       case IF:
@@ -1479,7 +1479,7 @@ static int FSM_critical(AST *a, int s) {
     goto done;
   f->seen = 1;
   f->cr = 0;
-  for (t = f->t; t; t = t->nxt)
+  for (t = f->t; t; t = t->next)
     if ((t->relevant & 1) || FSM_critical(a, t->to)) {
       f->cr = 1;
 
@@ -1507,9 +1507,9 @@ static void AST_ctrl(AST *a) {
     printf("CTL -- %s\n", a->p->n->name.c_str());
 
   /* 1 : mark all blockable edges */
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     if (!(f->scratch & 2)) /* not part of irrelevant subgraph */
-      for (t = f->t; t; t = t->nxt) {
+      for (t = f->t; t; t = t->next) {
         if (t->step && t->step->n)
           switch (t->step->n->node_type) {
           case 'r':
@@ -1531,13 +1531,13 @@ static void AST_ctrl(AST *a) {
   }
 
   /* 2: keep only 2-marked stmnts from which 1-marked stmnts can be reached */
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     fsm_tbl[f->from] = f;
     f->seen = 0; /* used in dfs from FSM_critical */
   }
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     if (!FSM_critical(a, f->from))
-      for (t = f->t; t; t = t->nxt)
+      for (t = f->t; t; t = t->next)
         if (t->relevant & 2) {
           t->relevant &= ~2; /* clear mark */
           if (verbose_flags.NeedToPrintVerbose()) {
@@ -1550,9 +1550,9 @@ static void AST_ctrl(AST *a) {
   }
 
   /* 3 : lift marks across IF/DO etc. */
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     hit = 0;
-    for (t = f->t; t; t = t->nxt) {
+    for (t = f->t; t; t = t->next) {
       if (t->step && t->step->n)
         switch (t->step->n->node_type) {
         case IF:
@@ -1573,7 +1573,7 @@ static void AST_ctrl(AST *a) {
         break;
     }
     if (hit) /* at least one outgoing trans can block */
-      for (t = f->t; t; t = t->nxt) {
+      for (t = f->t; t; t = t->next) {
         t->round = AST_Round;
         t->relevant |= 2; /* lift */
         if (verbose_flags.NeedToPrintVerbose()) {
@@ -1587,8 +1587,8 @@ static void AST_ctrl(AST *a) {
   }
 
   /* 4: nodes with 2-marked out-edges contribute new slice criteria */
-  for (f = a->fsm; f; f = f->nxt)
-    for (t = f->t; t; t = t->nxt)
+  for (f = a->fsm; f; f = f->next)
+    for (t = f->t; t; t = t->next)
       if (t->relevant & 2) {
         AST_shouldconsider(a, f->from);
         break; /* inner loop */
@@ -1598,7 +1598,7 @@ static void AST_ctrl(AST *a) {
 static void AST_control_dep(void) {
   AST *a;
 
-  for (a = ast; a; a = a->nxt) {
+  for (a = ast; a; a = a->next) {
     if (a->p->b != models::btypes::N_CLAIM &&
         a->p->b != models::btypes::E_TRACE &&
         a->p->b != models::btypes::N_TRACE) {
@@ -1612,12 +1612,12 @@ static void AST_prelabel(void) {
   models::FSM_state *f;
   models::FSM_trans *t;
 
-  for (a = ast; a; a = a->nxt) {
+  for (a = ast; a; a = a->next) {
     if (a->p->b != models::btypes::N_CLAIM &&
         a->p->b != models::btypes::E_TRACE &&
         a->p->b != models::btypes::N_TRACE)
-      for (f = a->fsm; f; f = f->nxt)
-        for (t = f->t; t; t = t->nxt) {
+      for (f = a->fsm; f; f = f->next)
+        for (t = f->t; t; t = t->next) {
           if (t->step && t->step->n && t->step->n->node_type == ASSERT) {
             t->relevant |= 1;
           }
@@ -1649,13 +1649,13 @@ static void AST_alias_analysis(void) /* aliasing of promela channels */
   AST *a;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (a = ast; a; a = a->nxt)
+  for (a = ast; a; a = a->next)
     AST_sends(a); /* collect chan-names that are send across chans */
 
-  for (a = ast; a; a = a->nxt)
+  for (a = ast; a; a = a->next)
     AST_para(a->p); /* aliasing of chans thru proctype parameters */
 
-  for (a = ast; a; a = a->nxt)
+  for (a = ast; a; a = a->next)
     AST_other(a); /* chan params in asgns and recvs */
 
   AST_trans(); /* transitive closure of alias table */
@@ -1676,7 +1676,7 @@ void AST_slice(void) {
   }
   AST_dorelevant(); /* mark procs refered to in remote refs */
 
-  for (a = ast; a; a = a->nxt)
+  for (a = ast; a; a = a->next)
     AST_def_use(a); /* compute standard def/use information */
 
   AST_hidden(); /* parameter passing and local var inits */
@@ -1689,7 +1689,7 @@ void AST_slice(void) {
                    */
   if (!spurious || verbose_flags.NeedToPrintVerbose()) {
     spurious = 1;
-    for (a = ast; a; a = a->nxt) {
+    for (a = ast; a; a = a->next) {
       AST_dump(a);         /* marked up result */
       if (a->relevant & 2) /* it printed something */
         spurious = 0;
@@ -1714,7 +1714,7 @@ void AST_store(models::ProcList *p, int start_state) {
     n_ast->i_st = start_state;
     n_ast->relevant = 0;
     n_ast->fsm = fsmx;
-    n_ast->nxt = ast;
+    n_ast->next = ast;
     ast = n_ast;
   }
   fsmx = nullptr; /* hide it from FSM_DEL */
@@ -1736,7 +1736,7 @@ static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
 
   cur_t = nullptr;
 
-  e->nxt = explicit_;
+  e->next = explicit_;
   explicit_ = e;
 }
 
@@ -1771,9 +1771,9 @@ static void AST_mk1(const std::string &s, models::Lextok *c, int parno) {
    * formal par c to matching actual pars made explicit
    */
 
-  for (a = ast; a; a = a->nxt)      /* automata       */
-    for (f = a->fsm; f; f = f->nxt) /* control states */
-      for (t = f->t; t; t = t->nxt) /* transitions    */
+  for (a = ast; a; a = a->next)      /* automata       */
+    for (f = a->fsm; f; f = f->next) /* control states */
+      for (t = f->t; t; t = t->next) /* transitions    */
       {
         if (t->step)
           AST_fp1(s, t->step->n, c, parno);
@@ -1786,7 +1786,7 @@ static void AST_par_init() /* parameter passing -- hidden_flags assignments */
   models::Lextok *f, *t, *c;
   int cnt;
 
-  for (a = ast; a; a = a->nxt) {
+  for (a = ast; a; a = a->next) {
     if (a->p->b == models::btypes::N_CLAIM ||
         a->p->b == models::btypes::I_PROC ||
         a->p->b == models::btypes::E_TRACE ||
@@ -1825,7 +1825,7 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
     }
   }
 
-  for (a = ast; a; a = a->nxt) {
+  for (a = ast; a; a = a->next) {
     if (a->p->b != models::btypes::N_CLAIM &&
         a->p->b != models::btypes::E_TRACE &&
         a->p->b != models::btypes::N_TRACE) /* has no locals */
@@ -1849,12 +1849,12 @@ static void show_expl(void) {
 
   printf("\nExplicit List:\n");
   for (T = expl_par; T; T = (T == expl_par) ? expl_var : nullptr) {
-    for (t = T; t; t = t->nxt) {
+    for (t = T; t; t = t->next) {
       if (!t->Val[0])
         continue;
       printf("%s", t->relevant ? "*" : " ");
       printf("%3d", t->round);
-      for (u = t->Val[0]; u; u = u->nxt) {
+      for (u = t->Val[0]; u; u = u->next) {
         printf("\t<");
         AST_var(u->n, u->n->symbol, 1);
         printf(":%d>, ", u->special);
@@ -1910,7 +1910,7 @@ static int bad_scratch(models::FSM_state *f, int upto) {
   }
 
   if (f->from != upto)
-    for (t = f->t; t; t = t->nxt)
+    for (t = f->t; t; t = t->next)
       if (bad_scratch(fsm_tbl[t->to], upto))
         goto bad;
 
@@ -1925,21 +1925,21 @@ static void mark_subgraph(models::FSM_state *f, int upto) {
 
   f->scratch |= 2;
 
-  for (t = f->t; t; t = t->nxt)
+  for (t = f->t; t; t = t->next)
     mark_subgraph(fsm_tbl[t->to], upto);
 }
 
 static void AST_pair(AST *a, models::FSM_state *h, int y) {
   Pair *p;
 
-  for (p = a->pairs; p; p = p->nxt)
+  for (p = a->pairs; p; p = p->next)
     if (p->h == h && p->b == y)
       return;
 
   p = (Pair *)emalloc(sizeof(Pair));
   p->h = h;
   p->b = y;
-  p->nxt = a->pairs;
+  p->next = a->pairs;
   a->pairs = p;
 }
 
@@ -1947,7 +1947,7 @@ static void AST_checkpairs(AST *a) {
   Pair *p;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (p = a->pairs; p; p = p->nxt) {
+  for (p = a->pairs; p; p = p->next) {
     if (verbose_flags.NeedToPrintVerbose())
       printf("	inspect pair %d %d\n", p->b, p->h->from);
     if (!bad_scratch(p->h, p->b)) /* subgraph is clean */
@@ -1988,7 +1988,7 @@ static void act_dom(AST *a) {
   models::FSM_trans *t;
   int i, j, cnt;
 
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     if (!f->seen)
       continue;
 #if 0
@@ -1999,7 +1999,7 @@ static void act_dom(AST *a) {
 		   (need reachability - in case of reverse dominance)
 		d. the dominator is reachable, and not equal to this node
 #endif
-    for (t = f->p, i = 0; t; t = t->nxt) {
+    for (t = f->p, i = 0; t; t = t->next) {
       i += fsm_tbl[t->to]->seen;
     }
     if (i <= 1) {
@@ -2015,7 +2015,7 @@ static void act_dom(AST *a) {
       if (!(f->dom[i] & (1 << j))) {
         continue;
       }
-      for (t = fsm_tbl[cnt]->t, i = 0; t; t = t->nxt) {
+      for (t = fsm_tbl[cnt]->t, i = 0; t; t = t->next) {
         i += fsm_tbl[t->to]->seen;
       }
       if (i <= 1) {
@@ -2032,7 +2032,7 @@ static void act_dom(AST *a) {
 static void reachability(AST *a) {
   models::FSM_state *f;
 
-  for (f = a->fsm; f; f = f->nxt)
+  for (f = a->fsm; f; f = f->next)
     f->seen = 0;          /* clear */
   AST_dfs(a, a->i_st, 0); /* mark 'seen' */
 }
@@ -2040,7 +2040,7 @@ static void reachability(AST *a) {
 static int see_else(models::FSM_state *f) {
    models::FSM_trans *t;
 
-  for (t = f->t; t; t = t->nxt) {
+  for (t = f->t; t; t = t->next) {
     if (t->step && t->step->n)
       switch (t->step->n->node_type) {
       case ELSE:
@@ -2063,7 +2063,7 @@ static int is_guard(models::FSM_state *f) {
   models::FSM_state *g;
   models::FSM_trans *t;
 
-  for (t = f->p; t; t = t->nxt) {
+  for (t = f->p; t; t = t->next) {
     g = fsm_tbl[t->to];
     if (!g->seen)
       continue;
@@ -2100,13 +2100,13 @@ static void curtail(AST *a) {
   if (verbose_flags.NeedToPrintVerbose())
     printf("Curtail %s:\n", a->p->n->name.c_str());
 
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     if (!f->seen || (f->scratch & (1 | 2)))
       continue;
 
     isrel = haselse = i = blocking = 0;
 
-    for (t = f->t; t; t = t->nxt) {
+    for (t = f->t; t; t = t->next) {
       g = fsm_tbl[t->to];
 
       isrel |= (t->relevant & 1); /* data relevant */
@@ -2148,7 +2148,7 @@ static void init_dom(AST *a) {
 	(2)  for s in S - {s0} do D(s) = S
 #endif
 
-  for (f = a->fsm; f; f = f->nxt) {
+  for (f = a->fsm; f; f = f->next) {
     if (!f->seen)
       continue;
 
@@ -2193,7 +2193,7 @@ static int dom_perculate(AST *a, models::FSM_state *f) {
   for (i = 0; i < a->nwords; i++)
     ndom[i] = (ulong)~0;
 
-  for (t = f->p; t; t = t->nxt) /* all reachable predecessors */
+  for (t = f->p; t; t = t->next) /* all reachable predecessors */
   {
     g = fsm_tbl[t->to];
     if (g->seen)
@@ -2221,7 +2221,7 @@ static void dom_forward(AST *a) {
   init_dom(a); /* (1,2) */
   do {
     cnt = 0;
-    for (f = a->fsm; f; f = f->nxt) {
+    for (f = a->fsm; f; f = f->next) {
       if (f->seen && f->from != a->i_st) /* (4) */
         cnt += dom_perculate(a, f);      /* (5) */
     }
@@ -2253,9 +2253,9 @@ static void AST_dominant(void) {
 	(one entry node, one exit node)
 #endif
   if (AST_Round == 1) /* computed once, reused in every round */
-    for (a = ast; a; a = a->nxt) {
+    for (a = ast; a; a = a->next) {
       a->nstates = 0;
-      for (f = a->fsm; f; f = f->nxt) {
+      for (f = a->fsm; f; f = f->next) {
         a->nstates++;         /* count */
         fsm_tbl[f->from] = f; /* fast lookup */
         f->scratch = 0;       /* clear scratch marks */
@@ -2276,7 +2276,7 @@ static void AST_dominant(void) {
       dom_forward(a); /* forward dominance relation */
 
       curtail(a); /* mark ineligible edges */
-      for (f = a->fsm; f; f = f->nxt) {
+      for (f = a->fsm; f; f = f->next) {
         t = f->p;
         f->p = f->t;
         f->t = t; /* invert edges */
@@ -2292,7 +2292,7 @@ static void AST_dominant(void) {
       act_dom(a);        /* mark proper subgraphs, if any */
       AST_checkpairs(a); /* selectively place 2 scratch-marks */
 
-      for (f = a->fsm; f; f = f->nxt) {
+      for (f = a->fsm; f; f = f->next) {
         t = f->p;
         f->p = f->t;
         f->t = t; /* restore */
@@ -2300,8 +2300,8 @@ static void AST_dominant(void) {
       a->i_st = oi; /* restore */
     }
   else
-    for (a = ast; a; a = a->nxt) {
-      for (f = a->fsm; f; f = f->nxt) {
+    for (a = ast; a; a = a->next) {
+      for (f = a->fsm; f; f = f->next) {
         fsm_tbl[f->from] = f;
         f->scratch &= 1; /* preserve 1-marks */
       }
@@ -2311,7 +2311,7 @@ static void AST_dominant(void) {
 
       curtail(a); /* mark ineligible edges */
 
-      for (f = a->fsm; f; f = f->nxt) {
+      for (f = a->fsm; f; f = f->next) {
         t = f->p;
         f->p = f->t;
         f->t = t; /* invert edges */
@@ -2319,7 +2319,7 @@ static void AST_dominant(void) {
 
       AST_checkpairs(a); /* recompute 2-marks */
 
-      for (f = a->fsm; f; f = f->nxt) {
+      for (f = a->fsm; f; f = f->next) {
         t = f->p;
         f->p = f->t;
         f->t = t; /* restore */

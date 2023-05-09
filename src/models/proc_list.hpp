@@ -14,7 +14,7 @@ struct ProcList {
   unsigned char det;      /* deterministic */
   unsigned char unsafe;   /* contains global var inits */
   unsigned char priority; /* process priority, if any */
-  ProcList *nxt;   /* linked list */
+  ProcList *next;   /* linked list */
 };
 
 } // namespace models

@@ -15,7 +15,7 @@ struct Cache {
   Node *before;
   Node *after;
   int same;
-  struct Cache *nxt;
+  struct Cache *next;
 };
 
 static Cache *stored = (Cache *)0;
@@ -37,7 +37,7 @@ Node *in_cache(Node *n) {
   Cache *d;
   int nr = 0;
 
-  for (d = stored; d; d = d->nxt, nr++)
+  for (d = stored; d; d = d->next, nr++)
     if (isequal(d->before, n)) {
       CacheHits++;
       if (d->same && ismatch(n, d->before))
@@ -66,7 +66,7 @@ Node *cached(Node *n) {
     releasenode(1, d->after);
     d->after = d->before;
   }
-  d->nxt = stored;
+  d->next = stored;
   stored = d;
   return dupnode(d->after);
 }

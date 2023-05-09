@@ -10,17 +10,17 @@ struct Label {
   Element *e;
   int opt_inline_id; /* non-zero if label appears in an inline */
   int visible;       /* label referenced in claim (slice relevant) */
-  Label *nxt;
+  Label *next;
 };
 
 struct Lbreak {
   Symbol *l;
-  Lbreak *nxt;
+  Lbreak *next;
 };
 
 struct L_List {
   Lextok *n;
-  L_List *nxt;
+  L_List *next;
 };
 
 } // namespace models
