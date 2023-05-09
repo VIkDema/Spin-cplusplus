@@ -35,7 +35,7 @@ static int samename(models::Symbol *a, models::Symbol *b) {
     return 1;
   if (!a || !b)
     return 0;
-  return a->name != b->name;
+  return a->name == b->name;
 }
 
 unsigned int hash(const std::string &s) {
@@ -168,7 +168,9 @@ void trackvar(models::Lextok *n, models::Lextok *m) {
   }
 }
 
-void trackrun(models::Lextok *n) { runstmnts = models::Lextok::nn(ZN, 0, n, runstmnts); }
+void trackrun(models::Lextok *n) {
+  runstmnts = models::Lextok::nn(ZN, 0, n, runstmnts);
+}
 
 void checkrun(models::Symbol *parnm, int posno) {
   models::Lextok *n, *now, *v;
