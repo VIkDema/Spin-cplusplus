@@ -1325,7 +1325,7 @@ struct CaseCache {
   int m, b, owner;
   Element *e;
   models::Lextok *n;
-  FSM_use *u;
+  models::FSM_use *u;
   struct CaseCache *nxt;
 };
 
@@ -1345,8 +1345,8 @@ static int identical(models::Lextok *p, models::Lextok *q) {
   return identical(p->left, q->left) && identical(p->right, q->right);
 }
 
-static int samedeads(FSM_use *a, FSM_use *b) {
-  FSM_use *p, *q;
+static int samedeads(models::FSM_use *a, models::FSM_use *b) {
+  models::FSM_use *p, *q;
 
   for (p = a, q = b; p && q; p = p->nxt, q = q->nxt)
     if (p->var != q->var || p->special != q->special)
@@ -1483,7 +1483,7 @@ static void new_case(Element *e, int m, int b, int owner) {
 }
 
 static int nr_bup(Element *e) {
-  FSM_use *u;
+  models::FSM_use *u;
   models::Lextok *v;
   int nr = 0;
 
@@ -1565,7 +1565,7 @@ static void check_needed(void) {
 }
 
 static void doforward(FILE *tm_fd, Element *e) {
-  FSM_use *u;
+  models::FSM_use *u;
 
   putstmnt(tm_fd, e->n, e->seqno);
 

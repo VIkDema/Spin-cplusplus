@@ -7,22 +7,22 @@
 #include "y.tab.h"
 
 extern models::Ordered *all_names;
-extern FSM_use *use_free;
-extern FSM_state **fsm_tbl;
-extern FSM_state *fsmx;
+extern models::FSM_use *use_free;
+extern models::FSM_state **fsm_tbl;
+extern models::FSM_state *fsmx;
 extern int o_max;
 
-static FSM_trans *cur_t;
-static FSM_trans *expl_par;
-static FSM_trans *expl_var;
-static FSM_trans *explicit_;
+static models::FSM_trans *cur_t;
+static models::FSM_trans *expl_par;
+static models::FSM_trans *expl_var;
+static models::FSM_trans *explicit_;
 
-extern void rel_use(FSM_use *);
+extern void rel_use(models::FSM_use *);
 
 #define ulong unsigned long
 
 struct Pair {
-  FSM_state *h;
+  models::FSM_state *h;
   int b;
   struct Pair *nxt;
 };
@@ -32,9 +32,9 @@ struct AST {
   int i_st;    /* start state */
   int nstates, nwords;
   int relevant;
-  Pair *pairs;     /* entry and exit nodes of proper subgraphs */
-  FSM_state *fsm;  /* proctype body */
-  struct AST *nxt; /* linked list */
+  Pair *pairs;            /* entry and exit nodes of proper subgraphs */
+  models::FSM_state *fsm; /* proctype body */
+  struct AST *nxt;        /* linked list */
 };
 
 struct RPN { /* relevant proctype names */
@@ -139,7 +139,7 @@ static void name_def_indices(models::Lextok *n, int code) {
 }
 
 static void name_def_use(models::Lextok *n, int code) {
-  FSM_use *u;
+  models::FSM_use *u;
 
   if (!n)
     return;
@@ -363,8 +363,8 @@ static void AST_run_alias(const std::string &s, models::Lextok *t, int parno) {
 }
 
 static void AST_findrun(std::string &s, int parno) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   AST *a;
 
   for (a = ast; a; a = a->nxt)      /* automata       */
@@ -505,9 +505,9 @@ static void AST_setcur(models::Lextok *n) /* set chalcur */
 
 static void AST_other(AST *a) /* check chan params in asgns and recvs */
 {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *u;
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *u;
   ChanList *cl;
 
   for (f = a->fsm; f; f = f->nxt)                        /* control states */
@@ -574,9 +574,9 @@ static void AST_aliases(void) {
   printf("\n");
 }
 
-static void AST_indirect(FSM_use *uin, FSM_trans *t, const std::string &cause,
+static void AST_indirect(models::FSM_use *uin, FSM_trans *t, const std::string &cause,
                          const std::string &pn) {
-  FSM_use *u;
+  models::FSM_use *u;
 
   /* this is a newly discovered relevant statement */
   /* all vars it uses to contribute to its DEF are new criteria */
@@ -609,9 +609,9 @@ static void AST_indirect(FSM_use *uin, FSM_trans *t, const std::string &cause,
     }
 }
 
-static void def_relevant(const std::string &pn, FSM_trans *t, models::Lextok *n,
+static void def_relevant(const std::string &pn, models::FSM_trans *t, models::Lextok *n,
                          int ischan) {
-  FSM_use *u;
+  models::FSM_use *u;
   ALIAS *na, *ca;
   int chanref;
 
@@ -650,8 +650,8 @@ static void def_relevant(const std::string &pn, FSM_trans *t, models::Lextok *n,
 
 static void AST_relevant(models::Lextok *n) {
   AST *a;
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   int ischan;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -695,11 +695,11 @@ static void AST_relevant(models::Lextok *n) {
 }
 
 static int AST_relpar(const std::string &s) {
-  FSM_trans *t, *T;
-  FSM_use *u;
+  models::FSM_trans *t, *T;
+  models::FSM_use *u;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
-  for (T = expl_par; T; T = (T == expl_par) ? expl_var : (FSM_trans *)0)
+  for (T = expl_par; T; T = (T == expl_par) ? expl_var : nullptr)
     for (t = T; t; t = t->nxt) {
       if (t->relevant & 1)
         for (u = t->Val[0]; u; u = u->nxt) {
@@ -764,8 +764,8 @@ static int AST_scoutrun(models::Lextok *t) {
 
 static void AST_tagruns(void) {
   AST *a;
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   /* if any stmnt inside a proctype is relevant
    * or any parameter passed in a run
@@ -797,7 +797,7 @@ static void AST_tagruns(void) {
     for (f = a->fsm; f; f = f->nxt)
       for (t = f->t; t; t = t->nxt)
         if (t->step && AST_scoutrun(t->step->n)) {
-          AST_indirect((FSM_use *)0, t, ":run:", a->p->n->name);
+          AST_indirect((models::FSM_use *)0, t, ":run:", a->p->n->name);
           /* BUT, not all actual params are relevant */
         }
 }
@@ -826,9 +826,9 @@ static int AST_always(models::Lextok *n) {
   return AST_always(n->left) || AST_always(n->right);
 }
 
-static void AST_edge_dump(AST *a, FSM_state *f) {
-  FSM_trans *t;
-  FSM_use *u;
+static void AST_edge_dump(AST *a, models::FSM_state *f) {
+  models::FSM_trans *t;
+  models::FSM_use *u;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (t = f->t; t; t = t->nxt) /* edges */
@@ -894,8 +894,8 @@ static void AST_edge_dump(AST *a, FSM_state *f) {
 }
 
 static void AST_dfs(AST *a, int s, int vis) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = fsm_tbl[s];
   if (f->seen)
@@ -910,7 +910,7 @@ static void AST_dfs(AST *a, int s, int vis) {
 }
 
 static void AST_dump(AST *a) {
-  FSM_state *f;
+  models::FSM_state *f;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (f = a->fsm; f; f = f->nxt) {
@@ -925,9 +925,9 @@ static void AST_dump(AST *a) {
 }
 
 static void AST_sends(AST *a) {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *u;
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *u;
   ChanList *cl;
 
   for (f = a->fsm; f; f = f->nxt) /* control states */
@@ -978,8 +978,8 @@ static void AST_trans(void) {
 }
 
 static void AST_def_use(AST *a) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   for (f = a->fsm; f; f = f->nxt) /* control states */
     for (t = f->t; t; t = t->nxt) /* all edges */
@@ -987,14 +987,14 @@ static void AST_def_use(AST *a) {
       cur_t = t;
       rel_use(t->Val[0]); /* redo Val; doesn't cover structs */
       rel_use(t->Val[1]);
-      t->Val[0] = t->Val[1] = (FSM_use *)0;
+      t->Val[0] = t->Val[1] = nullptr;
 
       if (!t->step)
         continue;
 
       def_use(t->step->n, 0); /* def/use info, including structs */
     }
-  cur_t = (FSM_trans *)0;
+  cur_t = nullptr;
 }
 
 static void name_AST_track(models::Lextok *n, int code) {
@@ -1198,8 +1198,8 @@ static int AST_dump_rel(void) {
 static void AST_suggestions(void) {
   models::Symbol *s;
   models::Ordered *walk;
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   AST *a;
   int banner = 0;
   int talked = 0;
@@ -1333,8 +1333,8 @@ static void AST_data_dep(void) {
 }
 
 static int AST_blockable(AST *a, int s) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = fsm_tbl[s];
 
@@ -1369,8 +1369,8 @@ static int AST_blockable(AST *a, int s) {
 }
 
 static void AST_spread(AST *a, int s) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = fsm_tbl[s];
 
@@ -1419,8 +1419,8 @@ static int AST_withchan(models::Lextok *n) {
   return AST_withchan(n->left) || AST_withchan(n->right);
 }
 
-static int AST_suspect(FSM_trans *t) {
-  FSM_use *u;
+static int AST_suspect(models::FSM_trans *t) {
+  models::FSM_use *u;
   /* check for possible overkill */
   if (!t || !t->step || !AST_withchan(t->step->n))
     return 0;
@@ -1431,8 +1431,8 @@ static int AST_suspect(FSM_trans *t) {
 }
 
 static void AST_shouldconsider(AST *a, int s) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = fsm_tbl[s];
   for (t = f->t; t; t = t->nxt) {
@@ -1468,8 +1468,8 @@ static void AST_shouldconsider(AST *a, int s) {
 }
 
 static int FSM_critical(AST *a, int s) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   /* is a 1-relevant stmnt reachable from this state? */
@@ -1495,8 +1495,8 @@ done:
 }
 
 static void AST_ctrl(AST *a) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   int hit;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -1609,8 +1609,8 @@ static void AST_control_dep(void) {
 
 static void AST_prelabel(void) {
   AST *a;
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   for (a = ast; a; a = a->nxt) {
     if (a->p->b != models::btypes::N_CLAIM &&
@@ -1717,23 +1717,24 @@ void AST_store(ProcList *p, int start_state) {
     n_ast->nxt = ast;
     ast = n_ast;
   }
-  fsmx = (FSM_state *)0; /* hide it from FSM_DEL */
+  fsmx = nullptr; /* hide it from FSM_DEL */
 }
 
 static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
-  FSM_trans *e = (FSM_trans *)emalloc(sizeof(FSM_trans));
+  models::FSM_trans *e =
+      (models::FSM_trans *)emalloc(sizeof(models::FSM_trans));
 
   e->to = 0;              /* or start_state ? */
   e->relevant = 0;        /* to be determined */
   e->step = (Element *)0; /* left blank */
-  e->Val[0] = e->Val[1] = (FSM_use *)0;
+  e->Val[0] = e->Val[1] = nullptr;
 
   cur_t = e;
 
   def_use(u, USE);
   def_use(d, DEF);
 
-  cur_t = (FSM_trans *)0;
+  cur_t = nullptr;
 
   e->nxt = explicit_;
   explicit_ = e;
@@ -1763,8 +1764,8 @@ static void AST_fp1(const std::string &s, models::Lextok *t, models::Lextok *f,
 
 static void AST_mk1(const std::string &s, models::Lextok *c, int parno) {
   AST *a;
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   /* concoct an extra FSM_trans *t with the asgn of
    * formal par c to matching actual pars made explicit
@@ -1843,11 +1844,11 @@ AST_var_init(void) /* initialized vars (not chans) - hidden_flags assignments */
 }
 
 static void show_expl(void) {
-  FSM_trans *t, *T;
-  FSM_use *u;
+  models::FSM_trans *t, *T;
+  models::FSM_use *u;
 
   printf("\nExplicit List:\n");
-  for (T = expl_par; T; T = (T == expl_par) ? expl_var : (FSM_trans *)0) {
+  for (T = expl_par; T; T = (T == expl_par) ? expl_var : nullptr) {
     for (t = T; t; t = t->nxt) {
       if (!t->Val[0])
         continue;
@@ -1869,17 +1870,17 @@ static void AST_hidden(void) /* reveal all hidden_flags assignments */
 {
   AST_par_init();
   expl_par = explicit_;
-  explicit_ = (FSM_trans *)0;
+  explicit_ = (models::FSM_trans *)0;
 
   AST_var_init();
   expl_var = explicit_;
-  explicit_ = (FSM_trans *)0;
+  explicit_ = (models::FSM_trans *)0;
 }
 
 #define BPW (8 * sizeof(ulong)) /* bits per word */
 
-static int bad_scratch(FSM_state *f, int upto) {
-  FSM_trans *t;
+static int bad_scratch(models::FSM_state *f, int upto) {
+  models::FSM_trans *t;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 #if 0
 	1. all internal branch-points have else-s
@@ -1916,8 +1917,8 @@ static int bad_scratch(FSM_state *f, int upto) {
   return 0;
 }
 
-static void mark_subgraph(FSM_state *f, int upto) {
-  FSM_trans *t;
+static void mark_subgraph(models::FSM_state *f, int upto) {
+   models::FSM_trans *t;
 
   if (f->from == upto || !f->seen || (f->scratch & 2))
     return;
@@ -1928,7 +1929,7 @@ static void mark_subgraph(FSM_state *f, int upto) {
     mark_subgraph(fsm_tbl[t->to], upto);
 }
 
-static void AST_pair(AST *a, FSM_state *h, int y) {
+static void AST_pair(AST *a, models::FSM_state *h, int y) {
   Pair *p;
 
   for (p = a->pairs; p; p = p->nxt)
@@ -1958,8 +1959,8 @@ static void AST_checkpairs(AST *a) {
   }
 }
 
-static void subgraph(AST *a, FSM_state *f, int out) {
-  FSM_state *h;
+static void subgraph(AST *a, models::FSM_state *f, int out) {
+  models::FSM_state *h;
   int i, j;
   ulong *g;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
@@ -1983,8 +1984,8 @@ static void subgraph(AST *a, FSM_state *f, int out) {
 }
 
 static void act_dom(AST *a) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   int i, j, cnt;
 
   for (f = a->fsm; f; f = f->nxt) {
@@ -2029,15 +2030,15 @@ static void act_dom(AST *a) {
 }
 
 static void reachability(AST *a) {
-  FSM_state *f;
+  models::FSM_state *f;
 
   for (f = a->fsm; f; f = f->nxt)
     f->seen = 0;          /* clear */
   AST_dfs(a, a->i_st, 0); /* mark 'seen' */
 }
 
-static int see_else(FSM_state *f) {
-  FSM_trans *t;
+static int see_else(models::FSM_state *f) {
+   models::FSM_trans *t;
 
   for (t = f->t; t; t = t->nxt) {
     if (t->step && t->step->n)
@@ -2058,9 +2059,9 @@ static int see_else(FSM_state *f) {
   return 0;
 }
 
-static int is_guard(FSM_state *f) {
-  FSM_state *g;
-  FSM_trans *t;
+static int is_guard(models::FSM_state *f) {
+  models::FSM_state *g;
+  models::FSM_trans *t;
 
   for (t = f->p; t; t = t->nxt) {
     g = fsm_tbl[t->to];
@@ -2085,8 +2086,8 @@ static int is_guard(FSM_state *f) {
 }
 
 static void curtail(AST *a) {
-  FSM_state *f, *g;
-  FSM_trans *t;
+  models::FSM_state *f, *g;
+  models::FSM_trans *t;
   int i, haselse, isrel, blocking;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
@@ -2140,7 +2141,7 @@ static void curtail(AST *a) {
 }
 
 static void init_dom(AST *a) {
-  FSM_state *f;
+  models::FSM_state *f;
   int i, j, cnt;
 #if 0
 	(1)  D(s0) = {s0}
@@ -2177,12 +2178,12 @@ static void init_dom(AST *a) {
   }
 }
 
-static int dom_perculate(AST *a, FSM_state *f) {
+static int dom_perculate(AST *a, models::FSM_state *f) {
   static ulong *ndom = (ulong *)0;
   static int on = 0;
   int i, j, cnt = 0;
-  FSM_state *g;
-  FSM_trans *t;
+  models::FSM_state *g;
+  models::FSM_trans *t;
 
   if (on < a->nwords) {
     on = a->nwords;
@@ -2214,7 +2215,7 @@ static int dom_perculate(AST *a, FSM_state *f) {
 }
 
 static void dom_forward(AST *a) {
-  FSM_state *f;
+  models::FSM_state *f;
   int cnt;
 
   init_dom(a); /* (1,2) */
@@ -2229,11 +2230,11 @@ static void dom_forward(AST *a) {
 }
 
 static void AST_dominant(void) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
   AST *a;
   int oi;
-  static FSM_state no_state;
+  static models::FSM_state no_state;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 #if 0
 	find dominators

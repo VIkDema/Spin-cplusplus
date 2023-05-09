@@ -2,7 +2,6 @@
 
 struct Sequence;
 struct SeqList;
-struct Sequence;
 
 namespace models {
 
@@ -14,5 +13,8 @@ struct Slicer;
 struct Lextok;
 struct Symbol;
 struct Ordered;
+struct FSM_state;
+struct FSM_trans;
+struct FSM_use;
 
 } // namespace models

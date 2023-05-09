@@ -70,6 +70,12 @@ set(SPIN_SOURCES
     src/main/pre_proc_settings.cpp
     src/main/pan_processor.hpp
     src/main/pan_processor.cpp
+    src/models/access.hpp
+    src/models/fms.hpp
+    src/models/lextok.hpp
+    src/models/mtypes.hpp
+    src/models/slicer.hpp
+    src/models/queue.hpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

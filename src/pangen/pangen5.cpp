@@ -10,7 +10,7 @@
 extern LaunchSettings launch_settings;
 
 struct BuildStack {
-  FSM_trans *t;
+  models::FSM_trans *t;
   struct BuildStack *nxt;
 };
 
@@ -18,18 +18,18 @@ extern ProcList *ready;
 extern int verbose, eventmapnr, claimnr, u_sync;
 extern Element *Al_El;
 
-static FSM_state *fsm_free;
-static FSM_trans *trans_free;
+static models::FSM_state *fsm_free;
+static models::FSM_trans *trans_free;
 static BuildStack *bs, *bf;
 static int max_st_id;
 static int cur_st_id;
 int o_max;
-FSM_state *fsmx;
-FSM_state **fsm_tbl;
-FSM_use *use_free;
+models::FSM_state *fsmx;
+models::FSM_state **fsm_tbl;
+models::FSM_use *use_free;
 
 static void ana_seq(Sequence *);
-static void ana_stmnt(FSM_trans *, models::Lextok *, int);
+static void ana_stmnt(models::FSM_trans *, models::Lextok *, int);
 
 extern void AST_slice(void);
 extern void AST_store(ProcList *, int);
@@ -37,14 +37,14 @@ extern int has_global(models::Lextok *);
 extern void exit(int);
 
 static void fsm_table(void) {
-  FSM_state *f;
+  models::FSM_state *f;
   max_st_id += 2;
   /* fprintf(stderr, "omax %d, max=%d\n", o_max, max_st_id); */
   if (o_max < max_st_id) {
     o_max = max_st_id;
-    fsm_tbl = (FSM_state **)emalloc(max_st_id * sizeof(FSM_state *));
+    fsm_tbl = (models::FSM_state **)emalloc(max_st_id * sizeof(models::FSM_state *));
   } else
-    memset((char *)fsm_tbl, 0, max_st_id * sizeof(FSM_state *));
+    memset((char *)fsm_tbl, 0, max_st_id * sizeof(models::FSM_state *));
   cur_st_id = max_st_id;
   max_st_id = 0;
 
@@ -52,10 +52,10 @@ static void fsm_table(void) {
     fsm_tbl[f->from] = f;
 }
 
-static int FSM_DFS(int from, FSM_use *u) {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *v;
+static int FSM_DFS(int from, models::FSM_use *u) {
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *v;
   int n;
 
   if (from == 0)
@@ -92,7 +92,7 @@ static void new_dfs(void) {
       fsm_tbl[i]->seen = 0;
 }
 
-static int good_dead(Element *e, FSM_use *u) {
+static int good_dead(Element *e, models::FSM_use *u) {
   switch (u->special) {
   case 2: /* ok if it's a receive */
     if (e->n->node_type == ASGN && e->n->right->node_type == CONST && e->n->right->value == 0)
@@ -106,7 +106,7 @@ static int good_dead(Element *e, FSM_use *u) {
   return 1;
 }
 
-static int eligible(FSM_trans *v) {
+static int eligible(models::FSM_trans *v) {
   Element *el = ZE;
   models::Lextok *lt = ZN;
 
@@ -141,7 +141,7 @@ static int eligible(FSM_trans *v) {
   return 1;
 }
 
-static int canfill_in(FSM_trans *v) {
+static int canfill_in(models::FSM_trans *v) {
   Element *el = v->step;
   models::Lextok *lt = v->step->n;
 
@@ -185,8 +185,8 @@ static void popbuild(void) {
   bf = f; /* freelist */
 }
 
-static int build_step(FSM_trans *v) {
-  FSM_state *f;
+static int build_step(models::FSM_trans *v) {
+  models::FSM_state *f;
   Element *el;
   int st;
   int r;
@@ -220,8 +220,8 @@ static int build_step(FSM_trans *v) {
 static void FSM_MERGER(
     /* char *pname */ void) /* find candidates for safely merging steps */
 {
-  FSM_state *f, *g;
-  FSM_trans *t;
+  models::FSM_state *f, *g;
+  models::FSM_trans *t;
   models::Lextok *lt;
 
   for (f = fsmx; f; f = f->nxt)   /* all states */
@@ -305,9 +305,9 @@ static void FSM_MERGER(
 }
 
 static void FSM_ANA(void) {
-  FSM_state *f;
-  FSM_trans *t;
-  FSM_use *u, *v, *w;
+  models::FSM_state *f;
+  models::FSM_trans *t;
+  models::FSM_use *u, *v, *w;
   int n;
 
   for (f = fsmx; f; f = f->nxt)   /* all states */
@@ -326,7 +326,7 @@ static void FSM_ANA(void) {
     for (f = fsmx; f; f = f->nxt)
       for (t = f->t; t; t = t->nxt)
         for (n = 0; n < 2; n++)
-          for (u = t->Val[n], w = (FSM_use *)0; u;) {
+          for (u = t->Val[n], w = nullptr; u;) {
             if (u->special) {
               v = u->nxt;
               if (!w) /* remove from list */
@@ -345,7 +345,7 @@ static void FSM_ANA(void) {
           }
 }
 
-void rel_use(FSM_use *u) {
+void rel_use(models::FSM_use *u) {
   if (!u)
     return;
   rel_use(u->nxt);
@@ -355,13 +355,13 @@ void rel_use(FSM_use *u) {
   use_free = u;
 }
 
-static void rel_trans(FSM_trans *t) {
+static void rel_trans(models::FSM_trans *t) {
   if (!t)
     return;
   rel_trans(t->nxt);
   rel_use(t->Val[0]);
   rel_use(t->Val[1]);
-  t->Val[0] = t->Val[1] = (FSM_use *)0;
+  t->Val[0] = t->Val[1] = nullptr;
   t->nxt = trans_free;
   trans_free = t;
 }
@@ -371,18 +371,18 @@ static void rel_state(FSM_state *f) {
     return;
   rel_state(f->nxt);
   rel_trans(f->t);
-  f->t = (FSM_trans *)0;
+  f->t = nullptr;
   f->nxt = fsm_free;
   fsm_free = f;
 }
 
 static void FSM_DEL(void) {
   rel_state(fsmx);
-  fsmx = (FSM_state *)0;
+  fsmx = (models::FSM_state *)0;
 }
 
 static FSM_state *mkstate(int s) {
-  FSM_state *f;
+  models::FSM_state *f;
 
   /* fsm_tbl isn't allocated yet */
   for (f = fsmx; f; f = f->nxt)
@@ -391,12 +391,12 @@ static FSM_state *mkstate(int s) {
   if (!f) {
     if (fsm_free) {
       f = fsm_free;
-      memset(f, 0, sizeof(FSM_state));
+      memset(f, 0, sizeof(models::FSM_state));
       fsm_free = fsm_free->nxt;
     } else
-      f = (FSM_state *)emalloc(sizeof(FSM_state));
+      f = (models::FSM_state *)emalloc(sizeof(models::FSM_state));
     f->from = s;
-    f->t = (FSM_trans *)0;
+    f->t = nullptr;
     f->nxt = fsmx;
     fsmx = f;
     if (s > max_st_id)
@@ -405,23 +405,23 @@ static FSM_state *mkstate(int s) {
   return f;
 }
 
-static FSM_trans *get_trans(int to) {
-  FSM_trans *t;
+static models::FSM_trans *get_trans(int to) {
+  models::FSM_trans *t;
 
   if (trans_free) {
     t = trans_free;
-    memset(t, 0, sizeof(FSM_trans));
+    memset(t, 0, sizeof(models::FSM_trans));
     trans_free = trans_free->nxt;
   } else
-    t = (FSM_trans *)emalloc(sizeof(FSM_trans));
+    t = (models::FSM_trans *)emalloc(sizeof(models::FSM_trans));
 
   t->to = to;
   return t;
 }
 
 static void FSM_EDGE(int from, int to, Element *e) {
-  FSM_state *f;
-  FSM_trans *t;
+  models::FSM_state *f;
+  models::FSM_trans *t;
 
   f = mkstate(from); /* find it or else make it */
   t = get_trans(to);
@@ -448,7 +448,7 @@ static void FSM_EDGE(int from, int to, Element *e) {
 #define LVAL 1
 #define RVAL 0
 
-static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
+static void ana_var(models::FSM_trans *t, models::Lextok *now, int usage) {
   FSM_use *u, *v;
 
   if (!t || !now || !now->symbol)
@@ -471,7 +471,7 @@ static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
       u = use_free;
       use_free = use_free->nxt;
     } else
-      u = (FSM_use *)emalloc(sizeof(FSM_use));
+      u = (models::FSM_use *)emalloc(sizeof(models::FSM_use));
 
     u->var = now->symbol;
     u->nxt = t->Val[usage];
@@ -483,7 +483,7 @@ static void ana_var(FSM_trans *t, models::Lextok *now, int usage) {
     ana_var(t, now->right->left, usage);
 }
 
-static void ana_stmnt(FSM_trans *t, models::Lextok *now, int usage) {
+static void ana_stmnt(models::FSM_trans *t, models::Lextok *now, int usage) {
   models::Lextok *v;
 
   if (!t || !now)
