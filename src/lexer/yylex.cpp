@@ -9,7 +9,7 @@
 extern std::string yytext;
 extern int need_arguments;
 extern YYSTYPE yylval;
-extern models::Symbol *context, *owner;
+extern models::Symbol  *owner;
 lexer::Lexer lexer_;
 
 namespace {
@@ -88,7 +88,7 @@ int yylex() {
     }
 
     if (temp_token == SEMI || temp_token == ARROW) {
-      if (context) {
+      if (models::Symbol::GetContext()) {
         owner = ZS;
       }
       hold_token = lexer_.lex();

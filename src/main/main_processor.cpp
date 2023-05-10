@@ -141,14 +141,14 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     } else {
       cmd = fmt::format("{}", argv[1]);
     }
-    oFname = Fname = lookup(cmd);
+    oFname = Fname = models::Symbol::BuildOrFind(cmd);
     if (oFname->name[0] == '\"') {
       oFname->name[oFname->name.length() - 1] = '\0';
       oFname =
-          lookup(std::string(oFname->name.begin() + 1, oFname->name.end()));
+          models::Symbol::BuildOrFind(std::string(oFname->name.begin() + 1, oFname->name.end()));
     }
   } else {
-    oFname = Fname = lookup("<stdin>");
+    oFname = Fname = models::Symbol::BuildOrFind("<stdin>");
     if (!launch_settings.ltl_add.empty()) {
       if (argc > 0)
         //   exit(tl_main(2, add_ltl));
@@ -187,7 +187,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
       loger::fatal("cannot open %s", ltl_claims);
     }
     r = oFname;
-    oFname = Fname = lookup(ltl_claims);
+    oFname = Fname = models::Symbol::BuildOrFind(ltl_claims);
     yyparse();
     fclose(yyin);
     oFname = Fname = r;
@@ -228,17 +228,17 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
 
 void MainProcessor::InitSymbols() {
   models::Symbol *s;
-  s = lookup("_");
+  s = models::Symbol::BuildOrFind("_");
   s->type = models::SymbolType::kPredef; /* write-only global var */
-  s = lookup("_p");
+  s = models::Symbol::BuildOrFind("_p");
   s->type = models::SymbolType::kPredef;
-  s = lookup("_pid");
+  s = models::Symbol::BuildOrFind("_pid");
   s->type = models::SymbolType::kPredef;
-  s = lookup("_last");
+  s = models::Symbol::BuildOrFind("_last");
   s->type = models::SymbolType::kPredef;
-  s = lookup("_nr_pr");
+  s = models::Symbol::BuildOrFind("_nr_pr");
   s->type = models::SymbolType::kPredef; /* new 3.3.10 */
-  s = lookup("_priority");
+  s = models::Symbol::BuildOrFind("_priority");
   s->type = models::SymbolType::kPredef; /* new 6.2.0 */
 }
 

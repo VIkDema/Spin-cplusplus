@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+
 namespace helpers {
 
 int isdigit_(int curr);
@@ -17,4 +18,9 @@ bool IsWhitespace(int curr);
 std::string SkipWhite(const std::string &p);
 
 std::string SkipNonwhite(const std::string &p);
+
+int PutType(std::string &foo, int type);
+
+int PrintType(int type);
+
 } // namespace helpers

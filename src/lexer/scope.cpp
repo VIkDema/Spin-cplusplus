@@ -3,7 +3,6 @@
 #include "../spin.hpp"
 #include <fmt/core.h>
 
-extern models::Symbol *context;
 
 namespace lexer {
 int ScopeProcessor::scope_level_ = 0;
@@ -14,7 +13,7 @@ std::array<int, 256> ScopeProcessor::scope_seq_;
 void ScopeProcessor::SetCurrScope() {
   curr_scope_name_ = "_";
 
-  if (context == nullptr) {
+  if (models::Symbol::GetContext() == nullptr) {
     return;
   }
   for (int i = 0; i < scope_level_; i++) {

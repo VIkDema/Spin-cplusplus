@@ -17,7 +17,6 @@
 std::string yytext;
 extern models::Symbol *Fname, *oFname;
 extern YYSTYPE yylval;
-extern models::Symbol *context;
 
 #define ValToken(x, y)                                                         \
   {                                                                            \
@@ -81,7 +80,7 @@ int Lexer::CheckName(const std::string &value) {
     yylval->value = opt_name->value;
     if (opt_name->symbol.has_value()) {
       std::string symbol_copy{opt_name->symbol.value()};
-      yylval->symbol = lookup(symbol_copy.data());
+      yylval->symbol = models::Symbol::BuildOrFind(symbol_copy.data());
     }
 
     if (!(opt_name->token == IN && !in_for_)) {
@@ -134,7 +133,7 @@ int Lexer::CheckName(const std::string &value) {
         loger::fatal("formal par of %s contains replacement value",
                      inline_stub[InlineProcessor::GetInlining()].nm->name);
         yylval->node_type = tt->left->node_type;
-        yylval->symbol = lookup(tt->left->symbol->name);
+        yylval->symbol = models::Symbol::BuildOrFind(tt->left->symbol->name);
         return NAME;
       }
 
@@ -157,7 +156,7 @@ int Lexer::CheckName(const std::string &value) {
     }
   }
   std::string value_copy = value;
-  yylval->symbol = lookup(value_copy); /* symbol table */
+  yylval->symbol = models::Symbol::BuildOrFind(value_copy); /* symbol table */
   if (IsUtype(value)) {
     return UNAME;
   }
@@ -192,7 +191,7 @@ int Lexer::pre_proc() {
   }
 
   yylval = models::Lextok::nn(ZN, 0, ZN, ZN);
-  yylval->symbol = lookup(pre_proc_command.data());
+  yylval->symbol = models::Symbol::BuildOrFind(pre_proc_command.data());
 
   return PREPROC;
 }
@@ -239,7 +238,7 @@ void Lexer::do_directive(int first_char) {
     loger::fatal("malformed preprocessor directive - fname.");
   }
 
-  Fname = lookup(yytext.data());
+  Fname = models::Symbol::BuildOrFind(yytext.data());
 done:
   while (stream_.GetChar() != '\n') {
   };
@@ -373,7 +372,7 @@ again:
       loger::fatal("string not terminated", yytext);
     }
     yytext += "\"";
-    { SymToken(lookup(yytext.data()), STRING) }
+    { SymToken(models::Symbol::BuildOrFind(yytext.data()), STRING) }
   }
   case '$': {
     yytext = stream_.GetWord(new_char, helpers::IsNotDollar);
@@ -381,7 +380,7 @@ again:
       loger::fatal("ltl definition not terminated", yytext);
     }
     yytext += "\"";
-    { SymToken(lookup(yytext.data()), STRING) }
+    { SymToken(models::Symbol::BuildOrFind(yytext.data()), STRING) }
   }
   case '\'': {
     new_char = stream_.GetChar();
@@ -602,7 +601,7 @@ models::Symbol *Lexer::HandleInline(models::Symbol *symbol,
     symbol = (models::Symbol *)emalloc(sizeof(models::Symbol));
     symbol->name = (char *)emalloc(strlen("c_code") + 26);
     symbol->name = fmt::format("c_code{}", c_code++);
-    symbol->context = context;
+    symbol->context = models::Symbol::GetContext();
     symbol->type = models::SymbolType::kCodeFrag;
   } else {
     symbol->type = models::SymbolType::kPredef;
@@ -800,7 +799,7 @@ models::Lextok *Lexer::ReturnStatement(models::Lextok *lextok) {
   if (inline_stub->rval) {
       models::Lextok *g = models::Lextok::nn(ZN, NAME, ZN, ZN);
       models::Lextok *h = inline_stub->rval;
-      g->symbol = lookup("rv_");
+      g->symbol = models::Symbol::BuildOrFind("rv_");
       return models::Lextok::nn(h, ASGN, h, lextok);
   } else {
       loger::fatal("return statement outside inline");

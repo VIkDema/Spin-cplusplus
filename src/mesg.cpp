@@ -10,6 +10,7 @@
 #include <assert.h>
 #include <fmt/core.h>
 #include <stdlib.h>
+#include "helpers/helpers.hpp"
 
 constexpr int kMaxQueueSize = 2500;
 
@@ -257,8 +258,8 @@ void typ_ck(int ft, int at, const std::string &s) {
   if (verbose_flags.NeedToPrintVerbose() && ft != at &&
       (ft == CHAN || at == CHAN) && (at != PREDEF || s != "recv")) {
     std::string buf, tag1, tag2;
-    sputtype(tag1, ft);
-    sputtype(tag2, at);
+    helpers::PutType(tag1, ft);
+    helpers::PutType(tag2, at);
     buf = "type-clash in " + s + ", (" + tag1 + "<-> " + tag2 + ")";
     loger::non_fatal("%s", buf.c_str());
   }
@@ -550,7 +551,7 @@ static void channm(models::Lextok *n) {
   if (n->symbol->type == models::SymbolType::kChan) {
     strcat(GBuf, n->symbol->name.c_str());
   } else if (n->symbol->type == models::SymbolType::kName) {
-    strcat(GBuf, lookup(n->symbol->name)->name.c_str());
+    strcat(GBuf, models::Symbol::BuildOrFind(n->symbol->name)->name.c_str());
   } else if (n->symbol->type == models::SymbolType::kStruct) {
     models::Symbol *r = n->symbol;
     if (r->context) {

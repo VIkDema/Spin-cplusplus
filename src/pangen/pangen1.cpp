@@ -16,6 +16,7 @@
 #endif
 #include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
+#include "../helpers/helpers.hpp"
 #include <fmt/core.h>
 
 extern LaunchSettings launch_settings;
@@ -539,7 +540,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
     if (!verbose_flags.NeedToPrintVerbose()) {
       return;
     }
-    sputtype(buf, sp->type);
+    helpers::PutType(buf, sp->type);
     i = (int)buf.length();
     while (buf[--i] == ' ')
       buf[i] = '\0';
@@ -690,7 +691,7 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
   case SHORT:
   case INT:
   case UNSIGNED:
-    sputtype(buf, sp->type);
+    helpers::PutType(buf, sp->type);
     if (sp->value_type == 1 && sp->is_array == 0) {
       if (sp->type == MTYPE && ismtype(sp->name)) {
         fprintf(fd, "\tprintf(\"\t%s %s:\t%d\\n\");\n", buf.c_str(),

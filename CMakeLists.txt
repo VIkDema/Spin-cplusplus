@@ -44,6 +44,8 @@ set(SPIN_SOURCES
     src/utils/verbose/verbose.cpp
     src/utils/memory.hpp
     src/utils/memory.cpp
+    src/utils/utils.hpp
+    src/utils/utils.cpp
     src/lexer/lexer.hpp
     src/lexer/lexer.cpp
     src/lexer/names.cpp

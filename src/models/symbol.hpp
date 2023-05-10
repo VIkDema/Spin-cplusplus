@@ -24,14 +24,15 @@ enum SymbolType {
   kName = 315,
   kMtype = 275,
   kCodeDecl = 4,
-  kCodeFrag = 2
+  kCodeFrag = 2,
+  kProctype = 301
 };
 
 struct Symbol {
   std::string name;
   short id; /* unique number for the name OLD id */
 
-  SymbolType type = kNone;            /* bit,short,.., chan,struct  */
+  SymbolType type = kNone;    /* bit,short,.., chan,struct  */
   unsigned char hidden_flags; /* bit-flags:
                                    1=hide, 2=show,
                                    4=bit-equiv,   8=byte-equiv,
@@ -44,10 +45,10 @@ struct Symbol {
 
   std::string block_scope;
 
-  int sc; /* scope seq no -- set only for proctypes unused */
+  int sc;                   /* scope seq no -- set only for proctypes unused */
   std::optional<int> nbits; /* optional width specifier */
-  int value_type;                 /* 1 if scalar, >1 if array   OLD: nel*/
-  int last_depth;                 /* last depth value changed   */
+  int value_type;           /* 1 if scalar, >1 if array   OLD: nel*/
+  int last_depth;           /* last depth value changed   */
 
   std::vector<int> value; /* runtime value(s), initl 0  */
   Lextok **Sval;          /* values for structures */
@@ -57,20 +58,29 @@ struct Symbol {
   Lextok *init_value;      /* initial value, or chan-def */
   Lextok *struct_template; /* template for structure if struct */
 
-  Symbol *xup[2];       /* xr or xs proctype  */
-  Access *access;       /* e.g., senders and receives of chan */
-  Symbol *mtype_name;   /* if type == MTYPE else nil */
-  Symbol *struct_name;  /* name of the defining struct */
-  Symbol *owner_name;   /* set for names of subfields in typedefs */
-  Symbol *context;      /* 0 if global, or procname */
-  models::Symbol *next; /* linked list */
-  void AddAccess(models::Symbol *what, int count, int type);
+  Symbol *xup[2];      /* xr or xs proctype  */
+  Access *access;      /* e.g., senders and receives of chan */
+  Symbol *mtype_name;  /* if type == MTYPE else nil */
+  Symbol *struct_name; /* name of the defining struct */
+  Symbol *owner_name;  /* set for names of subfields in typedefs */
+  Symbol *context;     /* 0 if global, or procname */
+  Symbol *next;        /* linked list */
+
+  void AddAccess(Symbol *what, int count, int type);
   void DetectSideEffects();
+
+  static Symbol *BuildOrFind(const std::string &name);
+  
+  static void SetContext(Symbol *context);
+  static Symbol *GetContext();
+
+private:
+  static Symbol *context_;
 };
 
 struct Ordered { /* links all names in Symbol table */
-  models::Symbol *entry;
-  struct Ordered *next;
+  Symbol *entry;
+  Ordered *next;
 };
 
 } // namespace models

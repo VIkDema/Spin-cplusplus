@@ -5,6 +5,8 @@
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include "../helpers/helpers.hpp"
+
 
 extern models::Ordered *all_names;
 extern models::FSM_use *use_free;
@@ -1185,7 +1187,7 @@ static int AST_dump_rel(void) {
     if (!s->last_depth &&
         (s->type != MTYPE || s->init_value->node_type != CONST) &&
         s->type != STRUCT /* report only fields */
-        && s->type != PROCTYPE && !s->owner_name && sputtype(buf, s->type)) {
+        && s->type != PROCTYPE && !s->owner_name && helpers::PutType(buf, s->type)) {
       if (!banner) {
         banner = 1;
         printf("spin: redundant vars (for given property):\n");

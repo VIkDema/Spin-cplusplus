@@ -104,7 +104,6 @@ models::Sequence *close_seq(int);
 models::Symbol *break_dest(void);
 models::Symbol *findloc(models::Symbol *);
 models::Symbol *has_lab(models::Element *, int);
-models::Symbol *lookup(const std::string &s);
 
 char *erealloc(void *, size_t, size_t);
 
@@ -147,7 +146,6 @@ int remotevar(models::Lextok *);
 int Rval_struct(models::Lextok *, models::Symbol *, int);
 int setlocal(models::Lextok *, int);
 int setval(models::Lextok *, int);
-int sputtype(std::string &, int);
 int tl_main(int, char *[]);
 int Width_set(int *, int, models::Lextok *);
 int yyparse(void);

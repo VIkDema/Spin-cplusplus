@@ -66,7 +66,7 @@ int getval(models::Lextok *sn) {
 
   if (!s->type) /* not declared locally */
   {
-    s = lookup(s->name); /* try global */
+    s = models::Symbol::BuildOrFind(s->name); /* try global */
     sn->symbol = s;         /* fix it */
   }
 
@@ -94,7 +94,7 @@ int setval(models::Lextok *v, int n) {
   if (v->symbol->context && v->symbol->type)
     return setlocal(v, n);
   if (!v->symbol->type)
-    v->symbol = lookup(v->symbol->name);
+    v->symbol = models::Symbol::BuildOrFind(v->symbol->name);
   return setglobal(v, n);
 }
 

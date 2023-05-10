@@ -89,7 +89,6 @@ Symbol *DoDump(Node *);
 
 extern char *emalloc(size_t); /* in main.c */
 
-extern unsigned int hash(const std::string &); /* in sym.c */
 
 int anywhere(int, Node *, Node *);
 int dump_cond(Node *, Node *, int);

@@ -6,16 +6,18 @@
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
+#include "models/symbol.hpp"
 #include "spin.hpp"
 #include "utils/seed/seed.hpp"
 #include "utils/verbose/verbose.hpp"
+#include "helpers/helpers.hpp"
 
 #include "y.tab.h"
 #include <stdlib.h>
 
 extern char *claimproc, *eventmap, GBuf[];
 extern models::Ordered *all_names;
-extern models::Symbol *Fname, *context;
+extern models::Symbol *Fname;
 extern int nr_errs;
 extern int u_sync, Elcnt, TstOnly;
 extern short has_enabled;
@@ -709,7 +711,7 @@ void sched(void) {
   Y = pickproc(Y);
 
   while (X_lst) {
-    context = X_lst->n;
+    models::Symbol::SetContext(X_lst->n);
     if (X_lst->pc && X_lst->pc->n) {
       file::LineNumber::Set(X_lst->pc->n->line_number);
       Fname = X_lst->pc->n->file_name;
@@ -819,7 +821,7 @@ void sched(void) {
     Y = pickproc(X_lst);
     notbeyond = 0;
   }
-  context = ZS;
+  models::Symbol::SetContext(ZS);
   wrapup(0);
 }
 
@@ -975,8 +977,8 @@ static void oneparam(models::RunList *r, models::Lextok *t, models::Lextok *a,
 
   if (at != ft && (at == CHAN || ft == CHAN)) {
     std::string buf, tag1, tag2;
-    sputtype(tag1, ft);
-    sputtype(tag2, at);
+    helpers::PutType(tag1, ft);
+    helpers::PutType(tag2, at);
     buf = "type-clash in params of " + p->n->name + "(..), (" + tag1 + " <-> " +
           tag2 + ")";
     loger::non_fatal("%s", buf);

@@ -1,10 +1,13 @@
 #include "helpers.hpp"
 
 #include "../fatal/fatal.hpp"
+#include "../models/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
+#include "y.tab.h"
 #include <algorithm>
 #include <array>
 #include <ctype.h>
+#include <iostream>
 
 namespace helpers {
 
@@ -51,4 +54,52 @@ std::string SkipNonwhite(const std::string &p) {
   }
   return p.substr(i);
 }
+
+int PutType(std::string &foo, int type) {
+  switch (type) {
+  case models::SymbolType::kUnsigned:
+    foo.append("unsigned ");
+    break;
+  case models::SymbolType::kBit:
+    foo.append("bit   ");
+    break;
+  case models::SymbolType::kByte:
+    foo.append("byte  ");
+    break;
+  case models::SymbolType::kChan:
+    foo.append("chan  ");
+    break;
+  case models::SymbolType::kShort:
+    foo.append("short ");
+    break;
+  case models::SymbolType::kInt:
+    foo.append("int   ");
+    break;
+  case models::SymbolType::kMtype:
+    foo.append("mtype ");
+    break;
+  case models::SymbolType::kStruct:
+    foo.append("struct");
+    break;
+  case models::SymbolType::kProctype:
+    foo.append("proctype");
+    break;
+  case models::SymbolType::kLabel:
+    foo.append("label ");
+    return 0;
+  default:
+    foo.append("value ");
+    return 0;
+  }
+  return 1;
+}
+int PrintType(int type) {
+  std::string buf;
+  if (helpers::PutType(buf, type)) {
+    std::cout << buf;
+    return 1;
+  }
+  return 0;
+}
+
 } // namespace helpers

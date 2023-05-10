@@ -126,7 +126,7 @@ void check_sequence(models::Sequence *s) {
 
 void prune_opts(models::Lextok *n) {
   models::SeqList *l;
-  extern models::Symbol *context;
+  models::Symbol *context = models::Symbol::GetContext();
   extern char *claimproc;
 
   if (!n ||
@@ -555,7 +555,7 @@ void add_seq(models::Lextok *n) {
 
 void set_lab(models::Symbol *s, models::Element *e) {
   models::Label *l;
-  extern models::Symbol *context;
+  models::Symbol *context = models::Symbol::GetContext();
   int cur_uiid = lexer::InlineProcessor::GetCurrInlineUuid();
 
   if (!s)
@@ -664,7 +664,7 @@ void fix_dest(models::Symbol *c,
               models::Symbol *a) /* c:label name, a:proctype name */
 {
   models::Label *l;
-  extern models::Symbol *context;
+  models::Symbol *context = models::Symbol::GetContext();
 
   for (l = labtab; l; l = l->next) {
     if (c->name == l->s->name && a->name == l->c->name) /* ? */
@@ -752,7 +752,7 @@ void pushbreak(void) {
   char buf[64];
 
   sprintf(buf, ":b%d", break_id++);
-  l = lookup(buf);
+  l = models::Symbol::BuildOrFind(buf);
   r->l = l;
   r->next = breakstack;
   breakstack = r;
@@ -871,7 +871,7 @@ models::Lextok *for_index(models::Lextok *a3, models::Lextok *a5) {
     sprintf(tmp_nm, "_f0r_t3mp%s",
             lexer::ScopeProcessor::GetCurrScope()
                 .c_str()); /* make sure it's unique */
-    tmp_cnt = lookup(tmp_nm);
+    tmp_cnt = models::Symbol::BuildOrFind(tmp_nm);
     if (z0->value > 255) /* check nr of slots, i.e. max length */
     {
       tmp_cnt->type = models::SymbolType::kShort; /* should be rare */

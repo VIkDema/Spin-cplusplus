@@ -1,6 +1,7 @@
 /***** spin: sym.c *****/
 
 #include "fatal/fatal.hpp"
+#include "helpers/helpers.hpp"
 #include "lexer/lexer.hpp"
 #include "lexer/line_number.hpp"
 #include "lexer/scope.hpp"
@@ -9,6 +10,7 @@
 #include "models/lextok.hpp"
 #include "models/symbol.hpp"
 #include "spin.hpp"
+#include "utils/utils.hpp"
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
@@ -20,35 +22,11 @@ extern int depth, verbose, NamesNotAdded;
 extern int has_hidden;
 extern short has_xu;
 
-models::Symbol *context = ZS;
-models::Ordered *all_names = nullptr;
+extern models::Ordered *all_names;
 int Nid_nr = 0;
 
 models::Mtypes_t *Mtypes;
 models::Lextok *runstmnts = ZN;
-
-static models::Ordered *last_name = nullptr;
-static models::Symbol *symtab[Nhash + 1];
-
-static int samename(models::Symbol *a, models::Symbol *b) {
-  if (!a && !b)
-    return 1;
-  if (!a || !b)
-    return 0;
-  return a->name == b->name;
-}
-
-unsigned int hash(const std::string &s) {
-  unsigned int h = 0;
-
-  for (char c : s) {
-    h += static_cast<unsigned int>(c);
-    h <<= 1;
-    if (h & (Nhash + 1))
-      h |= 1;
-  }
-  return h & Nhash;
-}
 
 void disambiguate(void) {
   models::Ordered *walk;
@@ -77,71 +55,6 @@ void disambiguate(void) {
       sp->name = sp->block_scope + sp->name; /* discard the old memory */
     }
   }
-}
-
-models::Symbol *lookup(const std::string &s) {
-  models::Symbol *sp;
-  models::Ordered *no;
-  unsigned int h = hash(s);
-
-  if (launch_settings.need_old_scope_rules) { /* same scope - global refering to
-                            global or local to local */
-    for (sp = symtab[h]; sp; sp = sp->next) {
-      if (sp->name == s && samename(sp->context, context) &&
-          samename(sp->owner_name, owner)) {
-        return sp; /* found */
-      }
-    }
-  } else { /* added 6.0.0: more traditional, scope rule */
-    for (sp = symtab[h]; sp; sp = sp->next) {
-      if (sp->name == s && samename(sp->context, context) &&
-          (sp->block_scope == lexer::ScopeProcessor::GetCurrScope() ||
-           (sp->block_scope.compare(0, sp->block_scope.length(),
-                                    lexer::ScopeProcessor::GetCurrScope()) ==
-                0 &&
-            samename(sp->owner_name, owner)))) {
-        if (!samename(sp->owner_name, owner)) {
-          printf("spin: different container %s\n", sp->name.c_str());
-          printf("    old: %s\n",
-                 sp->owner_name ? sp->owner_name->name.c_str() : "--");
-          printf("    new: %s\n", owner ? owner->name.c_str() : "--");
-          /*        MainProcessor::Exit(1);    */
-        }
-        return sp; /* found */
-      }
-    }
-  }
-
-  if (context) /* in proctype, refers to global */
-    for (sp = symtab[h]; sp; sp = sp->next) {
-      if (sp->name == s.c_str() && !sp->context &&
-          samename(sp->owner_name, owner)) {
-        return sp; /* global */
-      }
-    }
-
-  sp = (models::Symbol *)emalloc(sizeof(models::Symbol));
-  sp->name += s;
-  sp->value_type = 1;
-  sp->last_depth = depth;
-  sp->context = context;
-  sp->owner_name = owner; /* if fld in struct */
-  sp->block_scope = lexer::ScopeProcessor::GetCurrScope();
-
-  if (NamesNotAdded == 0) {
-    sp->next = symtab[h];
-    symtab[h] = sp;
-    no = (models::Ordered *)emalloc(sizeof(models::Ordered));
-    no->entry = sp;
-    if (!last_name)
-      last_name = all_names = no;
-    else {
-      last_name->next = no;
-      last_name = no;
-    }
-  }
-
-  return sp;
 }
 
 void trackvar(models::Lextok *n, models::Lextok *m) {
@@ -208,7 +121,7 @@ void checkrun(models::Symbol *parnm, int posno) {
       return;
     buf = !(res & 4) ? "bit" : "byte";
 
-    sputtype(buf, parnm->type);
+    helpers::PutType(buf, parnm->type);
     i = buf.length();
     while (i > 0 && buf[--i] == ' ')
       buf[i] = '\0';
@@ -329,12 +242,14 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
 static void setonexu(models::Symbol *sp, int t) {
   sp->xu |= t;
   if (t == XR || t == XS) {
-    if (sp->xup[t - 1] && sp->xup[t - 1]->name != context->name) {
+    if (sp->xup[t - 1] &&
+        sp->xup[t - 1]->name != models::Symbol::GetContext()->name) {
       printf("error: x[rs] claims from %s and %s\n",
-             sp->xup[t - 1]->name.c_str(), context->name.c_str());
+             sp->xup[t - 1]->name.c_str(),
+             models::Symbol::GetContext()->name.c_str());
       loger::non_fatal("conflicting claims on chan '%s'", sp->name.c_str());
     }
-    sp->xup[t - 1] = context;
+    sp->xup[t - 1] = models::Symbol::GetContext();
   }
 }
 
@@ -364,7 +279,7 @@ void setxus(models::Lextok *p, int t) {
         p->line_number);
   }
 
-  if (!context) {
+  if (!models::Symbol::GetContext()) {
     file::LineNumber::Set(p->line_number);
     Fname = p->file_name;
     loger::fatal("non-local x[rs] assertion");
@@ -374,7 +289,7 @@ void setxus(models::Lextok *p, int t) {
     Xu_new->opt_inline_id = p->opt_inline_id;
     Xu_new->value = t;
     Xu_new->left = m->left;
-    Xu_new->symbol = context;
+    Xu_new->symbol = models::Symbol::GetContext();
     Xu_new->right = Xu_List;
     Xu_List = Xu_new;
 
@@ -497,58 +412,10 @@ int ismtype(const std::string &str) /* name to number */
   return 0;
 }
 
-int sputtype(std::string &foo, int m) {
-  switch (m) {
-  case UNSIGNED:
-    foo.append("unsigned ");
-    break;
-  case BIT:
-    foo.append("bit   ");
-    break;
-  case BYTE:
-    foo.append("byte  ");
-    break;
-  case CHAN:
-    foo.append("chan  ");
-    break;
-  case SHORT:
-    foo.append("short ");
-    break;
-  case INT:
-    foo.append("int   ");
-    break;
-  case MTYPE:
-    foo.append("mtype ");
-    break;
-  case STRUCT:
-    foo.append("struct");
-    break;
-  case PROCTYPE:
-    foo.append("proctype");
-    break;
-  case LABEL:
-    foo.append("label ");
-    return 0;
-  default:
-    foo.append("value ");
-    return 0;
-  }
-  return 1;
-}
-
-static int puttype(int m) {
-  std::string buf;
-  if (sputtype(buf, m)) {
-    std::cout << buf;
-    return 1;
-  }
-  return 0;
-}
-
 void symvar(models::Symbol *sp) {
   models::Lextok *m;
 
-  if (!puttype(sp->type))
+  if (!helpers::PrintType(sp->type))
     return;
 
   printf("\t");
@@ -588,10 +455,11 @@ void symvar(models::Symbol *sp) {
       i++;
     printf("\t%d\t", i);
     for (m = sp->init_value->right; m; m = m->right) {
-      if (m->node_type == STRUCT)
+      if (m->node_type == STRUCT) {
         printf("struct %s", m->symbol->name.c_str());
-      else
-        (void)puttype(m->node_type);
+      } else {
+        helpers::PrintType(m->node_type);
+      }
       if (m->right)
         printf("\t");
     }
@@ -714,7 +582,7 @@ void chanaccess(void) {
           continue;
 
         printf("spin: %s:0, warning, ", Fname->name.c_str());
-        sputtype(buf, walk->entry->type);
+        helpers::PutType(buf, walk->entry->type);
         if (walk->entry->context) {
           printf("proctype %s", walk->entry->context->name.c_str());
         } else {

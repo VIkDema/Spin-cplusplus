@@ -28,7 +28,7 @@ extern lexer::Lexer lexer_;
 
 static	models::Lextok *ltl_to_string(models::Lextok *);
 
-extern  models::Symbol	*context, *owner;
+extern  models::Symbol	*owner;
 extern	models::Lextok *for_body(models::Lextok *, int);
 extern	void for_setup(models::Lextok *, models::Lextok *, models::Lextok *);
 extern	models::Lextok *for_index(models::Lextok *, models::Lextok *);
@@ -132,8 +132,8 @@ proc	: inst		/* optional instantiator */
 	  proctype NAME	{ 
 			  setptype(ZN, $3, PROCTYPE, ZN);
 			  setpname($3);
-			  context = $3->symbol;
-			  context->init_value = $2; /* linenr and file */
+			  models::Symbol::SetContext($3->symbol);
+			  models::Symbol::GetContext()->init_value = $2; /* linenr and file */
 			  Expand_Ok++; /* expand struct names in decl */
 			  has_ini = 0;
 			}
@@ -163,7 +163,7 @@ proc	: inst		/* optional instantiator */
 				 */
 				rl->unsafe = 1;
 			  }
-			  context = ZS;
+			  models::Symbol::SetContext(ZS);
 			}
 	;
 
@@ -194,14 +194,15 @@ inst	: /* empty */	{ $$ = ZN; }
 	;
 
 init	: INIT		{ 
-	context = $1->symbol;
+	models::Symbol::SetContext($1->symbol);
 	 }
 	  Opt_priority
-	  body		{ models::ProcList *rl;
-			  rl = mk_rdy(context, ZN, $4->sequence, 0, ZN,    models::btypes::I_PROC);
+	  body		{ 
+		      models::ProcList *rl;
+			  rl = mk_rdy(models::Symbol::GetContext(), ZN, $4->sequence, 0, ZN,    models::btypes::I_PROC);
 			  runnable(rl, $3?$3->value:1, 1);
 			  announce(":root:");
-			  context = ZS;
+			  models::Symbol::SetContext(ZS);
         		}
 	;
 
@@ -223,7 +224,7 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 			  {	$1->symbol = $2->symbol;	/* new 5.3.0 */
 			  }
 			  nclaims++;
-			  context = $1->symbol;
+	          models::Symbol::SetContext($1->symbol);
 			  if (claimproc && !strcmp(claimproc, $1->symbol->name.c_str()))
 			  {	loger::fatal("claim %s redefined", claimproc);
 			  }
@@ -231,7 +232,7 @@ claim	: CLAIM	optname	{ if ($2 != ZN)
 			  strcpy(claimproc, $1->symbol->name.c_str());
 			}
 	  body		{ (void) mk_rdy($1->symbol, ZN, $4->sequence, 0, ZN, models::btypes::N_CLAIM);
-        		  context = ZS;
+				models::Symbol::SetContext(ZS);
         		}
 	;
 
@@ -239,7 +240,7 @@ optname : /* empty */	{ char tb[32];
 			  memset(tb, 0, 32);
 			  sprintf(tb, "never_%d", nclaims);
 			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
-			  $$->symbol = lookup(tb);
+			  $$->symbol = models::Symbol::BuildOrFind(tb);
 			}
 	| NAME		{ $$ = $1; }
 	;
@@ -248,13 +249,13 @@ optname2 : /* empty */ { char tb[32]; static int nltl = 0;
 			  memset(tb, 0, 32);
 			  sprintf(tb, "ltl_%d", nltl++);
 			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
-			  $$->symbol = lookup(tb);
+			  $$->symbol = models::Symbol::BuildOrFind(tb);
 			}
 	| NAME		{ $$ = $1; }
 	;
 
 events : TRACE		{ 
-	context = $1->symbol;
+			  models::Symbol::SetContext( $1->symbol);
 			  if (eventmap)
 				loger::non_fatal("trace %s redefined", std::string(eventmap));
 			  eventmap = new char[$1->symbol->name.length() + 1];
@@ -267,12 +268,13 @@ events : TRACE		{
 			  } else
 			  {	(void) mk_rdy($1->symbol, ZN, $3->sequence, 0, ZN, models::btypes::N_TRACE);
 			  }
-        		  context = ZS;
+			  models::Symbol::SetContext(ZS);
 			  inEventMap--;
 			}
 	;
 
-utype	: TYPEDEF NAME '{' 	{  if (context)
+utype	: TYPEDEF NAME '{' 	{  
+					if (models::Symbol::GetContext())
 				   { loger::fatal("typedef %s must be global",
 					$2->symbol->name);
 				   }
@@ -354,7 +356,7 @@ cexpr	: C_EXPR		{ models::Symbol *s;
 				  s = lexer_.HandleInline(ZS, ZN);
 /* if context is 0 this was inside an ltl formula
    mark the last inline added to seqnames */
-				  if (!context)
+				  if (!models::Symbol::GetContext())
 				  {	
 					lexer::InlineProcessor::SetIsExpr();
 				  }
@@ -424,7 +426,7 @@ one_decl: vis TYPE osubt var_list {
 				  if ($1)
 					loger::non_fatal("cannot %s mtype (ignored)",
 						$1->symbol->name);
-				  if (context != ZS)
+				  if (models::Symbol::GetContext() != ZS)
 					loger::fatal("mtype declaration must be global");
 				}
 	;
@@ -854,7 +856,7 @@ expr    : l_par expr r_par		{ $$ = $2; }
 				  $$ = models::Lextok::nn(ZN, '?', $2, $$);
 				}
 	| RUN aname		{ Expand_Ok++;
-				  if (!context)
+				  if (!models::Symbol::GetContext())
 				   loger::fatal("used 'run' outside proctype" );
 				}
 	  l_par args r_par
@@ -1142,7 +1144,7 @@ ltl_to_string(models::Lextok *n)
 
 	if (1) printf("ltl %s: %s\n", ltl_name, ltl_formula);
 
-	m->symbol = lookup(ltl_formula);
+	m->symbol = models::Symbol::BuildOrFind(ltl_formula);
 #ifndef __MINGW32__
 	free(ltl_formula);
 #endif

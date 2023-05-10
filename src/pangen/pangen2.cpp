@@ -37,7 +37,7 @@ extern LaunchSettings launch_settings;
 extern models::ProcList *ready;
 extern models::RunList *run_lst;
 extern models::Lextok *runstmnts;
-extern models::Symbol *Fname, *oFname, *context;
+extern models::Symbol *Fname, *oFname;
 extern char *claimproc, *eventmap;
 extern int Npars, Mpars, nclaims;
 extern int has_remote, has_remvar, rvopt;
@@ -1692,18 +1692,17 @@ static void lab_transfer(models::Element *to, models::Element *from) {
   /* "from" could have all three labels -- rename
    * to prevent jumps to the transfered copies
    */
-  oc = context;                    /* remember */
+  oc = models::Symbol::GetContext();                    /* remember */
   for (ltp = 1; ltp < 8; ltp *= 2) /* 1, 2, and 4 */
     if ((s = has_lab(from, ltp)) != (models::Symbol *)0) {
       ns = (models::Symbol *)emalloc(sizeof(models::Symbol));
       ns->name = (char *)emalloc((int)strlen(s->name.c_str()) + 4);
       ns->name = fmt::format("{}{}", s->name, modifier);
-
-      context = s->context;
+      models::Symbol::SetContext(s->context);
       set_lab(ns, to);
       usedit++;
     }
-  context = oc; /* restore */
+  models::Symbol::SetContext(oc);/* restore */
   if (usedit) {
     if (modifier++ > 990)
       loger::fatal("modifier overflow error");
@@ -3494,7 +3493,7 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
   if (!s)
     loger::fatal("no name - putname");
 
-  if (s->context && context && s->type)
+  if (s->context && models::Symbol::GetContext() && s->type)
     s = findloc(s); /* it's a local var */
 
   if (!s) {
@@ -3503,7 +3502,7 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
   }
 
   if (!s->type)          /* not a local name */
-    s = lookup(s->name); /* must be a global */
+    s = models::Symbol::BuildOrFind(s->name); /* must be a global */
 
   if (!s->type) {
     if (pre != ".") {

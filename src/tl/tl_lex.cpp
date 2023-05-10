@@ -13,6 +13,7 @@
 #include "tl.hpp"
 #include <ctype.h>
 #include <stdlib.h>
+#include "../utils/utils.hpp"
 
 static Symbol *symtab[Nhash + 1];
 static int tl_lex(void);
@@ -260,7 +261,7 @@ static int tl_lex(void) {
 
 Symbol *tl_lookup(char *s) {
   Symbol *sp;
-  unsigned int h = hash(s);
+  unsigned int h = utils::hash(s);
 
   for (sp = symtab[h]; sp; sp = sp->next)
     if (strcmp(sp->name, s) == 0)

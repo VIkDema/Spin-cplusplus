@@ -15,7 +15,6 @@ extern LaunchSettings launch_settings;
 extern models::Symbol *Fname;
 extern int realread;
 extern char *emalloc(size_t);
-extern models::Symbol *context;
 extern int DstepStart;
 int Etimeouts; /* nr timeouts in program */
 int Ntimeouts; /* nr timeouts in never claim */
@@ -68,7 +67,7 @@ Lextok *Lextok::nn(models::Lextok *symbol, int type, models::Lextok *left,
   if (type == TIMEOUT)
     Etimeouts++;
 
-  if (!context)
+  if (!models::Symbol::GetContext())
     return n;
 
   if (type == 'r' || type == 's') {
@@ -78,7 +77,7 @@ Lextok *Lextok::nn(models::Lextok *symbol, int type, models::Lextok *left,
     n->symbol->AddAccess(ZS, 0, 'P');
   }
 
-  if (context->name.c_str() == claimproc) {
+  if (models::Symbol::GetContext()->name.c_str() == claimproc) {
     int forbidden = launch_settings.separate_version;
     switch (type) {
     case ASGN:
@@ -145,7 +144,7 @@ Lextok *Lextok::CreateRemoteLabelAssignment(models::Symbol *proctype_name,
   tmp1 = nn(ZN, '?', pid, ZN);
   tmp1->symbol = proctype_name;
   tmp1 = nn(ZN, 'p', tmp1, ZN);
-  tmp1->symbol = lookup("_p");
+  tmp1->symbol = models::Symbol::BuildOrFind("_p");
   tmp2 = nn(ZN, NAME, ZN, ZN);
   tmp2->symbol = proctype_name;
   tmp3 = nn(ZN, 'q', tmp2, ZN);
