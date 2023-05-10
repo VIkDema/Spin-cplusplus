@@ -26,7 +26,7 @@ short has_accept;
 
 static models::Lbreak *breakstack = nullptr;
 static models::Lextok *innermost;
-static models::SeqList *cur_s = (models::SeqList *)0;
+static models::SeqList *cur_s = nullptr;
 static int break_id = 0;
 
 static models::Element *if_seq(models::Lextok *);
@@ -42,7 +42,12 @@ void open_seq(int top) {
   models::Sequence *s = (models::Sequence *)emalloc(sizeof(models::Sequence));
   s->minel = -1;
 
-  t = seqlist(s, cur_s);
+  if (cur_s == nullptr) {
+    t = models::SeqList::Build(s);
+  } else {
+    t = cur_s->Add(s);
+  }
+
   cur_s = t;
   if (top) {
     Elcnt = 1;
@@ -209,7 +214,7 @@ models::Sequence *close_seq(int nottop) {
 
 models::Lextok *do_unless(models::Lextok *No, models::Lextok *Es) {
   models::SeqList *Sl;
-  models::Lextok *Re =  models::Lextok::nn(ZN, UNLESS, ZN, ZN);
+  models::Lextok *Re = models::Lextok::nn(ZN, UNLESS, ZN, ZN);
 
   Re->line_number = No->line_number;
   Re->file_name = No->file_name;
@@ -220,7 +225,7 @@ models::Lextok *do_unless(models::Lextok *No, models::Lextok *Es) {
   } else {
     open_seq(0);
     add_seq(Es);
-    Sl = seqlist(close_seq(1), 0);
+    Sl = models::SeqList::Build(close_seq(1));
   }
 
   if (No->node_type == NON_ATOMIC) {
@@ -237,7 +242,7 @@ models::Lextok *do_unless(models::Lextok *No, models::Lextok *Es) {
     open_seq(0);
     add_seq(Re);
     Re = models::Lextok::nn(ZN, tok, ZN, ZN);
-    Re->seq_list = seqlist(close_seq(7), 0);
+    Re->seq_list = models::SeqList::Build(close_seq(7));
     Re->line_number = No->line_number;
     Re->file_name = No->file_name;
 
@@ -248,19 +253,11 @@ models::Lextok *do_unless(models::Lextok *No, models::Lextok *Es) {
   } else {
     open_seq(0);
     add_seq(No);
-    Sl = seqlist(close_seq(2), Sl);
+    Sl = models::SeqList::Build(close_seq(2));
   }
 
   Re->seq_list = Sl;
   return Re;
-}
-
-models::SeqList *seqlist(models::Sequence *s, models::SeqList *r) {
-  models::SeqList *t = (models::SeqList *)emalloc(sizeof(models::SeqList));
-
-  t->this_sequence = s;
-  t->next = r;
-  return t;
 }
 
 static models::Element *new_el(models::Lextok *n) {
@@ -421,9 +418,9 @@ static models::Element *if_seq(models::Lextok *n) {
     add_el(t, z->this_sequence); /* append target */
 
   if (tok == DO) {
-    add_el(t, cur_s->this_sequence);  /* target upfront */
+    add_el(t, cur_s->this_sequence);                  /* target upfront */
     t = new_el(models::Lextok::nn(n, BREAK, ZN, ZN)); /* break target */
-    set_lab(break_dest(), t);         /* new exit  */
+    set_lab(break_dest(), t);                         /* new exit  */
     popbreak();
   }
   add_el(e, cur_s->this_sequence);
@@ -444,7 +441,7 @@ static void escape_el(models::Element *f, models::Sequence *e) {
 
   /* now attach escape to the state itself */
 
-  f->esc = seqlist(e, f->esc); /* in lifo order... */
+  f->esc = f->esc->Add(e); /* in lifo order... */
 #ifdef DEBUG
   printf("attach %d (", e->frst->Seqno);
   comment(stdout, e->frst->n, 0);
@@ -506,17 +503,6 @@ static models::Element *unless_seq(models::Lextok *n) {
 
   add_el(e, cur_s->this_sequence);
   add_el(t, cur_s->this_sequence);
-#ifdef DEBUG
-  printf("unless element (%d,%d):\n", e->Seqno, t->Seqno);
-  for (z = s; z; z = z->next) {
-    models::Element *x;
-    printf("\t%d,%d,%d :: ", z->this_sequence->frst->Seqno,
-           z->this_sequence->extent->Seqno, z->this_sequence->last->Seqno);
-    for (x = z->this_sequence->frst; x; x = x->next)
-      printf("(%d)", x->Seqno);
-    printf("\n");
-  }
-#endif
   return e;
 }
 
@@ -536,11 +522,6 @@ static void add_el(models::Element *e, models::Sequence *s) {
       add_el(y, s);
     }
   }
-#ifdef DEBUG
-  printf("add_el %d after %d -- ", e->Seqno, (s->last) ? s->last->Seqno : -1);
-  comment(stdout, e->n, 0);
-  printf("\n");
-#endif
   if (!s->frst)
     s->frst = e;
   else
@@ -713,7 +694,8 @@ void fix_dest(models::Symbol *c,
     Al_El = y;
 
     /* turn the original element+seqno into a skip */
-    l->e->n = models::Lextok::nn(ZN, 'c', models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
+    l->e->n =
+        models::Lextok::nn(ZN, 'c', models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
     l->e->n->line_number = l->e->n->left->line_number = keep_ln;
     l->e->n->file_name = l->e->n->left->file_name = keep_fn;
     l->e->n->left->value = 1;
@@ -849,7 +831,8 @@ void for_setup(models::Lextok *a3, models::Lextok *a5,
   /* a5->node_type = a8->node_type = CONST; */
   add_seq(models::Lextok::nn(a3, ASGN, a3, a5)); /* start value */
   open_seq(0);
-  add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(a3, LE, a3, a8), ZN)); /* condition */
+  add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(a3, LE, a3, a8),
+                             ZN)); /* condition */
 }
 
 models::Lextok *for_index(models::Lextok *a3, models::Lextok *a5) {
@@ -885,9 +868,9 @@ models::Lextok *for_index(models::Lextok *a3, models::Lextok *a5) {
     z1->value = 0;
     z2 = models::Lextok::nn(a5, LEN, a5, ZN);
 
-    sprintf(
-        tmp_nm, "_f0r_t3mp%s",
-        lexer::ScopeProcessor::GetCurrScope().c_str()); /* make sure it's unique */
+    sprintf(tmp_nm, "_f0r_t3mp%s",
+            lexer::ScopeProcessor::GetCurrScope()
+                .c_str()); /* make sure it's unique */
     tmp_cnt = lookup(tmp_nm);
     if (z0->value > 255) /* check nr of slots, i.e. max length */
     {
@@ -902,12 +885,14 @@ models::Lextok *for_index(models::Lextok *a3, models::Lextok *a5) {
 
     open_seq(0);
 
-    add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(z3, LT, z3, z2), ZN)); /* condition */
+    add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(z3, LT, z3, z2),
+                               ZN)); /* condition */
 
     /* retrieve  message from the right slot -- for now: rotate contents */
     lexer_.SetInFor(0);
     add_seq(models::Lextok::nn(a5, 'r', a5, expand(a3, 1))); /* receive */
-    add_seq(models::Lextok::nn(a5, 's', a5, expand(a3, 1))); /* put back in to rotate */
+    add_seq(models::Lextok::nn(a5, 's', a5,
+                               expand(a3, 1))); /* put back in to rotate */
     lexer_.SetInFor(1);
     return z3;
   } else {
@@ -959,7 +944,7 @@ models::Lextok *for_body(models::Lextok *a3, int with_else) {
   t2->sequence = close_seq(9);
 
   t0 = models::Lextok::nn(ZN, 0, ZN, ZN);
-  t0->seq_list = seqlist(t2->sequence, seqlist(t1->sequence, 0));
+  t0->seq_list = models::SeqList::Build(t1->sequence)->Add(t2->sequence);
 
   rv = models::Lextok::nn(ZN, DO, ZN, ZN);
   rv->seq_list = t0->seq_list;
@@ -975,7 +960,8 @@ models::Lextok *sel_index(models::Lextok *a3, models::Lextok *a5,
 
   add_seq(models::Lextok::nn(a3, ASGN, a3, a5)); /* start value */
   open_seq(0);
-  add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(a3, LT, a3, a7), ZN)); /* condition */
+  add_seq(models::Lextok::nn(ZN, 'c', models::Lextok::nn(a3, LT, a3, a7),
+                             ZN)); /* condition */
 
   pushbreak();            /* new 6.2.1 */
   return for_body(a3, 0); /* no else, just a non-deterministic break */

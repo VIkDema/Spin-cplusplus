@@ -17,6 +17,9 @@ struct Lextok {
   SeqList *seq_list;        /* sequence list old: sl*/
   Lextok *left, *right;     /* children in parse tree old: fn*/
   void ProcessSymbolForRead();
+  int ResolveSymbolType();
+
+
   static Lextok *nn(models::Lextok *symbol, int type, models::Lextok *left,
                     models::Lextok *right);
   static Lextok *CreateRemoteLabelAssignment(models::Symbol *proctype_name,

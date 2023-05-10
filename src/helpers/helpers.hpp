@@ -1,5 +1,6 @@
 #pragma once
-namespace lexer::helpers {
+#include <string>
+namespace helpers {
 
 int isdigit_(int curr);
 int isalpha_(int curr);
@@ -12,4 +13,8 @@ bool IsFollowsToken(int curr_token);
 int IsNotDollar(int curr);
 
 bool IsWhitespace(int curr);
-} // namespace lexer::helpers
+
+std::string SkipWhite(const std::string &p);
+
+std::string SkipNonwhite(const std::string &p);
+} // namespace helpers

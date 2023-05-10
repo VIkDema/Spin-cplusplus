@@ -5,10 +5,10 @@
 #include <string>
 #include <vector>
 
-extern FILE *yyin;
+FILE *yyin, *yyout;
 
 namespace file {
-FileStream::FileStream() : push_back_(0), pushed_back_(0){}
+FileStream::FileStream() : push_back_(0), pushed_back_(0) {}
 int FileStream::GetChar() {
   int curr;
   if (pushed_back_ > 0 && push_back_ < pushed_back_) {

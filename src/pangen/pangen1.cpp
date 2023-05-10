@@ -1,6 +1,7 @@
 /***** spin: pangen1.c *****/
 
 #include "pangen1.hpp"
+#include "../codegen/codegen.hpp"
 #include "../fatal/fatal.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
@@ -33,9 +34,6 @@ extern models::Queue *ltab[];
 int Npars = 0, u_sync = 0, u_async = 0, hastrack = 1;
 short has_io = 0;
 short has_state = 0; /* code contains c_state */
-
-extern void c_add_stack(FILE *);
-extern void c_stack_size(FILE *);
 
 static models::Symbol *LstSet = ZS;
 static int acceptors = 0, progressors = 0, nBits = 0;
@@ -206,10 +204,10 @@ here:
   if (launch_settings.separate_version != 2) {
     ntimes(fd_th, 0, 1, Header);
     fprintf(fd_th, "#define StackSize	(");
-    c_stack_size(fd_th);
+    codegen::CStackSize(fd_th);
     fprintf(fd_th, ")\n");
 
-    c_add_stack(fd_th);
+    codegen::CAddStack(fd_th);
     ntimes(fd_th, 0, 1, Header0);
   } else {
     fprintf(fd_th, "extern char *emalloc(unsigned long);\n");
@@ -219,7 +217,7 @@ here:
   LstSet = ZS;
   doglobal("", models::PUTV);
 
-  hastrack = c_add_sv(fd_th);
+  hastrack = codegen::CAddSv(fd_th);
 
   fprintf(fd_th, "#ifdef TRIX\n");
   fprintf(fd_th, "	/* room for 512 proc+chan ptrs, + safety margin */\n");
@@ -326,22 +324,6 @@ shortcut:
   else
     ntimes(fd_tc, 1, nrRdy, R5);
   ntimes(fd_tc, 0, 1, R8a);
-}
-
-void do_locinits(FILE *fd) {
-  models::ProcList *p;
-
-  /* the locinit functions may refer to pptr or qptr */
-  fprintf(fd, "#if VECTORSZ>32000\n");
-  fprintf(fd, "	extern int \n");
-  fprintf(fd, "#else\n");
-  fprintf(fd, "	extern short \n");
-  fprintf(fd, "#endif\n");
-  fprintf(fd, "	*proc_offset, *q_offset;\n");
-
-  for (p = ready; p; p = p->next) {
-    c_add_locinit(fd, p->tn, p->n->name);
-  }
 }
 
 void genother(void) {
@@ -1017,7 +999,7 @@ static void put_ptype(const std::string &s, int i, int m0, int m1,
   LstSet = ZS;
   nBits = 8 + blog(m1) + blog(m0);
   k = dolocal(fd_tc, "", models::PUTV, i, s, b); /* includes pars */
-  c_add_loc(fd_th, s);
+  codegen::CAddLoc(fd_th, s);
 
   fprintf(fd_th, "} P%d;\n", i);
   if ((!LstSet && k > 0) || has_state)

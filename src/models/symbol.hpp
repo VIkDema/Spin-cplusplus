@@ -65,6 +65,7 @@ struct Symbol {
   Symbol *context;      /* 0 if global, or procname */
   models::Symbol *next; /* linked list */
   void AddAccess(models::Symbol *what, int count, int type);
+  void DetectSideEffects();
 };
 
 struct Ordered { /* links all names in Symbol table */

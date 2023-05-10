@@ -1,6 +1,8 @@
 /***** spin: run.c *****/
 
+#include "codegen/codegen.hpp"
 #include "fatal/fatal.hpp"
+#include "lexer/line_number.hpp"
 #include "main/launch_settings.hpp"
 #include "main/main_processor.hpp"
 #include "models/lextok.hpp"
@@ -9,7 +11,6 @@
 #include "utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <stdlib.h>
-#include "lexer/line_number.hpp"
 
 extern models::RunList *X_lst, *run_lst;
 extern models::Symbol *Fname;
@@ -327,10 +328,10 @@ static int assign(models::Lextok *now) {
     t = BYTE;
     break;
   default:
-    t = Sym_typ(now->right);
+    t = now->right->ResolveSymbolType();
     break;
   }
-  typ_ck(Sym_typ(now->left), t, "assignment");
+  typ_ck(now->left->ResolveSymbolType(), t, "assignment");
 
   return setval(now->left, eval(now->right));
 }
@@ -487,14 +488,14 @@ int eval(models::Lextok *now) {
     case C_CODE:
       if (!launch_settings.need_to_analyze) {
         printf("%s:\t", now->symbol->name.c_str());
-        plunk_inline(stdout, now->symbol->name, 0, 1);
+        codegen::PlunkInline(stdout, now->symbol->name, 0, 1);
       }
       return 1; /* uninterpreted */
 
     case C_EXPR:
       if (!!launch_settings.need_to_analyze) {
         printf("%s:\t", now->symbol->name.c_str());
-        plunk_expr(stdout, now->symbol->name);
+        codegen::PlunkExpr(stdout, now->symbol->name);
         printf("\n");
       }
       return 1; /* uninterpreted */

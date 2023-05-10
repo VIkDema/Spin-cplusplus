@@ -1,9 +1,12 @@
+#include "helpers.hpp"
+
+#include "../fatal/fatal.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
 #include <algorithm>
 #include <array>
 #include <ctype.h>
 
-namespace lexer::helpers {
+namespace helpers {
 
 constexpr std::array<int, 15> kSpecials = {'}',  ')',   ']',    OD,     FI,
                                            ELSE, BREAK, C_CODE, C_EXPR, C_DECL,
@@ -27,4 +30,25 @@ bool IsWhitespace(int curr) {
          curr == '\r';
 }
 
-} // namespace lexer::helpers
+std::string SkipWhite(const std::string &p) {
+  std::string::size_type i = 0;
+  while (i < p.length() && (p[i] == ' ' || p[i] == '\t')) {
+    i++;
+  }
+  if (i == p.length()) {
+    loger::fatal("bad format - 1");
+  }
+  return p.substr(i);
+}
+
+std::string SkipNonwhite(const std::string &p) {
+  std::string::size_type i = 0;
+  while (i < p.length() && (p[i] != ' ' && p[i] != '\t')) {
+    i++;
+  }
+  if (i == p.length()) {
+    loger::fatal("bad format - 2");
+  }
+  return p.substr(i);
+}
+} // namespace helpers

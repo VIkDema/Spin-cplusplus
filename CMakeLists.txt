@@ -13,7 +13,6 @@ set(CMAKE_CXX_FLAGS_PICKY "-std=c++17 -Wstrict-prototypes -pedantic -fno-strengt
 # Source files
 set(SPIN_SOURCES
     src/spin.hpp
-    src/spinlex.cpp
     src/sym.cpp
     src/vars.cpp
     src/main.cpp
@@ -57,8 +56,8 @@ set(SPIN_SOURCES
     src/lexer/line_number.hpp
     src/lexer/yylex.cpp
     src/lexer/yylex.hpp
-    src/lexer/helpers.hpp
-    src/lexer/helpers.cpp
+    src/helpers/helpers.hpp
+    src/helpers/helpers.cpp
     src/lexer/deferred.hpp
     src/lexer/deferred.cpp
     src/lexer/scope.hpp
@@ -85,6 +84,10 @@ set(SPIN_SOURCES
     src/models/slicer.hpp
     src/models/queue.hpp
     src/models/itype.hpp
+    src/models/sequence.hpp
+    src/models/sequence.cpp
+    src/codegen/codegen.hpp
+    src/codegen/codegen.cpp
 )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/version/version.hpp)
 

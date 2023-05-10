@@ -8,6 +8,7 @@
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch_settings.hpp"
+#include "/Users/vikdema/Desktop/projects/Spin/src++/src/codegen/codegen.hpp"
 #include <sys/types.h>
 #include <iostream>
 #ifndef PC
@@ -305,22 +306,22 @@ c_fcts	: ccode			{ /* leaves pseudo-inlines with sym of
 	;
 
 cstate	: C_STATE STRING STRING	{
-				  c_state($2->symbol, $3->symbol, ZS);
+				  codegen::HandleCState($2->symbol, $3->symbol, ZS);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_TRACK STRING STRING {
-				  c_track($2->symbol, $3->symbol, ZS);
+				  codegen::HandleCTrack($2->symbol, $3->symbol, ZS);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_STATE STRING STRING	STRING {
-				  c_state($2->symbol, $3->symbol, $4->symbol);
+				  codegen::HandleCState($2->symbol, $3->symbol, $4->symbol);
 				  lexer_.SetHasCode(1);
 				  has_state = 1;
 				}
 	| C_TRACK STRING STRING STRING {
-				  c_track($2->symbol, $3->symbol, $4->symbol);
+				  codegen::HandleCTrack($2->symbol, $3->symbol, $4->symbol);
 				   lexer_.SetHasCode(1);
 				   has_state = 1;
 				}
@@ -362,7 +363,7 @@ cexpr	: C_EXPR		{ models::Symbol *s;
 				  $$->symbol = s;
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
-				  no_side_effects(s->name);
+				  s->DetectSideEffects();
 				  lexer_.SetHasCode(1);
 				}
 	;
@@ -735,7 +736,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = models::Lextok::nn($1, ASGN, $1, $3);	/* as
 				}
 	| ATOMIC   '{'   	{ open_seq(0); }
           sequence OS '}'   	{ $$ = models::Lextok::nn($1, ATOMIC, ZN, ZN);
-        			  $$->seq_list = seqlist(close_seq(3), 0);
+        			  $$->seq_list = models::SeqList::Build(close_seq(3));
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
 				  make_atomic($$->seq_list->this_sequence, 0);
@@ -744,7 +745,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = models::Lextok::nn($1, ASGN, $1, $3);	/* as
 				  rem_Seq();
 				}
           sequence OS '}'   	{ $$ = models::Lextok::nn($1, D_STEP, ZN, ZN);
-        			  $$->seq_list = seqlist(close_seq(4), 0);
+        			  $$->seq_list =  models::SeqList::Build(close_seq(4));
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
         			  make_atomic($$->seq_list->this_sequence, D_ATOM);
@@ -752,7 +753,7 @@ Stmnt	: varref ASGN full_expr	{ $$ = models::Lextok::nn($1, ASGN, $1, $3);	/* as
         			}
 	| '{'			{ open_seq(0); }
 	  sequence OS '}'	{ $$ = models::Lextok::nn(ZN, NON_ATOMIC, ZN, ZN);
-        			  $$->seq_list = seqlist(close_seq(5), 0);
+        			  $$->seq_list = models::SeqList::Build(close_seq(5));
 				  $$->line_number = $1->line_number;
 				  $$->file_name = $1->file_name;
         			}
@@ -772,8 +773,14 @@ Stmnt	: varref ASGN full_expr	{ $$ = models::Lextok::nn($1, ASGN, $1, $3);	/* as
 	| RETURN full_expr	{ $$ = lexer_.ReturnStatement($2); }	
 	;
 
-options : option		{ $$->seq_list = seqlist($1->sequence, 0); }
-	| option options	{ $$->seq_list = seqlist($1->sequence, $2->seq_list); }
+options : option		{ $$->seq_list =  models::SeqList::Build($1->sequence); }
+	| option options	{ 
+		if($2->seq_list == nullptr){
+		$$->seq_list =   models::SeqList::Build($1->sequence); 
+		}else{
+		$$->seq_list = $2->seq_list->Add($1->sequence); 
+		}
+		}
 	;
 
 option  : SEP   		{ open_seq(0); }
@@ -1091,7 +1098,7 @@ recursive(FILE *fd, models::Lextok *n)
 		binop(n, "<->");
 		break;
 	case C_EXPR:
-		fprintf(fd, "c_expr { %s }", put_inline(fd, n->symbol->name));
+		fprintf(fd, "c_expr { %s }", codegen::PutInline(fd, n->symbol->name));
 		break;
 	default:
 		comment(fd, n, 0);

@@ -329,7 +329,7 @@ static int a_snd(models::Queue *q, models::Lextok *n) {
         depth >= launch_settings.count_of_skipping_steps) {
       sr_talk(n, New, "Send ", "->", j, q); /* XXX j was i+j in 6.4.8 */
     }
-    typ_ck(q->fld_width[i + j], Sym_typ(m->left), "send");
+    typ_ck(q->fld_width[i + j], m->left->ResolveSymbolType(), "send");
   }
 
   if (verbose_flags.NeedToPrintSends() &&
@@ -438,7 +438,7 @@ try_slot:
       continue; /* test */
     if (m && m->left->node_type != CONST && m->left->node_type != EVAL) {
       (void)setval(m->left, q->contents[i * q->nflds + j]);
-      typ_ck(q->fld_width[j], Sym_typ(m->left), "recv");
+      typ_ck(q->fld_width[j], m->left->ResolveSymbolType(), "recv");
     }
     if (n->value < 2) /* not a poll */
       for (k = i; k < q->qlen - 1; k++) {
@@ -473,7 +473,7 @@ static int s_snd(models::Queue *q, models::Lextok *n) {
 
   for (m = n->right; m && j < q->nflds; m = m->right, j++) {
     q->contents[j] = cast_val(q->fld_width[j], eval(m->left), 0);
-    typ_ck(q->fld_width[j], Sym_typ(m->left), "rv-send");
+    typ_ck(q->fld_width[j], m->left->ResolveSymbolType(), "rv-send");
 
     if (q->fld_width[j] == MTYPE) {
       mtype_ck(q->mtp[j], m->left); /* 6.4.8 */

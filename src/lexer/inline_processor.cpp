@@ -3,7 +3,10 @@
 #include "../models/itype.hpp"
 #include "file_stream.hpp"
 #include "line_number.hpp"
+
 extern models::Symbol *Fname;
+extern models::RunList *X_lst;
+extern models::ProcList *ready;
 
 namespace lexer {
 models::IType *InlineProcessor::seqnames = nullptr;
@@ -116,4 +119,31 @@ bool InlineProcessor::IsEqname(const std::string &value) {
   }
   return false;
 }
+
+int InlineProcessor::CheckGlobInline(const std::string &s) {
+  auto tmp = FindInline(s);
+  char *body = (char *)tmp->cn;
+  return (strstr(body, "now.")          /* global ref or   */
+          || strchr(body, '(') > body); /* possible C-function call */
+}
+
+void InlineProcessor::CheckInline(models::IType *itype) {
+  char buf[128];
+
+  if (!X_lst)
+    return;
+
+  for (auto p = ready; p; p = p->next) {
+    if (p->n->name == X_lst->n->name) {
+      continue;
+    }
+    sprintf(buf, "P%s->", p->n->name.c_str());
+    if (strstr((char *)itype->cn, buf)) {
+      printf("spin: in proctype %s, ref to object in proctype %s\n",
+             X_lst->n->name.c_str(), p->n->name.c_str());
+      loger::fatal("invalid variable ref in '%s'", itype->nm->name);
+    }
+  }
+}
+
 } // namespace lexer

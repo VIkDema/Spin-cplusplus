@@ -190,4 +190,21 @@ Lextok *Lextok::CreateRemoteVariableAssignment(models::Symbol *proctype_name,
 	b (pid expr)
 #endif
 }
+
+int Lextok::ResolveSymbolType() {
+
+  if (symbol == nullptr) {
+    return 0;
+  }
+  if (symbol->type != models::SymbolType::kStruct) {
+    return symbol->type;
+  }
+
+  if (!right || right->node_type != '.' /* gh: had ! in wrong place */
+      || !right->left) {
+    return STRUCT; /* not a field reference */
+  }
+  return right->left->ResolveSymbolType();
+}
+
 } // namespace models

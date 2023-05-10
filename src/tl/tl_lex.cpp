@@ -9,7 +9,7 @@
  * presented at the PSTV Conference, held in 1995, Warsaw, Poland 1995.
  */
 
-#include "../lexer/helpers.hpp"
+#include "../helpers/helpers.hpp"
 #include "tl.hpp"
 #include <ctype.h>
 #include <stdlib.h>
@@ -97,9 +97,8 @@ static int is_predicate(int z) {
       }
     } else {
       int c_nxt = tl_peek(i);
-      if (((c == 'U' || c == 'V' || c == 'X') &&
-           !lexer::helpers::isalnum_(c_prev) &&
-           (c_nxt == -1 || !lexer::helpers::isalnum_(c_nxt))) ||
+      if (((c == 'U' || c == 'V' || c == 'X') && !helpers::isalnum_(c_prev) &&
+           (c_nxt == -1 || !helpers::isalnum_(c_nxt))) ||
           (c == '<' && c_nxt == '>') || (c == '<' && c_nxt == '-') ||
           (c == '-' && c_nxt == '>') || (c == '[' && c_nxt == ']')) {
         return 0;
@@ -168,7 +167,7 @@ static int tl_lex(void) {
     tl_yyerror("unexpected '}'");
   }
   if (islower(c)) {
-    tl_getword(c, lexer::helpers::isalnum_);
+    tl_getword(c, helpers::isalnum_);
     if (strcmp("true", yytext) == 0) {
       Token(TRUE);
     }

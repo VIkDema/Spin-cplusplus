@@ -1,5 +1,6 @@
 #include "preprocessed_file_viewer.hpp"
 
+#include "../../codegen/codegen.hpp"
 #include "../../spin.hpp"
 #include "y.tab.h"
 #include <cstdio>
@@ -20,12 +21,14 @@ void PreprocessedFileViewer::doindent() {
   }
 }
 
-//TODO: fix name variable
-void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence) {
+// TODO: fix name variable
+void PreprocessedFileViewer::recursive_view_sequence(
+    models::Sequence *sequence) {
   models::Symbol *v;
   models::SeqList *h;
 
-  for (models::Element *element = sequence->frst; element; element = element->next) {
+  for (models::Element *element = sequence->frst; element;
+       element = element->next) {
     v = has_lab(element, 0);
     if (v) {
       std::cout << fmt::format("{}:", v->name) << std::endl;
@@ -84,10 +87,11 @@ void PreprocessedFileViewer::recursive_view_sequence(models::Sequence *sequence)
         doindent();
         if (element->n->node_type == C_CODE) {
           std::cout << "c_code ";
-          plunk_inline(stdout, element->n->symbol->name, 1, 1);
-        } else if (element->n->node_type == 'c' && element->n->left->node_type == C_EXPR) {
+          codegen::PlunkInline(stdout, element->n->symbol->name, 1, 1);
+        } else if (element->n->node_type == 'c' &&
+                   element->n->left->node_type == C_EXPR) {
           std::cout << "c_expr { ";
-          plunk_expr(stdout, element->n->left->symbol->name);
+          codegen::PlunkExpr(stdout, element->n->left->symbol->name);
           std::cout << "} ->" << std::endl;
         } else {
           comment(stdout, element->n, 0);

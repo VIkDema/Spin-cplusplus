@@ -32,6 +32,9 @@ public:
   static void SetInliner(char *new_inliner);
   static void IncInlining();
 
+  static int CheckGlobInline(const std::string &s);
+  static void CheckInline(models::IType* itype);
+
 private:
   static int Inlining;
   static char *ReDiRect_;

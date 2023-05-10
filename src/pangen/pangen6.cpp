@@ -29,12 +29,12 @@ struct Pair {
 
 struct AST {
   models::ProcList *p; /* proctype decl */
-  int i_st;    /* start state */
+  int i_st;            /* start state */
   int nstates, nwords;
   int relevant;
   Pair *pairs;            /* entry and exit nodes of proper subgraphs */
   models::FSM_state *fsm; /* proctype body */
-  struct AST *next;        /* linked list */
+  struct AST *next;       /* linked list */
 };
 
 struct RPN { /* relevant proctype names */
@@ -46,12 +46,12 @@ struct ALIAS {         /* channel aliasing info */
   models::Lextok *cnm; /* this chan */
   int origin;          /* debugging - origin of the alias */
   struct ALIAS *alias; /* can be an alias for these other chans */
-  struct ALIAS *next;   /* linked list */
+  struct ALIAS *next;  /* linked list */
 };
 
 struct ChanList {
-  models::Lextok *s;    /* containing stmnt */
-  models::Lextok *n;    /* point of reference - could be struct */
+  models::Lextok *s;     /* containing stmnt */
+  models::Lextok *n;     /* point of reference - could be struct */
   struct ChanList *next; /* linked list */
 };
 
@@ -411,7 +411,7 @@ static void AST_para(models::ProcList *p) {
         c = t->left; /* expanded struct */
 
       cnt++;
-      if (Sym_typ(c) == CHAN) {
+      if (c->ResolveSymbolType() == CHAN) {
         ALIAS *na = (ALIAS *)emalloc(sizeof(ALIAS));
 
         na->cnm = c;
@@ -425,7 +425,7 @@ static void AST_para(models::ProcList *p) {
 static void AST_haschan(models::Lextok *c) {
   if (!c)
     return;
-  if (Sym_typ(c) == CHAN) {
+  if (c->ResolveSymbolType() == CHAN) {
     AST_add_alias(c, 2); /* ASGN */
   } else {
     AST_haschan(c->right);
@@ -510,10 +510,11 @@ static void AST_other(AST *a) /* check chan params in asgns and recvs */
   models::FSM_use *u;
   ChanList *cl;
 
-  for (f = a->fsm; f; f = f->next)                        /* control states */
-    for (t = f->t; t; t = t->next)                        /* transitions    */
-      for (u = t->Val[0]; u; u = u->next)                 /* def/use info   */
-        if (Sym_typ(u->n) == CHAN && (u->special & DEF)) /* def of chan-name  */
+  for (f = a->fsm; f; f = f->next)        /* control states */
+    for (t = f->t; t; t = t->next)        /* transitions    */
+      for (u = t->Val[0]; u; u = u->next) /* def/use info   */
+        if (u->n->ResolveSymbolType() == CHAN &&
+            (u->special & DEF)) /* def of chan-name  */
         {
           AST_setcur(u->n);
           switch (t->step->n->node_type) {
@@ -574,8 +575,8 @@ static void AST_aliases(void) {
   printf("\n");
 }
 
-static void AST_indirect(models::FSM_use *uin, models::FSM_trans *t, const std::string &cause,
-                         const std::string &pn) {
+static void AST_indirect(models::FSM_use *uin, models::FSM_trans *t,
+                         const std::string &cause, const std::string &pn) {
   models::FSM_use *u;
 
   /* this is a newly discovered relevant statement */
@@ -609,8 +610,8 @@ static void AST_indirect(models::FSM_use *uin, models::FSM_trans *t, const std::
     }
 }
 
-static void def_relevant(const std::string &pn, models::FSM_trans *t, models::Lextok *n,
-                         int ischan) {
+static void def_relevant(const std::string &pn, models::FSM_trans *t,
+                         models::Lextok *n, int ischan) {
   models::FSM_use *u;
   ALIAS *na, *ca;
   int chanref;
@@ -622,7 +623,7 @@ static void def_relevant(const std::string &pn, models::FSM_trans *t, models::Le
 
   if (n->node_type != ELSE)
     for (u = t->Val[0]; u; u = u->next) {
-      chanref = (Sym_typ(u->n) == CHAN);
+      chanref = (u->n->ResolveSymbolType() == CHAN);
 
       if (ischan != chanref                     /* no possible match  */
           || !(u->special & (DEF | DEREF_DEF))) /* not a def */
@@ -662,7 +663,7 @@ static void AST_relevant(models::Lextok *n) {
 
   if (!n)
     return;
-  ischan = (Sym_typ(n) == CHAN);
+  ischan = (n->ResolveSymbolType() == CHAN);
 
   if (verbose_flags.NeedToPrintVerbose()) {
     printf("<<ast_relevant (node_type=%d) ", n->node_type);
@@ -802,7 +803,8 @@ static void AST_tagruns(void) {
         }
 }
 
-static void AST_report(AST *a, models::Element *e) /* ALSO deduce irrelevant vars */
+static void AST_report(AST *a,
+                       models::Element *e) /* ALSO deduce irrelevant vars */
 {
   if (!(a->relevant & 2)) {
     a->relevant |= 2;
@@ -935,7 +937,7 @@ static void AST_sends(AST *a) {
     {
       if (t->step && t->step->n && t->step->n->node_type == 's')
         for (u = t->Val[0]; u; u = u->next) {
-          if (Sym_typ(u->n) == CHAN &&
+          if (u->n->ResolveSymbolType() == CHAN &&
               ((u->special & USE) && !(u->special & DEREF_USE))) {
             cl = (ChanList *)emalloc(sizeof(ChanList));
             cl->s = t->step->n;
@@ -1325,7 +1327,7 @@ static void AST_data_dep(void) {
     if (verbose_flags.NeedToPrintVerbose()) {
       printf("spin: slice criterion ");
       AST_var(sc->slice_criterion, sc->slice_criterion->symbol, 1);
-      printf(" type=%d\n", Sym_typ(sc->slice_criterion));
+      printf(" type=%d\n", sc->slice_criterion->ResolveSymbolType());
     }
     AST_relevant(sc->slice_criterion);
   }
@@ -1414,7 +1416,7 @@ static int AST_notrelevant(models::Lextok *n) {
 static int AST_withchan(models::Lextok *n) {
   if (!n)
     return 0;
-  if (Sym_typ(n) == CHAN)
+  if (n->ResolveSymbolType() == CHAN)
     return 1;
   return AST_withchan(n->left) || AST_withchan(n->right);
 }
@@ -1724,8 +1726,8 @@ static void AST_add_explicit(models::Lextok *d, models::Lextok *u) {
   models::FSM_trans *e =
       (models::FSM_trans *)emalloc(sizeof(models::FSM_trans));
 
-  e->to = 0;              /* or start_state ? */
-  e->relevant = 0;        /* to be determined */
+  e->to = 0;                      /* or start_state ? */
+  e->relevant = 0;                /* to be determined */
   e->step = (models::Element *)0; /* left blank */
   e->Val[0] = e->Val[1] = nullptr;
 
@@ -1918,7 +1920,7 @@ static int bad_scratch(models::FSM_state *f, int upto) {
 }
 
 static void mark_subgraph(models::FSM_state *f, int upto) {
-   models::FSM_trans *t;
+  models::FSM_trans *t;
 
   if (f->from == upto || !f->seen || (f->scratch & 2))
     return;
@@ -2038,7 +2040,7 @@ static void reachability(AST *a) {
 }
 
 static int see_else(models::FSM_state *f) {
-   models::FSM_trans *t;
+  models::FSM_trans *t;
 
   for (t = f->t; t; t = t->next) {
     if (t->step && t->step->n)

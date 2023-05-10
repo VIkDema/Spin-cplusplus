@@ -1,10 +1,10 @@
 #include "lexer.hpp"
 
+#include "../helpers/helpers.hpp"
 #include "../models/lextok.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
-#include "helpers.hpp"
 #include "inline_processor.hpp"
 #include "line_number.hpp"
 #include "names.hpp"
@@ -14,7 +14,7 @@
 #include <iostream>
 #include <optional>
 
-extern std::string yytext;
+std::string yytext;
 extern models::Symbol *Fname, *oFname;
 extern YYSTYPE yylval;
 extern models::Symbol *context;
@@ -23,7 +23,7 @@ extern models::Symbol *context;
   {                                                                            \
     if (in_comment_)                                                           \
       goto again;                                                              \
-    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                                \
+    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                \
     yylval->value = x;                                                         \
     last_token_ = y;                                                           \
     return y;                                                                  \
@@ -32,7 +32,7 @@ extern models::Symbol *context;
   {                                                                            \
     if (in_comment_)                                                           \
       goto again;                                                              \
-    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                                \
+    yylval = models::Lextok::nn(ZN, 0, ZN, ZN);                                \
     yylval->symbol = x;                                                        \
     last_token_ = y;                                                           \
     return y;                                                                  \
@@ -157,7 +157,7 @@ int Lexer::CheckName(const std::string &value) {
     }
   }
   std::string value_copy = value;
-  yylval->symbol = lookup(value_copy.data()); /* symbol table */
+  yylval->symbol = lookup(value_copy); /* symbol table */
   if (IsUtype(value)) {
     return UNAME;
   }

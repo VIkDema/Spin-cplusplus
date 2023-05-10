@@ -27,6 +27,7 @@ static models::Lextok *cpnn(models::Lextok *, int, int, int);
 extern void sr_mesg(FILE *, int, int, const std::string &);
 extern void Done_case(const std::string &, models::Symbol *);
 
+//TODO:может быть в lextok
 void setuname(models::Lextok *n) {
   UType *tmp;
 
@@ -72,6 +73,7 @@ bool IsUtype(const std::string &value) {
   return false;
 }
 
+// TODO:Can be in Symbol
 models::Lextok *getuname(models::Symbol *t) {
   UType *tmp;
 
@@ -264,22 +266,6 @@ is_lst:
         cnt += tl->symbol->value_type;
     }
   return cnt;
-}
-
-int Sym_typ(models::Lextok *t) {
-  models::Symbol *s = t->symbol;
-
-  if (!s)
-    return 0;
-
-  if (s->type != models::SymbolType::kStruct)
-    return s->type;
-
-  if (!t->right || t->right->node_type != '.' /* gh: had ! in wrong place */
-      || !t->right->left)
-    return STRUCT; /* not a field reference */
-
-  return Sym_typ(t->right->left);
 }
 
 int Width_set(int *wdth, int i, models::Lextok *n) {
@@ -565,6 +551,7 @@ static int retrieve(models::Lextok **targ, int i, int want, models::Lextok *n,
   return j;
 }
 
+//TODO:может быть в lextok
 static int is_explicit(models::Lextok *n) {
   if (!n)
     return 0;
@@ -652,6 +639,7 @@ models::Lextok *mk_explicit(models::Lextok *n, int Ok, int Ntyp)
   return bld;
 }
 
+//TODO:может быть в lextok
 models::Lextok *tail_add(models::Lextok *a, models::Lextok *b) {
   models::Lextok *t;
 
@@ -662,6 +650,7 @@ models::Lextok *tail_add(models::Lextok *a, models::Lextok *b) {
   return a;
 }
 
+//TODO:может быть в lextok
 void setpname(models::Lextok *n) {
   UType *tmp;
 
@@ -675,7 +664,7 @@ void setpname(models::Lextok *n) {
   tmp->next = Pnames;
   Pnames = tmp;
 }
-
+//TODO:может быть в symbol??
 bool IsProctype(const std::string &value) {
   UType *tmp;
 

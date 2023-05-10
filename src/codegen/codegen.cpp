@@ -1,22 +1,26 @@
-/***** spin: spinlex.c *****/
+#include "codegen.hpp"
 
-#include "fatal/fatal.hpp"
-#include "lexer/inline_processor.hpp"
-#include "lexer/lexer.hpp"
-#include "lexer/line_number.hpp"
-#include "main/launch_settings.hpp"
-#include "models/lextok.hpp"
-#include "spin.hpp"
-#include "utils/verbose/verbose.hpp"
+#include "../helpers/helpers.hpp"
+#include "../lexer/inline_processor.hpp"
+#include "../lexer/lexer.hpp"
+#include "../lexer/line_number.hpp"
+#include "../main/launch_settings.hpp"
+#include "../models/lextok.hpp"
+#include "../models/symbol.hpp"
+#include "../utils/memory.hpp"
 #include "y.tab.h"
-#include <assert.h>
-#include <ctype.h>
-#include <errno.h>
-#include <optional>
-#include <stdlib.h>
-#include <string>
 
+extern lexer::Lexer lexer_;
 extern LaunchSettings launch_settings;
+extern short terse;
+extern short nocast;
+extern models::Symbol *Fname;
+short has_stack = 0;
+extern int hastrack;
+extern models::ProcList *ready;
+
+namespace codegen {
+namespace {
 
 struct C_Added {
   models::Symbol *s;
@@ -26,143 +30,7 @@ struct C_Added {
   int opt_line_number;
   struct C_Added *next;
 };
-
-extern models::RunList *X_lst;
-extern models::ProcList *ready;
-extern models::Symbol *Fname;
-extern models::Symbol *context;
-extern YYSTYPE yylval;
-extern int hastrack;
-extern lexer::Lexer lexer_;
-short has_stack = 0;
-std::string yytext;
-FILE *yyin, *yyout;
-
 static C_Added *c_added, *c_tracked;
-
-// use in pangen2.cpp
-void gencodetable(FILE *fd) {
-  models::IType *tmp;
-  char *q;
-  int cnt;
-
-  if (launch_settings.separate_version == 2)
-    return;
-
-  fprintf(fd, "struct {\n");
-  fprintf(fd, "	char *c; char *t;\n");
-  fprintf(fd, "} code_lookup[] = {\n");
-
-  if (lexer_.GetHasCode())
-    for (tmp = lexer::InlineProcessor::GetSeqNames(); tmp; tmp = tmp->next)
-      if (tmp->nm->type == CODE_FRAG || tmp->nm->type == CODE_DECL) {
-        fprintf(fd, "\t{ \"%s\", ", tmp->nm->name.c_str());
-        q = (char *)tmp->cn;
-
-        while (*q == '\n' || *q == '\r' || *q == '\\')
-          q++;
-
-        fprintf(fd, "\"");
-        cnt = 0;
-        while (*q && cnt < 1024) /* pangen1.h allows 2048 */
-        {
-          switch (*q) {
-          case '"':
-            fprintf(fd, "\\\"");
-            break;
-          case '%':
-            fprintf(fd, "%%");
-            break;
-          case '\n':
-            fprintf(fd, "\\n");
-            break;
-          default:
-            putc(*q, fd);
-            break;
-          }
-          q++;
-          cnt++;
-        }
-        if (*q)
-          fprintf(fd, "...");
-        fprintf(fd, "\"");
-        fprintf(fd, " },\n");
-      }
-
-  fprintf(fd, "	{ (char *) 0, \"\" }\n");
-  fprintf(fd, "};\n");
-}
-
-void c_state(models::Symbol *s, models::Symbol *t,
-             models::Symbol *ival) /* name, scope, ival */
-{
-  C_Added *r;
-
-  r = (C_Added *)emalloc(sizeof(C_Added));
-  r->s = s; /* pointer to a data object */
-  r->t = t; /* size of object, or "global", or "local proctype_name"  */
-  r->ival = ival;
-  r->opt_line_number = file::LineNumber::Get();
-  r->file_name = Fname;
-  r->next = c_added;
-
-  if (strncmp(r->s->name.c_str(), "\"unsigned unsigned", 18) == 0) {
-    int i;
-    for (i = 10; i < 18; i++) {
-      r->s->name[i] = ' ';
-    }
-    /*	printf("corrected <%s>\n", r->s->name);	*/
-  }
-  c_added = r;
-}
-
-void c_track(models::Symbol *s, models::Symbol *t,
-             models::Symbol *stackonly) /* name, size */
-{
-  C_Added *r;
-
-  r = (C_Added *)emalloc(sizeof(C_Added));
-  r->s = s;
-  r->t = t;
-  r->ival = stackonly; /* abuse of name */
-  r->next = c_tracked;
-  r->file_name = Fname;
-  r->opt_line_number = file::LineNumber::Get();
-  c_tracked = r;
-
-  if (stackonly != ZS) {
-    if (stackonly->name == "\"Matched\"")
-      r->ival = ZS; /* the default */
-    else if (stackonly->name != "\"UnMatched\"" &&
-             stackonly->name != "\"unMatched\"" &&
-             stackonly->name != "\"StackOnly\"")
-      loger::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
-    else
-      has_stack = 1; /* unmatched stack */
-  }
-}
-
-std::string skip_white(const std::string &p) {
-  std::string::size_type i = 0;
-  while (i < p.length() && (p[i] == ' ' || p[i] == '\t')) {
-    i++;
-  }
-  if (i == p.length()) {
-    loger::fatal("bad format - 1");
-  }
-  return p.substr(i);
-}
-
-std::string skip_nonwhite(const std::string &p) {
-  std::string::size_type i = 0;
-  while (i < p.length() && (p[i] != ' ' && p[i] != '\t')) {
-    i++;
-  }
-  if (i == p.length()) {
-    loger::fatal("bad format - 2");
-  }
-  return p.substr(i);
-}
 
 std::string jump_etc(C_Added *r) {
   std::string op = r->s->name;
@@ -176,24 +44,24 @@ std::string jump_etc(C_Added *r) {
   file::LineNumber::Set(r->opt_line_number);
   Fname = r->file_name;
 
-  p = skip_white(p);
+  p = helpers::SkipWhite(p);
 
   if (p.compare(0, 4, "enum") == 0) {
     p = p.substr(4);
-    p = skip_white(p);
+    p = helpers::SkipWhite(p);
   }
   if (p.compare(0, 8, "unsigned") == 0) {
     p = p.substr(8);
-    q = skip_white(p);
+    q = helpers::SkipWhite(p);
   }
-  p = skip_nonwhite(p);
-  p = skip_white(p);
+  p = helpers::SkipNonwhite(p);
+  p = helpers::SkipWhite(p);
 
   while (!p.empty() && p.front() == '*') {
     p = p.substr(1);
   }
 
-  p = skip_white(p);
+  p = helpers::SkipWhite(p);
 
   if (p.empty()) {
     if (!q.empty()) {
@@ -214,7 +82,8 @@ std::string jump_etc(C_Added *r) {
 
   return p;
 }
-void c_add_globinit(FILE *fd) {
+
+void CAddGlobInit(FILE *fd) {
   C_Added *r;
   std::string p;
 
@@ -260,7 +129,222 @@ void c_add_globinit(FILE *fd) {
   fprintf(fd, "}\n");
 }
 
-void c_add_locinit(FILE *fd, int tpnr, const std::string &pnm) {
+void CAddHidden(FILE *fd) {
+  C_Added *r;
+
+  for (r = c_added; r; r = r->next) /* pickup hidden_flags decls */
+    if (r->t->name.compare(0, 6, "Hidden") == 0) {
+      r->s->name.back() = ' ';
+      fprintf(fd, "%s;	/* Hidden */\n", r->s->name.substr(1).c_str());
+      r->s->name.back() = '"';
+    }
+  /* called before CAddDef - quotes are still there */
+}
+
+void PlunkReverse(FILE *fd, models::IType *p, int matchthis) {
+  char *y, *z;
+
+  if (!p)
+    return;
+  PlunkReverse(fd, p->next, matchthis);
+
+  if (!p->nm->context && p->nm->type == matchthis && p->is_expr == 0) {
+    fprintf(fd, "\n/* start of %s */\n", p->nm->name.c_str());
+    z = (char *)p->cn;
+    while (*z == '\n' || *z == '\r' || *z == '\\') {
+      z++;
+    }
+    /* e.g.: \#include "..." */
+
+    y = z;
+    while ((y = strstr(y, "\\#")) != NULL) {
+      *y = '\n';
+      y++;
+    }
+
+    fprintf(fd, "%s\n", z);
+    fprintf(fd, "\n/* end of %s */\n", p->nm->name.c_str());
+  }
+}
+
+void DoLocInits(FILE *fd) {
+  models::ProcList *p;
+
+  /* the locinit functions may refer to pptr or qptr */
+  fprintf(fd, "#if VECTORSZ>32000\n");
+  fprintf(fd, "	extern int \n");
+  fprintf(fd, "#else\n");
+  fprintf(fd, "	extern short \n");
+  fprintf(fd, "#endif\n");
+  fprintf(fd, "	*proc_offset, *q_offset;\n");
+
+  for (p = ready; p; p = p->next) {
+
+    codegen::AddLocInit(fd, p->tn, p->n->name);
+  }
+}
+
+} // namespace
+void GenCodeTable(FILE *fd) {
+  char *q;
+  int count;
+
+  if (launch_settings.separate_version == 2)
+    return;
+
+  fprintf(fd, "struct {\n"
+              "\tchar *c;\n"
+              "\tchar *t;\n"
+              "} code_lookup[] = {\n");
+
+  if (!lexer_.GetHasCode()) {
+    fprintf(fd, "	{ (char *) 0, \"\" }\n};\n");
+    return;
+  }
+
+  for (auto tmp = lexer::InlineProcessor::GetSeqNames(); tmp; tmp = tmp->next) {
+    if (tmp->nm->type != CODE_FRAG && tmp->nm->type != CODE_DECL) {
+      continue;
+    }
+
+    fprintf(fd, "\t{ \"%s\", ", tmp->nm->name.c_str());
+    q = (char *)tmp->cn;
+
+    while (*q == '\n' || *q == '\r' || *q == '\\') {
+      q++;
+    }
+
+    fprintf(fd, "\"");
+    count = 0;
+    while (*q && count < 1024) /* pangen1.h allows 2048 */
+    {
+      switch (*q) {
+      case '"': {
+        fprintf(fd, "\\\"");
+        break;
+      }
+      case '%': {
+        fprintf(fd, "%%");
+        break;
+      }
+      case '\n': {
+        fprintf(fd, "\\n");
+        break;
+      }
+      default: {
+        putc(*q, fd);
+        break;
+      }
+      }
+      q++;
+      count++;
+    }
+    if (*q) {
+      fprintf(fd, "...");
+    }
+    fprintf(fd, "\" },\n");
+  }
+
+  fprintf(fd, "	{ (char *) 0, \"\" }\n};\n");
+}
+
+void PlunkInline(FILE *fd, const std::string &s, int how,
+                 int gencode) /* c_code with precondition */
+{
+
+  auto tmp = lexer::InlineProcessor::FindInline(s);
+  lexer::InlineProcessor::CheckInline(tmp);
+
+  fprintf(fd, "{ ");
+  if (how && tmp->prec) {
+    fprintf(fd, "if (!(%s)) { if (!readtrail) {", tmp->prec);
+    fprintf(fd,
+            " uerror(\"c_code line %d precondition false: %s\"); continue; ",
+            tmp->dln, tmp->prec);
+    fprintf(fd, "} else { ");
+    fprintf(
+        fd,
+        "printf(\"pan: precondition false: %s\\n\"); _m = 3; goto P999; } } ",
+        tmp->prec);
+  }
+
+  if (!gencode) /* not in d_step */
+  {
+    fprintf(fd, "\n\t\tsv_save();");
+  }
+
+  fprintf(fd, "%s", (char *)tmp->cn);
+  fprintf(fd, " }\n");
+}
+
+void PlunkExpr(FILE *fd, const std::string &s) {
+  char *q;
+
+  auto tmp = lexer::InlineProcessor::FindInline(s);
+  lexer::InlineProcessor::CheckInline(tmp);
+
+  if (terse && nocast) {
+    for (q = (char *)tmp->cn; q && *q != '\0'; q++) {
+      fflush(fd);
+      if (*q == '"') {
+        fprintf(fd, "\\");
+      }
+      fprintf(fd, "%c", *q);
+    }
+  } else {
+    fprintf(fd, "%s", (char *)tmp->cn);
+  }
+}
+
+void HandleCState(models::Symbol *s, models::Symbol *t,
+                  models::Symbol *ival) /* name, scope, ival */
+{
+  C_Added *r = (C_Added *)emalloc(sizeof(C_Added));
+  r->s = s; /* pointer to a data object */
+  r->t = t; /* size of object, or "global", or "local proctype_name"  */
+  r->ival = ival;
+  r->opt_line_number = file::LineNumber::Get();
+  r->file_name = Fname;
+  r->next = c_added;
+
+  if (strncmp(r->s->name.c_str(), "\"unsigned unsigned", 18) == 0) {
+    int i;
+    for (i = 10; i < 18; i++) {
+      r->s->name[i] = ' ';
+    }
+    /*	printf("corrected <%s>\n", r->s->name);	*/
+  }
+  c_added = r;
+}
+
+void HandleCTrack(models::Symbol *s, models::Symbol *t,
+                  models::Symbol *stackonly) /* name, size */
+{
+  C_Added *r;
+
+  r = (C_Added *)emalloc(sizeof(C_Added));
+  r->s = s;
+  r->t = t;
+  r->ival = stackonly; /* abuse of name */
+  r->next = c_tracked;
+  r->file_name = Fname;
+  r->opt_line_number = file::LineNumber::Get();
+  c_tracked = r;
+
+  if (stackonly != nullptr) {
+    if (stackonly->name == "\"Matched\"")
+      r->ival = nullptr; /* the default */
+    else if (stackonly->name != "\"UnMatched\"" &&
+             stackonly->name != "\"unMatched\"" &&
+             stackonly->name != "\"StackOnly\"") {
+      loger::non_fatal("expecting '[Un]Matched', saw %s", stackonly->name);
+    } else {
+      has_stack = 1; /* unmatched stack */
+    }
+  }
+}
+
+void AddLocInit(FILE *fd, int tpnr, const std::string &pnm) {
   C_Added *r;
   std::string p, q, s;
   int frst = 1;
@@ -306,7 +390,7 @@ void c_add_locinit(FILE *fd, int tpnr, const std::string &pnm) {
         4. generate a call to that routine
  */
 
-void c_preview(void) {
+void CPreview(void) {
   C_Added *r;
 
   hastrack = 0;
@@ -322,7 +406,7 @@ void c_preview(void) {
       }
 }
 
-int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
+int CAddSv(FILE *fd) /* 1+2 -- called in pangen1.c */
 {
   C_Added *r;
   int cnt = 0;
@@ -371,7 +455,7 @@ int c_add_sv(FILE *fd) /* 1+2 -- called in pangen1.c */
   return 1;
 }
 
-void c_stack_size(FILE *fd) {
+void CStackSize(FILE *fd) {
   C_Added *r;
   int cnt = 0;
 
@@ -385,7 +469,7 @@ void c_stack_size(FILE *fd) {
   }
 }
 
-void c_add_stack(FILE *fd) {
+void CAddStack(FILE *fd) {
   C_Added *r;
   int cnt = 0;
 
@@ -403,19 +487,7 @@ void c_add_stack(FILE *fd) {
   }
 }
 
-void c_add_hidden(FILE *fd) {
-  C_Added *r;
-
-  for (r = c_added; r; r = r->next) /* pickup hidden_flags decls */
-    if (r->t->name.compare(0, 6, "Hidden") == 0) {
-      r->s->name.back() = ' ';
-      fprintf(fd, "%s;	/* Hidden */\n", r->s->name.substr(1).c_str());
-      r->s->name.back() = '"';
-    }
-  /* called before c_add_def - quotes are still there */
-}
-
-void c_add_loc(FILE *fd, const std::string &s) {
+void CAddLoc(FILE *fd, const std::string &s) {
   C_Added *r;
   static char buf[1024];
   const char *p;
@@ -441,7 +513,7 @@ void c_add_loc(FILE *fd, const std::string &s) {
   }
 }
 
-void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
+void CAddDef(FILE *fd) /* 3 - called in plunk_c_fcts() */
 {
   C_Added *r;
 
@@ -570,44 +642,18 @@ void c_add_def(FILE *fd) /* 3 - called in plunk_c_fcts() */
   fprintf(fd, "#endif\n");
 }
 
-void plunk_reverse(FILE *fd, models::IType *p, int matchthis) {
-  char *y, *z;
-
-  if (!p)
-    return;
-  plunk_reverse(fd, p->next, matchthis);
-
-  if (!p->nm->context && p->nm->type == matchthis && p->is_expr == 0) {
-    fprintf(fd, "\n/* start of %s */\n", p->nm->name.c_str());
-    z = (char *)p->cn;
-    while (*z == '\n' || *z == '\r' || *z == '\\') {
-      z++;
-    }
-    /* e.g.: \#include "..." */
-
-    y = z;
-    while ((y = strstr(y, "\\#")) != NULL) {
-      *y = '\n';
-      y++;
-    }
-
-    fprintf(fd, "%s\n", z);
-    fprintf(fd, "\n/* end of %s */\n", p->nm->name.c_str());
-  }
+void HandleCDescls(FILE *fd) {
+  PlunkReverse(fd, lexer::InlineProcessor::GetSeqNames(), CODE_DECL);
 }
 
-void plunk_c_decls(FILE *fd) {
-  plunk_reverse(fd, lexer::InlineProcessor::GetSeqNames(), CODE_DECL);
-}
-
-void plunk_c_fcts(FILE *fd) {
+void HandleCFCTS(FILE *fd) {
   if (launch_settings.separate_version == 2 && hastrack) {
-    c_add_def(fd);
+    CAddDef(fd);
     return;
   }
 
-  c_add_hidden(fd);
-  plunk_reverse(fd, lexer::InlineProcessor::GetSeqNames(), CODE_FRAG);
+  CAddHidden(fd);
+  PlunkReverse(fd, lexer::InlineProcessor::GetSeqNames(), CODE_FRAG);
 
   if (c_added || c_tracked) /* enables calls to c_revert and c_update */
     fprintf(fd, "#define C_States	1\n");
@@ -615,65 +661,21 @@ void plunk_c_fcts(FILE *fd) {
     fprintf(fd, "#undef C_States\n");
 
   if (hastrack)
-    c_add_def(fd);
+    CAddDef(fd);
 
-  c_add_globinit(fd);
-  do_locinits(fd);
+  CAddGlobInit(fd);
+  DoLocInits(fd);
 }
 
-static void check_inline(models::IType *tmp) {
-  char buf[128];
-  models::ProcList *p;
-
-  if (!X_lst)
-    return;
-
-  for (p = ready; p; p = p->next) {
-    if (p->n->name == X_lst->n->name) {
-      continue;
-    }
-    sprintf(buf, "P%s->", p->n->name.c_str());
-    if (strstr((char *)tmp->cn, buf)) {
-      printf("spin: in proctype %s, ref to object in proctype %s\n",
-             X_lst->n->name.c_str(), p->n->name.c_str());
-      loger::fatal("invalid variable ref in '%s'", tmp->nm->name);
-    }
-  }
-}
-
-extern short terse;
-extern short nocast;
-
-void plunk_expr(FILE *fd, const std::string &s) {
-  models::IType *tmp;
-  char *q;
-
-  tmp = lexer::InlineProcessor::FindInline(s);
-  check_inline(tmp);
-
-  if (terse && nocast) {
-    for (q = (char *)tmp->cn; q && *q != '\0'; q++) {
-      fflush(fd);
-      if (*q == '"') {
-        fprintf(fd, "\\");
-      }
-      fprintf(fd, "%c", *q);
-    }
-  } else {
-    fprintf(fd, "%s", (char *)tmp->cn);
-  }
-}
-
-void preruse(
+void PreRuse(
     FILE *fd,
     models::Lextok *n) /* check a condition for c_expr with preconditions */
 {
-  models::IType *tmp;
-
   if (!n)
     return;
+
   if (n->node_type == C_EXPR) {
-    tmp = lexer::InlineProcessor::FindInline(n->symbol->name);
+    auto tmp = lexer::InlineProcessor::FindInline(n->symbol->name);
     if (tmp->prec) {
       fprintf(fd, "if (!(%s)) { if (!readtrail) { depth++; ", tmp->prec);
       fprintf(fd, "trpt++; trpt->pr = II; trpt->o_t = t; trpt->st = tt; ");
@@ -685,102 +687,15 @@ void preruse(
       fprintf(fd, "_m = 3; goto P999; } } \n\t\t");
     }
   } else {
-    preruse(fd, n->right);
-    preruse(fd, n->left);
+    PreRuse(fd, n->right);
+    PreRuse(fd, n->left);
   }
 }
 
-int glob_inline(const std::string &s) {
-  models::IType *tmp;
-  char *bdy;
-
-  tmp = lexer::InlineProcessor::FindInline(s);
-  bdy = (char *)tmp->cn;
-  return (strstr(bdy, "now.")         /* global ref or   */
-          || strchr(bdy, '(') > bdy); /* possible C-function call */
-}
-
-char *put_inline(FILE *fd, const std::string &s) {
-  models::IType *tmp;
-
-  tmp = lexer::InlineProcessor::FindInline(s);
-  check_inline(tmp);
+char *PutInline(FILE *fd, const std::string &s) {
+  auto tmp = lexer::InlineProcessor::FindInline(s);
+  lexer::InlineProcessor::CheckInline(tmp);
   return (char *)tmp->cn;
 }
 
-void plunk_inline(FILE *fd, const std::string &s, int how,
-                  int gencode) /* c_code with precondition */
-{
-  models::IType *tmp;
-
-  tmp = lexer::InlineProcessor::FindInline(s.c_str());
-  check_inline(tmp);
-
-  fprintf(fd, "{ ");
-  if (how && tmp->prec) {
-    fprintf(fd, "if (!(%s)) { if (!readtrail) {", tmp->prec);
-    fprintf(fd,
-            " uerror(\"c_code line %d precondition false: %s\"); continue; ",
-            tmp->dln, tmp->prec);
-    fprintf(fd, "} else { ");
-    fprintf(
-        fd,
-        "printf(\"pan: precondition false: %s\\n\"); _m = 3; goto P999; } } ",
-        tmp->prec);
-  }
-
-  if (!gencode) /* not in d_step */
-  {
-    fprintf(fd, "\n\t\tsv_save();");
-  }
-
-  fprintf(fd, "%s", (char *)tmp->cn);
-  fprintf(fd, " }\n");
-}
-
-int side_scan(char *t, char *pat) {
-  char *r = strstr(t, pat);
-  return (r && *(r - 1) != '"' && *(r - 1) != '\'');
-}
-
-void no_side_effects(const std::string &s) {
-  models::IType *tmp;
-  char *t;
-  char *z;
-
-  /* could still defeat this check via hidden_flags
-   * side effects in function calls,
-   * but this will catch at least some cases
-   */
-
-  tmp = lexer::InlineProcessor::FindInline(s);
-  t = (char *)tmp->cn;
-  while (t && *t == ' ') {
-    t++;
-  }
-
-  z = strchr(t, '(');
-  if (z && z > t && isalnum((int)*(z - 1)) &&
-      strncmp(t, "spin_mutex_free(", strlen("spin_mutex_free(")) != 0) {
-    goto bad; /* fct call */
-  }
-
-  if (side_scan(t, ";") || side_scan(t, "++") || side_scan(t, "--")) {
-  bad:
-    file::LineNumber::Set(tmp->dln);
-    Fname = tmp->dfn;
-    loger::non_fatal("c_expr %s has side-effects", s);
-    return;
-  }
-  while ((t = strchr(t, '=')) != NULL) {
-    if (*(t - 1) == '!' || *(t - 1) == '>' || *(t - 1) == '<' ||
-        *(t - 1) == '"' || *(t - 1) == '\'') {
-      t += 2;
-      continue;
-    }
-    t++;
-    if (*t != '=')
-      goto bad;
-    t++;
-  }
-}
+} // namespace codegen

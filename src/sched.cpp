@@ -969,9 +969,9 @@ static void oneparam(models::RunList *r, models::Lextok *t, models::Lextok *a,
     loger::fatal("array in parameter list, %s", t->symbol->name);
   k = eval(a->left);
 
-  at = Sym_typ(a->left);
+  at = a->left->ResolveSymbolType();
   X_lst = r; /* switch context */
-  ft = Sym_typ(t);
+  ft = t->ResolveSymbolType();
 
   if (at != ft && (at == CHAN || ft == CHAN)) {
     std::string buf, tag1, tag2;

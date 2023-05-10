@@ -1,5 +1,7 @@
 #include "pangen2.hpp"
+#include "../codegen/codegen.hpp"
 #include "../fatal/fatal.hpp"
+#include "../lexer/inline_processor.hpp"
 #include "../lexer/lexer.hpp"
 #include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
@@ -490,7 +492,7 @@ doless:
 
   ntimes(fd_tc, 0, 1, Pre0);
 
-  plunk_c_decls(fd_tc); /* types can be refered to in State */
+  codegen::HandleCDescls(fd_tc); /* types can be refered to in State */
 
   switch (launch_settings.separate_version) {
   case 0:
@@ -526,7 +528,7 @@ doless:
   fprintf(fd_tc, "	char *p_name[MAXPROC+1];\n");
   fprintf(fd_tc, "#endif\n");
 
-  plunk_c_fcts(fd_tc); /* State can be used in fcts */
+  codegen::HandleCFCTS(fd_tc); /* State can be used in fcts */
 
   if (launch_settings.separate_version != 2) {
     ntimes(fd_tc, 0, 1, Preamble);
@@ -542,7 +544,7 @@ doless:
   fprintf(fd_tc, "	#define Index(x, y)\tx\n");
   fprintf(fd_tc, "#endif\n");
 
-  c_preview(); /* sets hastrack */
+  codegen::CPreview(); /* sets hastrack */
 
   for (p = ready; p; p = p->next)
     mstp = max(p->s->maxel, mstp);
@@ -665,8 +667,7 @@ doless:
   } else {
     fprintf(fd_tc, "extern uchar reached%d[3];  /* np_ */\n", nrRdy);
   }
-
-  gencodetable(fd_tc); /* was th */
+  codegen::GenCodeTable(fd_tc); /* was th */
 
   if (Unique < (1 << (8 * sizeof(unsigned char)))) /* was uniq before */
   {
@@ -2348,7 +2349,7 @@ int has_global(models::Lextok *n) {
 
   case C_CODE:
   case C_EXPR:
-    return glob_inline(n->symbol->name);
+    return lexer::InlineProcessor::CheckGlobInline(n->symbol->name);
 
   case ENABLED:
   case PC_VAL:
@@ -3261,7 +3262,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     break;
 
   case 'c':
-    preruse(fd, now->left); /* preconditions */
+    codegen::PreRuse(fd, now->left); /* preconditions */
     cat3("if (!(", now->left, "))\n\t\t\t");
     Bailout(fd, "");
     break;
@@ -3381,7 +3382,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
   } break;
 
   case NAME:
-    if (!nocast && now->symbol && Sym_typ(now) < SHORT)
+    if (!nocast && now->symbol && now->ResolveSymbolType() < SHORT)
       putname(fd, "((int)", now, m, ")");
     else
       putname(fd, "", now, m, "");
@@ -3400,7 +3401,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
 
   case C_EXPR:
     fprintf(fd, "(");
-    plunk_expr(fd, now->symbol->name);
+    codegen::PlunkExpr(fd, now->symbol->name);
 #if 1
     fprintf(fd, ")");
 #else
@@ -3414,11 +3415,11 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     if (has_enabled || lexer_.GetHasPriority())
       fprintf(fd, "if (TstOnly) return 1; /* T6 */\n\t\t");
 
-    if (now->symbol)
-      plunk_inline(fd, now->symbol->name, 1, GenCode);
-    else
+    if (now->symbol) {
+      codegen::PlunkInline(fd, now->symbol->name, 1, GenCode);
+    } else {
       loger::fatal("internal error pangen2.c");
-
+    }
     if (!GenCode) {
       fprintf(fd, "\n"); /* state changed, capture it */
       fprintf(fd, "#if defined(C_States) && (HAS_TRACK==1)\n");
@@ -3626,7 +3627,7 @@ void putremote(FILE *fd, models::Lextok *n, int m) /* remote reference */
       fprintf(fd, ".%s", n->symbol->name.c_str());
     }
   } else {
-    if (Sym_typ(n) < SHORT) {
+    if (n->ResolveSymbolType() < SHORT) {
       promoted = 1;
       fprintf(fd, "((int)");
     }
