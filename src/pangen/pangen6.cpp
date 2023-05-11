@@ -6,6 +6,7 @@
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include "../helpers/helpers.hpp"
+#include "../symbol/symbol.hpp"
 
 
 extern models::Ordered *all_names;
@@ -1193,7 +1194,7 @@ static int AST_dump_rel(void) {
         printf("spin: redundant vars (for given property):\n");
       }
       printf("\t");
-      symvar(s);
+      symbol::PrintSymbolVariable(s);
     }
   }
   return banner;
@@ -1219,7 +1220,7 @@ static void AST_suggestions(void) {
         printf(" abstraction to replace:\n");
       }
       printf("\t");
-      symvar(s);
+      symbol::PrintSymbolVariable(s);
     }
   }
 

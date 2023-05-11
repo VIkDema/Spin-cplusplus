@@ -6,6 +6,7 @@
 #include "../lexer/inline_processor.hpp"
 #include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
+#include "../run/flow.hpp"
 #include "symbol.hpp"
 #include "y.tab.h"
 #include <fmt/core.h>
@@ -140,7 +141,7 @@ Lextok *Lextok::CreateRemoteLabelAssignment(models::Symbol *proctype_name,
   models::Lextok *tmp1, *tmp2, *tmp3;
   has_remote++;
   label_name->type = models::kLabel;   /* refered to in global context here */
-  fix_dest(label_name, proctype_name); /* in case target of rem_lab is jump */
+  flow::FixLabelRef(label_name, proctype_name); /* in case target of rem_lab is jump */
   tmp1 = nn(ZN, '?', pid, ZN);
   tmp1->symbol = proctype_name;
   tmp1 = nn(ZN, 'p', tmp1, ZN);
@@ -204,6 +205,16 @@ int Lextok::ResolveSymbolType() {
     return STRUCT; /* not a field reference */
   }
   return right->left->ResolveSymbolType();
+}
+
+Lextok *Lextok::AddTail(Lextok *tail) {
+  models::Lextok *t;
+
+  for (t = this; t->right; t = t->right)
+    if (t->node_type != ',')
+      loger::fatal("unexpected type - tail_add");
+  t->right = tail;
+  return this;
 }
 
 } // namespace models

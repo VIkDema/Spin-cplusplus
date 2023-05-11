@@ -5,6 +5,9 @@
 #include "y.tab.h"
 #include <assert.h>
 #include "../main/launch_settings.hpp"
+#include "../symbol/symbol.hpp"
+#include "../trail/mesg.hpp"
+
 extern LaunchSettings launch_settings;
 extern FILE *fd_th, *fd_tc;
 extern int eventmapnr, in_settr;
@@ -23,8 +26,6 @@ static SRC *frst = (SRC *)0;
 static SRC *skip = (SRC *)0;
 extern lexer::Lexer lexer_;
 
-extern void sr_mesg(FILE *, int, int, const std::string&);
-extern models::Lextok **find_mtype_list(const std::string &);
 
 static void putnr(int n) {
   if (col++ == 8) {
@@ -276,7 +277,7 @@ static int symbolic(FILE *fd, models::Lextok *tv) {
     if (tv->symbol && tv->symbol->mtype_name) {
       s = tv->symbol->mtype_name->name;
     }
-    Mtype = *find_mtype_list(s);
+    Mtype = *symbol::GetListOfMtype(s);
     for (n = Mtype; n; n = n->right, cnt++) {
       if (cnt == tv->value) {
         fprintf(fd, "%s", n->left->symbol->name.c_str());
@@ -304,7 +305,7 @@ static void comwork(FILE *fd, models::Lextok *now, int m) {
     if (now->is_mtype_token && now->symbol && now->symbol->mtype_name) {
       s = now->symbol->mtype_name->name;
     }
-    sr_mesg(fd, now->value, now->is_mtype_token, s.c_str());
+    mesg::PrintFormattedMessage(fd, now->value, now->is_mtype_token, s.c_str());
     break;
 
   case '!':

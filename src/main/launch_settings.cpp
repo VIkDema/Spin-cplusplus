@@ -110,9 +110,6 @@ std::string LaunchSettings::BuildPanRuntime() {
   if (need_columnated_output) {
     pan_runtime_ += "-c ";
   }
-  if (need_generate_mas_flow_tcl_tk) {
-    pan_runtime_ += "-M ";
-  }
   if (seed.NeedToPrintSeed()) {
     pan_runtime_ += "-h ";
   }

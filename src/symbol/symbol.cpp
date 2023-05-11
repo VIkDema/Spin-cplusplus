@@ -1,34 +1,140 @@
-/***** spin: sym.c *****/
+#include "symbol.hpp"
 
-#include "fatal/fatal.hpp"
-#include "helpers/helpers.hpp"
-#include "lexer/lexer.hpp"
-#include "lexer/line_number.hpp"
-#include "lexer/scope.hpp"
-#include "main/launch_settings.hpp"
-#include "models/access.hpp"
-#include "models/lextok.hpp"
-#include "models/symbol.hpp"
-#include "spin.hpp"
-#include "utils/utils.hpp"
-#include "utils/verbose/verbose.hpp"
+#include "../fatal/fatal.hpp"
+#include "../helpers/helpers.hpp"
+#include "../lexer/lexer.hpp"
+#include "../lexer/line_number.hpp"
+#include "../lexer/scope.hpp"
+#include "../run/run.hpp"
+#include "../main/launch_settings.hpp"
+#include "../models/access.hpp"
+#include "../models/lextok.hpp"
+#include "../models/symbol.hpp"
+#include "../spin.hpp"
+#include "../utils/utils.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <iostream>
 
 extern LaunchSettings launch_settings;
+extern lexer::Lexer lexer_;
 
 extern models::Symbol *Fname, *owner;
-extern int depth, verbose, NamesNotAdded;
+extern int depth, NamesNotAdded;
 extern int has_hidden;
 extern short has_xu;
+extern int Expand_Ok;
 
 extern models::Ordered *all_names;
 int Nid_nr = 0;
-
 models::Mtypes_t *Mtypes;
-models::Lextok *runstmnts = ZN;
+models::Lextok *Xu_List = nullptr;
+models::Lextok *runstmnts = nullptr;
 
-void disambiguate(void) {
+namespace symbol {
+namespace {
+
+struct X_lkp {
+  int typ;
+  std::string nm;
+};
+
+static X_lkp xx[] = {
+    {'A', "exported as run parameter"},
+    {'F', "imported as proctype parameter"},
+    {'L', "used as l-value in asgnmnt"},
+    {'V', "used as r-value in asgnmnt"},
+    {'P', "polled in receive stmnt"},
+    {'R', "used as parameter in receive stmnt"},
+    {'S', "used as parameter in send stmnt"},
+    {'r', "received from"},
+    {'s', "sent to"},
+};
+
+void chname(models::Symbol *sp) {
+  printf("chan ");
+  if (sp->context)
+    printf("%s-", sp->context->name.c_str());
+  if (sp->owner_name)
+    printf("%s.", sp->owner_name->name.c_str());
+  printf("%s", sp->name.c_str());
+  if (sp->value_type > 1 || sp->is_array == 1)
+    printf("[%d]", sp->value_type);
+  printf("\t");
+}
+void chan_check(models::Symbol *sp) {
+  auto &verbose_flags = utils::verbose::Flags::getInstance();
+
+  models::Access *a;
+  int i, b = 0, d;
+
+  if (verbose_flags.NeedToPrintGlobalVariables())
+    goto report; /* -C -g */
+
+  for (a = sp->access; a; a = a->next)
+    if (a->type == 'r')
+      b |= 1;
+    else if (a->type == 's')
+      b |= 2;
+  if (b == 3 || (sp->hidden_flags & 16)) /* balanced or formal par */
+    return;
+report:
+  chname(sp);
+  for (i = d = 0; i < (int)(sizeof(xx) / sizeof(struct X_lkp)); i++) {
+    b = 0;
+    for (a = sp->access; a; a = a->next) {
+      if (a->type == xx[i].typ) {
+        b++;
+      }
+    }
+    if (b == 0) {
+      continue;
+    }
+    d++;
+    printf("\n\t%s by: ", xx[i].nm.c_str());
+    for (a = sp->access; a; a = a->next)
+      if (a->type == xx[i].typ) {
+        printf("%s", a->who->name.c_str());
+        if (a->what)
+          printf(" to %s", a->what->name.c_str());
+        if (a->count)
+          printf(" par %d", a->count);
+        if (--b > 0)
+          printf(", ");
+      }
+  }
+  printf("%s\n", (!d) ? "\n\tnever used under this name" : "");
+}
+
+void setonexu(models::Symbol *sp, int t) {
+  sp->xu |= t;
+  if (t == XR || t == XS) {
+    if (sp->xup[t - 1] &&
+        sp->xup[t - 1]->name != models::Symbol::GetContext()->name) {
+      printf("error: x[rs] claims from %s and %s\n",
+             sp->xup[t - 1]->name.c_str(),
+             models::Symbol::GetContext()->name.c_str());
+      loger::non_fatal("conflicting claims on chan '%s'", sp->name.c_str());
+    }
+    sp->xup[t - 1] = models::Symbol::GetContext();
+  }
+}
+
+void setallxu(models::Lextok *n, int t) {
+  models::Lextok *fp, *tl;
+
+  for (fp = n; fp; fp = fp->right)
+    for (tl = fp->left; tl; tl = tl->right) {
+      if (tl->symbol->type == STRUCT)
+        setallxu(tl->symbol->struct_template, t);
+      else if (tl->symbol->type == CHAN)
+        setonexu(tl->symbol, t);
+    }
+}
+
+} // namespace
+
+void EliminateAmbiguity(void) {
   models::Ordered *walk;
   models::Symbol *sp;
   std::string n, m;
@@ -57,7 +163,7 @@ void disambiguate(void) {
   }
 }
 
-void trackvar(models::Lextok *n, models::Lextok *m) {
+void TrackVar(models::Lextok *n, models::Lextok *m) {
   models::Symbol *sp = n->symbol;
 
   if (!sp)
@@ -66,8 +172,9 @@ void trackvar(models::Lextok *n, models::Lextok *m) {
   case NAME:
     if (m->symbol->type != BIT) {
       sp->hidden_flags |= 4;
-      if (m->symbol->type != models::SymbolType::kByte)
+      if (m->symbol->type != models::SymbolType::kByte) {
         sp->hidden_flags |= 8;
+      }
     }
     break;
   case CONST:
@@ -81,11 +188,11 @@ void trackvar(models::Lextok *n, models::Lextok *m) {
   }
 }
 
-void trackrun(models::Lextok *n) {
+void TrackRun(models::Lextok *n) {
   runstmnts = models::Lextok::nn(ZN, 0, n, runstmnts);
 }
 
-void checkrun(models::Symbol *parnm, int posno) {
+void CheckRun(models::Symbol *parnm, int posno) {
   models::Lextok *n, *now, *v;
   int i, m;
   int res = 0;
@@ -135,7 +242,7 @@ void checkrun(models::Symbol *parnm, int posno) {
   }
 }
 
-void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
+void TrackUseChan(models::Lextok *m, models::Lextok *w, int t) {
   models::Lextok *n = m;
   int count = 1;
   while (n) {
@@ -147,11 +254,10 @@ void trackchanuse(models::Lextok *m, models::Lextok *w, int t) {
   }
 }
 
-void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
+void SetPname(models::Lextok *mtype_name, models::Lextok *n, int t,
               models::Lextok *vis) /* predefined types */
 {
   int oln = file::LineNumber::Get(), cnt = 1;
-  extern int Expand_Ok;
 
   while (n) {
     if (n->symbol->type && !(n->symbol->hidden_flags & 32)) {
@@ -239,35 +345,7 @@ void setptype(models::Lextok *mtype_name, models::Lextok *n, int t,
   }
 }
 
-static void setonexu(models::Symbol *sp, int t) {
-  sp->xu |= t;
-  if (t == XR || t == XS) {
-    if (sp->xup[t - 1] &&
-        sp->xup[t - 1]->name != models::Symbol::GetContext()->name) {
-      printf("error: x[rs] claims from %s and %s\n",
-             sp->xup[t - 1]->name.c_str(),
-             models::Symbol::GetContext()->name.c_str());
-      loger::non_fatal("conflicting claims on chan '%s'", sp->name.c_str());
-    }
-    sp->xup[t - 1] = models::Symbol::GetContext();
-  }
-}
-
-static void setallxu(models::Lextok *n, int t) {
-  models::Lextok *fp, *tl;
-
-  for (fp = n; fp; fp = fp->right)
-    for (tl = fp->left; tl; tl = tl->right) {
-      if (tl->symbol->type == STRUCT)
-        setallxu(tl->symbol->struct_template, t);
-      else if (tl->symbol->type == CHAN)
-        setonexu(tl->symbol, t);
-    }
-}
-
-models::Lextok *Xu_List = (models::Lextok *)0;
-
-void setxus(models::Lextok *p, int t) {
+void SetXus(models::Lextok *p, int t) {
   models::Lextok *m, *n;
 
   has_xu = 1;
@@ -308,7 +386,7 @@ void setxus(models::Lextok *p, int t) {
   }
 }
 
-models::Lextok **find_mtype_list(const std::string &s) {
+models::Lextok **GetListOfMtype(const std::string &s) {
   models::Mtypes_t *lst;
 
   for (lst = Mtypes; lst; lst = lst->next) {
@@ -325,7 +403,7 @@ models::Lextok **find_mtype_list(const std::string &s) {
   return &(lst->list_of_names);
 }
 
-void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
+void AddMtype(models::Lextok *mtype_name, models::Lextok *m) {
   models::Lextok **mtl; /* mtype list */
   models::Lextok *n, *Mtype;
   int cnt, oln = file::LineNumber::Get();
@@ -340,7 +418,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
     s = mtype_name->symbol->name;
   }
 
-  mtl = find_mtype_list(s);
+  mtl = GetListOfMtype(s);
   Mtype = *mtl;
 
   if (!Mtype) {
@@ -376,9 +454,7 @@ void setmtype(models::Lextok *mtype_name, models::Lextok *m) {
   }
 }
 
-std::string which_mtype(
-    const std::string &str) /* which mtype is str, 0 if not an mtype at all  */
-{
+std::string GetMtypeName(const std::string &str) {
   models::Mtypes_t *lst;
   models::Lextok *n;
 
@@ -393,7 +469,7 @@ std::string which_mtype(
   return (char *)0;
 }
 
-int ismtype(const std::string &str) /* name to number */
+int IsMtype(const std::string &str) /* name to number */
 {
   models::Mtypes_t *lst;
   models::Lextok *n;
@@ -412,7 +488,7 @@ int ismtype(const std::string &str) /* name to number */
   return 0;
 }
 
-void symvar(models::Symbol *sp) {
+void PrintSymbolVariable(models::Symbol *sp) {
   models::Lextok *m;
 
   if (!helpers::PrintType(sp->type))
@@ -431,7 +507,7 @@ void symvar(models::Symbol *sp) {
            sp->struct_name != nullptr) /* Frank Weil, 2.9.8 */
     printf("\t%s", sp->struct_name->name.c_str());
   else
-    printf("\t%d", eval(sp->init_value));
+    printf("\t%d", run::Eval(sp->init_value));
 
   if (sp->owner_name)
     printf("\t<:struct-field:>");
@@ -472,87 +548,17 @@ void symvar(models::Symbol *sp) {
   printf("\n");
 }
 
-void symdump(void) {
+void DumpSymbols(void) {
   models::Ordered *walk;
 
-  for (walk = all_names; walk; walk = walk->next)
-    symvar(walk->entry);
-}
-
-void chname(models::Symbol *sp) {
-  printf("chan ");
-  if (sp->context)
-    printf("%s-", sp->context->name.c_str());
-  if (sp->owner_name)
-    printf("%s.", sp->owner_name->name.c_str());
-  printf("%s", sp->name.c_str());
-  if (sp->value_type > 1 || sp->is_array == 1)
-    printf("[%d]", sp->value_type);
-  printf("\t");
-}
-
-static struct X_lkp {
-  int typ;
-  std::string nm;
-} xx[] = {
-    {'A', "exported as run parameter"},
-    {'F', "imported as proctype parameter"},
-    {'L', "used as l-value in asgnmnt"},
-    {'V', "used as r-value in asgnmnt"},
-    {'P', "polled in receive stmnt"},
-    {'R', "used as parameter in receive stmnt"},
-    {'S', "used as parameter in send stmnt"},
-    {'r', "received from"},
-    {'s', "sent to"},
-};
-
-static void chan_check(models::Symbol *sp) {
-  auto &verbose_flags = utils::verbose::Flags::getInstance();
-
-  models::Access *a;
-  int i, b = 0, d;
-
-  if (verbose_flags.NeedToPrintGlobalVariables())
-    goto report; /* -C -g */
-
-  for (a = sp->access; a; a = a->next)
-    if (a->type == 'r')
-      b |= 1;
-    else if (a->type == 's')
-      b |= 2;
-  if (b == 3 || (sp->hidden_flags & 16)) /* balanced or formal par */
-    return;
-report:
-  chname(sp);
-  for (i = d = 0; i < (int)(sizeof(xx) / sizeof(struct X_lkp)); i++) {
-    b = 0;
-    for (a = sp->access; a; a = a->next) {
-      if (a->type == xx[i].typ) {
-        b++;
-      }
-    }
-    if (b == 0) {
-      continue;
-    }
-    d++;
-    printf("\n\t%s by: ", xx[i].nm.c_str());
-    for (a = sp->access; a; a = a->next)
-      if (a->type == xx[i].typ) {
-        printf("%s", a->who->name.c_str());
-        if (a->what)
-          printf(" to %s", a->what->name.c_str());
-        if (a->count)
-          printf(" par %d", a->count);
-        if (--b > 0)
-          printf(", ");
-      }
+  for (walk = all_names; walk; walk = walk->next) {
+    PrintSymbolVariable(walk->entry);
   }
-  printf("%s\n", (!d) ? "\n\tnever used under this name" : "");
 }
-void chanaccess(void) {
+
+void CheckChanAccess() {
   models::Ordered *walk;
   std::string buf;
-  extern lexer::Lexer lexer_;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   for (walk = all_names; walk; walk = walk->next) {
@@ -593,3 +599,4 @@ void chanaccess(void) {
       }
   }
 }
+} // namespace symbol

@@ -68,9 +68,10 @@ struct Symbol {
 
   void AddAccess(Symbol *what, int count, int type);
   void DetectSideEffects();
+  bool IsProctype();
 
   static Symbol *BuildOrFind(const std::string &name);
-  
+
   static void SetContext(Symbol *context);
   static Symbol *GetContext();
 

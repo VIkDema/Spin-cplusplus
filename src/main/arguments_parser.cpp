@@ -2,12 +2,10 @@
 
 #include "../utils/seed/seed.hpp"
 #include "../utils/verbose/verbose.hpp"
+#include "../trail/mesg.hpp"
 #include "pre_proc_settings.hpp"
 #include <cstdlib>
 #include <stdexcept>
-
-// TODO: change it
-extern void qhide(int);
 
 LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
   LaunchSettings result;
@@ -109,10 +107,6 @@ LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
       verbose_flags.SetNeedToPrintLocalVariables();
       break;
     }
-    case 'M': {
-      result.need_generate_mas_flow_tcl_tk = true;
-      break;
-    }
     case 'm': {
       result.need_lose_msgs_sent_to_full_queues = true;
       break;
@@ -156,7 +150,7 @@ LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
     }
     case 'q': {
       if (isdigit((int)argv[1][2])) {
-        qhide(atoi(&argv[1][2]));
+        mesg::HideQueue(atoi(&argv[1][2]));
       }
       break;
     }

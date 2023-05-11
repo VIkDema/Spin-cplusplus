@@ -1,12 +1,18 @@
 #include "pangen2.hpp"
 #include "../codegen/codegen.hpp"
+#include "../dstep/dstep.hpp"
 #include "../fatal/fatal.hpp"
 #include "../lexer/inline_processor.hpp"
 #include "../lexer/lexer.hpp"
 #include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
 #include "../main/main_processor.hpp"
+#include "../run/flow.hpp"
+#include "../run/sched.hpp"
 #include "../spin.hpp"
+#include "../structs/structs.hpp"
+#include "../symbol/symbol.hpp"
+#include "../trail/guided.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "../version/version.hpp"
 #include "pangen4.hpp"
@@ -90,10 +96,6 @@ static short _isok = 0;        /* checks usage of predefined variable _ */
 static short evalindex = 0;    /* evaluate index of var names */
 
 extern int has_global(models::Lextok *);
-extern void check_mtypes(models::Lextok *, models::Lextok *);
-extern void walk2_struct(const std::string &, models::Symbol *);
-extern int find_min(models::Sequence *);
-extern int find_max(models::Sequence *);
 
 static int getweight(models::Lextok *);
 static int scan_seq(models::Sequence *);
@@ -207,7 +209,7 @@ void gensrc(void) {
   models::ProcList *p;
   int i;
 
-  disambiguate(); /* avoid name-clashes between scopes */
+  symbol::EliminateAmbiguity(); /* avoid name-clashes between scopes */
 
   if (!(fd_tc = fopen(Cfile[0].nm[launch_settings.separate_version],
                       MFLAGS)) /* main routines */
@@ -342,7 +344,7 @@ void gensrc(void) {
     s->minel = -1;
     claimproc = "_:never_template:_";
     n->name = "_:never_template:_";
-    mk_rdy(n, ZN, s, 0, ZN, models::btypes::N_CLAIM);
+    sched::CreateProcessEntry(n, ZN, s, 0, ZN, models::btypes::N_CLAIM);
   }
   if (launch_settings.separate_version == 2) {
     if (has_remote) {
@@ -984,7 +986,7 @@ static void genconditionals(void) {
         else
           sprintf(pregat, "now.");
       }
-      walk2_struct(pregat, s);
+      structs::WalkStruct(pregat, s);
     }
   }
   fprintf(fd_tc, "	\tdefault: Uerror(\"unknown qid - q_cond\");\n");
@@ -1021,8 +1023,10 @@ static void putproc(models::ProcList *p) {
   fprintf(fd_th, "\n#define _nstates%d	%d\t/* %s */\n", Pid_nr, p->s->maxel,
           p->n->name.c_str());
   /* new */
-  fprintf(fd_th, "#define minseq%d	%d\n", Pid_nr, find_min(p->s));
-  fprintf(fd_th, "#define maxseq%d	%d\n", Pid_nr, find_max(p->s));
+  fprintf(fd_th, "#define minseq%d	%d\n", Pid_nr,
+          trail::FindMinSequence(p->s));
+  fprintf(fd_th, "#define maxseq%d	%d\n", Pid_nr,
+          trail::FindMaxSequence(p->s));
 
   /* end */
 
@@ -1266,7 +1270,7 @@ static void put_sub(models::Element *e, int Tt0, int Tt1) {
     else
       OkBreak = -1;
 
-    if (!putcode(fd_tm, s, e->next, 0, e->n->line_number, e->seqno)) {
+    if (!dstep::putcode(fd_tm, s, e->next, 0, e->n->line_number, e->seqno)) {
       fprintf(fd_tm, "\n#if defined(C_States) && (HAS_TRACK==1)\n");
       fprintf(fd_tm, "\t\tc_update((uchar *) &(now.c_state[0]));\n");
       fprintf(fd_tm, "#endif\n");
@@ -1365,7 +1369,7 @@ static models::Element *findnext(models::Element *f) {
   models::Element *g;
 
   if (f->n->node_type == GOTO) {
-    g = get_lab(f->n, 1);
+    g = flow::GetLabel(f->n, 1);
     return huntele(g, f->status, -1);
   }
   return f->next;
@@ -1542,7 +1546,7 @@ static int nrhops(models::Element *e) {
     cnt += nr_bup(f);
 
     if (f->n->node_type == GOTO) {
-      g = get_lab(f->n, 1);
+      g = flow::GetLabel(f->n, 1);
       if (g->seqno == stopat)
         f = g;
       else
@@ -1665,7 +1669,7 @@ static void lastfirst(int stopat, models::Element *fin, int casenr) {
   models::Element *f = fin, *g;
 
   if (f->n->node_type == GOTO) {
-    g = get_lab(f->n, 1);
+    g = flow::GetLabel(f->n, 1);
     if (g->seqno == stopat)
       f = g;
     else
@@ -1682,7 +1686,7 @@ static void lastfirst(int stopat, models::Element *fin, int casenr) {
 static int modifier;
 
 static void lab_transfer(models::Element *to, models::Element *from) {
-  models::Symbol *ns, *s = has_lab(from, (1 | 2 | 4));
+  models::Symbol *ns, *s = flow::HasLabel(from, (1 | 2 | 4));
   models::Symbol *oc;
   int ltp, usedit = 0;
 
@@ -1692,17 +1696,17 @@ static void lab_transfer(models::Element *to, models::Element *from) {
   /* "from" could have all three labels -- rename
    * to prevent jumps to the transfered copies
    */
-  oc = models::Symbol::GetContext();                    /* remember */
-  for (ltp = 1; ltp < 8; ltp *= 2) /* 1, 2, and 4 */
-    if ((s = has_lab(from, ltp)) != (models::Symbol *)0) {
+  oc = models::Symbol::GetContext(); /* remember */
+  for (ltp = 1; ltp < 8; ltp *= 2)   /* 1, 2, and 4 */
+    if ((s = flow::HasLabel(from, ltp)) != (models::Symbol *)0) {
       ns = (models::Symbol *)emalloc(sizeof(models::Symbol));
       ns->name = (char *)emalloc((int)strlen(s->name.c_str()) + 4);
       ns->name = fmt::format("{}{}", s->name, modifier);
       models::Symbol::SetContext(s->context);
-      set_lab(ns, to);
+      flow::SetLabel(ns, to);
       usedit++;
     }
-  models::Symbol::SetContext(oc);/* restore */
+  models::Symbol::SetContext(oc); /* restore */
   if (usedit) {
     if (modifier++ > 990)
       loger::fatal("modifier overflow error");
@@ -1827,7 +1831,7 @@ static int case_cache(models::Element *e, int a) {
 
   more:
     if (f->n->node_type == GOTO) {
-      g = get_lab(f->n, 1);
+      g = flow::GetLabel(f->n, 1);
       if (g->seqno == ntarget)
         f = g;
       else
@@ -1912,9 +1916,9 @@ static void put_el(models::Element *e, int Tt0, int Tt1) {
   models::Element *g = ZE;
 
   if (e->n->node_type == GOTO) {
-    g = get_lab(e->n, 1);
+    g = flow::GetLabel(e->n, 1);
     g = huntele(g, e->status, -1);
-    cross_dsteps(e->n, g->n);
+    flow::CrossDsteps(e->n, g->n);
     a = g->seqno;
   } else if (e->next) {
     g = huntele(e->next, e->status, -1);
@@ -2124,8 +2128,8 @@ patch_atomic(models::Sequence *s) /* catch goto's that break the chain */
 
   for (f = s->frst; f; f = f->next) {
     if (f->n && f->n->node_type == GOTO) {
-      g = get_lab(f->n, 1);
-      cross_dsteps(f->n, g->n);
+      g = flow::GetLabel(f->n, 1);
+      flow::CrossDsteps(f->n, g->n);
       if ((f->status & (ATOM | L_ATOM)) && !(g->status & (ATOM | L_ATOM))) {
         f->status &= ~ATOM;
         f->status |= L_ATOM;
@@ -2172,8 +2176,8 @@ static models::Element *find_target(models::Element *e) {
   }
   switch (e->n->node_type) {
   case GOTO:
-    f = get_lab(e->n, 1);
-    cross_dsteps(e->n, f->n);
+    f = flow::GetLabel(e->n, 1);
+    flow::CrossDsteps(e->n, f->n);
     f = find_target(f);
     break;
   case BREAK:
@@ -2575,7 +2579,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     for (v = now->left, i = 0; v; v = v->right, i++) {
       cat2(", ", v->left);
     }
-    check_param_count(i, now);
+    sched::ValidateParameterCount(i, now);
 
     if (i > Npars) { /* printf("\t%d parameters used, max %d expected\n", i,
                         Npars); */
@@ -2584,7 +2588,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     for (; i < Npars; i++)
       fprintf(fd, ", 0");
     fprintf(fd, ")");
-    check_mtypes(now, now->left);
+    sched::ValidateMTypeArguments(now, now->left);
     if (now->value < 0 || now->value > 255) /* 0 itself is allowed */
     {
       loger::fatal("bad process in run %s, valid range: 1..255",
@@ -3395,7 +3399,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     if (terse)
       fprintf(fd, "%s", now->symbol ? now->symbol->name.c_str() : "?");
     else
-      fprintf(fd, "%d", remotelab(now));
+      fprintf(fd, "%d", sched::ResolveRemoteLabelReference(now));
     break;
 
   case C_EXPR:
@@ -3494,14 +3498,14 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
     loger::fatal("no name - putname");
 
   if (s->context && models::Symbol::GetContext() && s->type)
-    s = findloc(s); /* it's a local var */
+    s = sched::FindOrCreateLocalSymbol(s); /* it's a local var */
 
   if (!s) {
     fprintf(fd, "%s%s%s", pre.c_str(), n->symbol->name.c_str(), suff.c_str());
     return;
   }
 
-  if (!s->type)          /* not a local name */
+  if (!s->type)                               /* not a local name */
     s = models::Symbol::BuildOrFind(s->name); /* must be a global */
 
   if (!s->type) {

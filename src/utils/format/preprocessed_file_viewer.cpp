@@ -2,6 +2,7 @@
 
 #include "../../codegen/codegen.hpp"
 #include "../../spin.hpp"
+#include "../../run/flow.hpp"
 #include "y.tab.h"
 #include <cstdio>
 #include <fmt/core.h>
@@ -29,7 +30,7 @@ void PreprocessedFileViewer::recursive_view_sequence(
 
   for (models::Element *element = sequence->frst; element;
        element = element->next) {
-    v = has_lab(element, 0);
+    v = flow::HasLabel(element, 0);
     if (v) {
       std::cout << fmt::format("{}:", v->name) << std::endl;
     }

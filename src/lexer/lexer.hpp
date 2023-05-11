@@ -54,9 +54,8 @@ public:
   models::Symbol *HandleInline(models::Symbol *s, models::Lextok *nms);
   models::Lextok *ReturnStatement(models::Lextok *Lextok);
 
-
   void PickupInline(models::Symbol *t, models::Lextok *apars,
-                   models::Lextok *rval);
+                    models::Lextok *rval);
 
 private:
   int pre_proc();

@@ -1,25 +1,30 @@
-#include "fatal/fatal.hpp"
-#include "main/launch_settings.hpp"
-#include "spin.hpp"
+#include "dstep.hpp"
+
+#include "../fatal/fatal.hpp"
+#include "../lexer/line_number.hpp"
+#include "../run/flow.hpp"
+#include "../main/launch_settings.hpp"
 #include "y.tab.h"
 #include <assert.h>
 #include <iomanip>
 #include <sstream>
-#include "lexer/line_number.hpp"
+
 extern LaunchSettings launch_settings;
-constexpr int kMaxDstep = 2048; // было 512
+extern models::Symbol *Fname;
+extern FILE *fd_th;
+constexpr int kMaxDstep = 2048;
 
 std::string NextLab[64]; /* must match value in pangen2.c:41 */
-
 int Level = 0, GenCode = 0, IsGuard = 0, TestOnly = 0;
 
 static int Tj = 0, Jt = 0, LastGoto = 0;
 static int Tojump[kMaxDstep], Jumpto[kMaxDstep], Special[kMaxDstep];
-static void putCode(FILE *, models::Element *, models::Element *, models::Element *, int);
 
 extern int Pid_nr, OkBreak;
 
-static void Sourced(int n, int special) {
+namespace dstep {
+namespace {
+void Sourced(int n, int special) {
   int i;
   for (i = 0; i < Tj; i++)
     if (Tojump[i] == n)
@@ -30,7 +35,7 @@ static void Sourced(int n, int special) {
   Tojump[Tj++] = n;
 }
 
-static void Dested(int n) {
+void Dested(int n) {
   int i;
   for (i = 0; i < Tj; i++)
     if (Tojump[i] == n)
@@ -44,7 +49,7 @@ static void Dested(int n) {
   LastGoto = 1;
 }
 
-static void Mopup(FILE *fd) {
+void Mopup(FILE *fd) {
   int i, j;
 
   for (i = 0; i < Jt; i++) {
@@ -66,10 +71,6 @@ static void Mopup(FILE *fd) {
     for (i = 0; i < Jt; i++)
       if (Tojump[j] == Jumpto[i])
         break;
-#ifdef DEBUG
-    if (i == Jt && !Special[i])
-      fprintf(fd, "\t\t/* no goto's to S_%.3d_0 */\n", Tojump[j]);
-#endif
   }
   for (j = i = 0; j < Tj; j++)
     if (Special[j]) {
@@ -84,7 +85,7 @@ static void Mopup(FILE *fd) {
   Jt = 0;
 }
 
-static int FirstTime(int n) {
+int FirstTime(int n) {
   int i;
   for (i = 0; i < Tj; i++)
     if (Tojump[i] == n)
@@ -92,14 +93,14 @@ static int FirstTime(int n) {
   return 1;
 }
 
-static void illegal(models::Element *e, char *str) {
+void illegal(models::Element *e, char *str) {
   printf("illegal operator in 'd_step:' '");
   comment(stdout, e->n, 0);
   printf("'\n");
   loger::fatal("'%s'", str);
 }
 
-static void filterbad(models::Element *e) {
+void filterbad(models::Element *e) {
   switch (e->n->node_type) {
   case ASSERT:
   case PRINT:
@@ -133,7 +134,7 @@ static void filterbad(models::Element *e) {
   }
 }
 
-static int CollectGuards(FILE *fd, models::Element *e, int inh) {
+int CollectGuards(FILE *fd, models::Element *e, int inh) {
   models::SeqList *h;
   models::Element *ee;
 
@@ -206,8 +207,123 @@ static int CollectGuards(FILE *fd, models::Element *e, int inh) {
   return inh;
 }
 
-int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards, int ln,
-            int seqno) {
+void putCode(FILE *fd, models::Element *f, models::Element *last,
+             models::Element *next, int isguard) {
+  models::Element *e, *N;
+  models::SeqList *h;
+  int i;
+  std::string NextOpt;
+  static int bno = 0;
+
+  for (e = f; e; e = e->next) {
+    if (e->status & DONE2)
+      continue;
+    e->status |= DONE2;
+
+    if (!(e->status & D_ATOM)) {
+      if (!LastGoto) {
+        fprintf(fd, "\t\tgoto S_%.3d_0;\n", e->Seqno);
+        Dested(e->Seqno);
+      }
+      break;
+    }
+    fprintf(fd, "S_%.3d_0: /* 2 */\n", e->Seqno);
+    LastGoto = 0;
+    Sourced(e->Seqno, 0);
+
+    if (!e->sub) {
+      filterbad(e);
+      switch (e->n->node_type) {
+      case NON_ATOMIC:
+        h = e->n->seq_list;
+        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, e->next,
+                0);
+        break;
+      case BREAK:
+        if (LastGoto)
+          break;
+        if (e->next) {
+          i = target(huntele(e->next, e->status, -1))->Seqno;
+          fprintf(fd, "\t\tgoto S_%.3d_0;	", i);
+          fprintf(fd, "/* 'break' */\n");
+          Dested(i);
+        } else {
+          if (next) {
+            fprintf(fd, "\t\tgoto S_%.3d_0;", next->Seqno);
+            fprintf(fd, " /* NEXT */\n");
+            Dested(next->Seqno);
+          } else
+            loger::fatal("cannot interpret d_step");
+        }
+        break;
+      case GOTO:
+        if (LastGoto)
+          break;
+        i = huntele(flow::GetLabel(e->n, 1), e->status, -1)->Seqno;
+        fprintf(fd, "\t\tgoto S_%.3d_0;	", i);
+        fprintf(fd, "/* 'goto' */\n");
+        Dested(i);
+        break;
+      case '.':
+        if (LastGoto)
+          break;
+        if (e->next && (e->next->status & DONE2)) {
+          i = e->next->Seqno;
+          fprintf(fd, "\t\tgoto S_%.3d_0;", i);
+          fprintf(fd, " /* '.' */\n");
+          Dested(i);
+        }
+        break;
+      default:
+        putskip(e->seqno);
+        GenCode = 1;
+        IsGuard = isguard;
+        fprintf(fd, "\t\t");
+        putstmnt(fd, e->n, e->seqno);
+        fprintf(fd, ";\n");
+        GenCode = IsGuard = isguard = LastGoto = 0;
+        break;
+      }
+      i = e->next ? e->next->Seqno : 0;
+      if (e->next && (e->next->status & DONE2) && !LastGoto) {
+        fprintf(fd, "\t\tgoto S_%.3d_0; ", i);
+        fprintf(fd, "/* ';' */\n");
+        Dested(i);
+        break;
+      }
+    } else {
+      for (h = e->sub, i = 1; h; h = h->next, i++) {
+        std::ostringstream oss;
+        oss << "goto S_" << std::setfill('0') << std::setw(3) << e->Seqno << "_"
+            << i;
+        NextOpt = oss.str();
+        NextLab[++Level] = NextOpt;
+        N = (e->n && e->n->node_type == DO) ? e : e->next;
+        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, N, 1);
+        Level--;
+        fprintf(fd, "%s: /* 3 */\n", &NextOpt[5]);
+        LastGoto = 0;
+      }
+      if (!LastGoto) {
+        fprintf(fd, "\t\tUerror(\"blocking sel ");
+        fprintf(fd, "in d_step (nr.%d, near line %d)\");\n", bno++,
+                (e->n) ? e->n->line_number : 0);
+        LastGoto = 0;
+      }
+    }
+    if (e == last) {
+      if (!LastGoto && next) {
+        fprintf(fd, "\t\tgoto S_%.3d_0;\n", next->Seqno);
+        Dested(next->Seqno);
+      }
+      break;
+    }
+  }
+}
+} // namespace
+
+int putcode(FILE *fd, models::Sequence *s, models::Element *next,
+            int justguards, int ln, int seqno) {
   int isg = 0;
   static std::string buf;
 
@@ -219,7 +335,7 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
     loger::non_fatal("'unless' inside d_step - ignored");
     return putcode(fd, s->frst->n->seq_list->this_sequence, next, 0, ln, seqno);
   case NON_ATOMIC:
-    (void)putcode(fd, s->frst->n->seq_list->this_sequence, ZE, 1, ln, seqno);
+    putcode(fd, s->frst->n->seq_list->this_sequence, ZE, 1, ln, seqno);
     if (justguards)
       return 0; /* 6.2.5 */
     break;
@@ -281,7 +397,6 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
       fprintf(fd, "trpt->");
     fprintf(fd, "o_pm&1))\n\t\t\tcontinue;");
     {
-      extern FILE *fd_th;
       fprintf(fd_th, "#ifndef ELSE_IN_GUARD\n");
       fprintf(fd_th, " #define ELSE_IN_GUARD\n");
       fprintf(fd_th, "#endif\n");
@@ -313,7 +428,6 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
   putCode(fd, s->frst, s->extent, next, isg);
 
   if (next) {
-    extern models::Symbol *Fname;
 
     if (FirstTime(next->Seqno) &&
         (!(next->status & DONE2) || !(next->status & D_ATOM))) {
@@ -329,117 +443,4 @@ int putcode(FILE *fd, models::Sequence *s, models::Element *next, int justguards
   unskip(s->frst->seqno);
   return LastGoto;
 }
-
-static void putCode(FILE *fd, models::Element *f, models::Element *last, models::Element *next,
-                    int isguard) {
-  models::Element *e, *N;
-  models::SeqList *h;
-  int i;
-  std::string NextOpt;
-  static int bno = 0;
-
-  for (e = f; e; e = e->next) {
-    if (e->status & DONE2)
-      continue;
-    e->status |= DONE2;
-
-    if (!(e->status & D_ATOM)) {
-      if (!LastGoto) {
-        fprintf(fd, "\t\tgoto S_%.3d_0;\n", e->Seqno);
-        Dested(e->Seqno);
-      }
-      break;
-    }
-    fprintf(fd, "S_%.3d_0: /* 2 */\n", e->Seqno);
-    LastGoto = 0;
-    Sourced(e->Seqno, 0);
-
-    if (!e->sub) {
-      filterbad(e);
-      switch (e->n->node_type) {
-      case NON_ATOMIC:
-        h = e->n->seq_list;
-        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, e->next,
-                0);
-        break;
-      case BREAK:
-        if (LastGoto)
-          break;
-        if (e->next) {
-          i = target(huntele(e->next, e->status, -1))->Seqno;
-          fprintf(fd, "\t\tgoto S_%.3d_0;	", i);
-          fprintf(fd, "/* 'break' */\n");
-          Dested(i);
-        } else {
-          if (next) {
-            fprintf(fd, "\t\tgoto S_%.3d_0;", next->Seqno);
-            fprintf(fd, " /* NEXT */\n");
-            Dested(next->Seqno);
-          } else
-            loger::fatal("cannot interpret d_step");
-        }
-        break;
-      case GOTO:
-        if (LastGoto)
-          break;
-        i = huntele(get_lab(e->n, 1), e->status, -1)->Seqno;
-        fprintf(fd, "\t\tgoto S_%.3d_0;	", i);
-        fprintf(fd, "/* 'goto' */\n");
-        Dested(i);
-        break;
-      case '.':
-        if (LastGoto)
-          break;
-        if (e->next && (e->next->status & DONE2)) {
-          i = e->next->Seqno;
-          fprintf(fd, "\t\tgoto S_%.3d_0;", i);
-          fprintf(fd, " /* '.' */\n");
-          Dested(i);
-        }
-        break;
-      default:
-        putskip(e->seqno);
-        GenCode = 1;
-        IsGuard = isguard;
-        fprintf(fd, "\t\t");
-        putstmnt(fd, e->n, e->seqno);
-        fprintf(fd, ";\n");
-        GenCode = IsGuard = isguard = LastGoto = 0;
-        break;
-      }
-      i = e->next ? e->next->Seqno : 0;
-      if (e->next && (e->next->status & DONE2) && !LastGoto) {
-        fprintf(fd, "\t\tgoto S_%.3d_0; ", i);
-        fprintf(fd, "/* ';' */\n");
-        Dested(i);
-        break;
-      }
-    } else {
-      for (h = e->sub, i = 1; h; h = h->next, i++) {
-        std::ostringstream oss;
-        oss << "goto S_" << std::setfill('0') << std::setw(3) << e->Seqno << "_"
-            << i;
-        NextOpt = oss.str();
-        NextLab[++Level] = NextOpt;
-        N = (e->n && e->n->node_type == DO) ? e : e->next;
-        putCode(fd, h->this_sequence->frst, h->this_sequence->extent, N, 1);
-        Level--;
-        fprintf(fd, "%s: /* 3 */\n", &NextOpt[5]);
-        LastGoto = 0;
-      }
-      if (!LastGoto) {
-        fprintf(fd, "\t\tUerror(\"blocking sel ");
-        fprintf(fd, "in d_step (nr.%d, near line %d)\");\n", bno++,
-                (e->n) ? e->n->line_number : 0);
-        LastGoto = 0;
-      }
-    }
-    if (e == last) {
-      if (!LastGoto && next) {
-        fprintf(fd, "\t\tgoto S_%.3d_0;\n", next->Seqno);
-        Dested(next->Seqno);
-      }
-      break;
-    }
-  }
-}
+} // namespace dstep

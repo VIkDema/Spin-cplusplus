@@ -6,6 +6,7 @@
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
+#include "../run/flow.hpp"
 
 extern LaunchSettings launch_settings;
 
@@ -123,7 +124,7 @@ static int eligible(models::FSM_trans *v) {
       lt->node_type ==
           NON_ATOMIC /* used for inlines -- should be able to handle this */
       || lt->node_type == IF || lt->node_type == C_CODE || lt->node_type == C_EXPR ||
-      has_lab(el, 0)       /* any label at all */
+      flow::HasLabel(el, 0)       /* any label at all */
       || lt->node_type == SET_P /* to prevent multiple set_p merges */
 
       || lt->node_type == DO || lt->node_type == UNLESS || lt->node_type == D_STEP ||
@@ -753,7 +754,7 @@ static void ana_seq(models::Sequence *s) {
       ana_seq(t);
     } else {
       if (e->n->node_type == GOTO) {
-        g = get_lab(e->n, 1);
+        g = flow::GetLabel(e->n, 1);
         g = huntele(g, e->status, -1);
         if (!g) {
           loger::fatal("unexpected error 2");

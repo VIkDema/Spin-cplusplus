@@ -13,14 +13,19 @@ set(CMAKE_CXX_FLAGS_PICKY "-std=c++17 -Wstrict-prototypes -pedantic -fno-strengt
 # Source files
 set(SPIN_SOURCES
     src/spin.hpp
-    src/sym.cpp
-    src/vars.cpp
+    src/symbol/symbol.cpp
+    src/symbol/symbol.hpp
+    src/variable/variable.hpp
+    src/variable/variable.cpp
     src/main.cpp
-    src/msc_tcl.cpp
-    src/mesg.cpp
-    src/flow.cpp
-    src/sched.cpp
-    src/run.cpp
+    src/trail/mesg.cpp
+    src/trail/mesg.hpp
+    src/run/flow.cpp
+    src/run/flow.hpp
+    src/run/sched.cpp
+    src/run/sched.hpp
+    src/run/run.cpp
+    src/run/run.hpp
     src/pangen/pangen1.cpp
     src/pangen/pangen2.cpp
     src/pangen/pangen3.cpp
@@ -28,9 +33,12 @@ set(SPIN_SOURCES
     src/pangen/pangen5.cpp
     src/pangen/pangen6.cpp
     src/pangen/pangen7.cpp
-    src/guided.cpp
-    src/dstep.cpp
-    src/structs.cpp
+    src/trail/guided.cpp
+    src/trail/guided.hpp
+    src/dstep/dstep.cpp
+    src/dstep/dstep.hpp
+    src/structs/structs.cpp
+    src/structs/structs.hpp
     src/version/version.hpp.in
     src/fatal/fatal.hpp
     src/fatal/fatal.cpp

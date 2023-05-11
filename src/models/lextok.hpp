@@ -18,7 +18,7 @@ struct Lextok {
   Lextok *left, *right;     /* children in parse tree old: fn*/
   void ProcessSymbolForRead();
   int ResolveSymbolType();
-
+  Lextok *AddTail(Lextok *tail);
 
   static Lextok *nn(models::Lextok *symbol, int type, models::Lextok *left,
                     models::Lextok *right);

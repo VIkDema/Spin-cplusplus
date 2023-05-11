@@ -4,6 +4,8 @@
 #include "../models/lextok.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
+#include "../structs/structs.hpp"
+#include "../symbol/symbol.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
 #include "inline_processor.hpp"
 #include "line_number.hpp"
@@ -88,7 +90,7 @@ int Lexer::CheckName(const std::string &value) {
     }
   }
 
-  if ((yylval->value = ismtype(value)) != 0) {
+  if ((yylval->value = symbol::IsMtype(value)) != 0) {
     yylval->is_mtype_token = 1;
     yylval->symbol = (models::Symbol *)emalloc(sizeof(models::Symbol));
     yylval->symbol->name = (char *)emalloc(value.length() + 1);
@@ -157,10 +159,10 @@ int Lexer::CheckName(const std::string &value) {
   }
   std::string value_copy = value;
   yylval->symbol = models::Symbol::BuildOrFind(value_copy); /* symbol table */
-  if (IsUtype(value)) {
+  if (structs::IsUtype(value)) {
     return UNAME;
   }
-  if (IsProctype(value)) {
+  if (yylval->symbol->IsProctype()) {
     return PNAME;
   }
   if (InlineProcessor::IsEqname(value)) {

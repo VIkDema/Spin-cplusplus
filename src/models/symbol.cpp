@@ -5,9 +5,10 @@
 #include "../main/launch_settings.hpp"
 #include "../utils/utils.hpp"
 #include "access.hpp"
+#include "utype.hpp"
 
 extern models::Symbol *Fname;
-
+extern models::UType *Pnames;
 extern models::Symbol *owner;
 extern char *emalloc(size_t);
 extern LaunchSettings launch_settings;
@@ -33,8 +34,8 @@ void Symbol::AddAccess(models::Symbol *what, int count, int type) {
   models::Access *a;
 
   for (a = access; a; a = a->next)
-    if (a->who == models::Symbol::GetContext() && a->what == what && a->count == count &&
-        a->type == type)
+    if (a->who == models::Symbol::GetContext() && a->what == what &&
+        a->count == count && a->type == type)
       return;
 
   a = (models::Access *)emalloc(sizeof(models::Access));
@@ -164,6 +165,16 @@ Symbol *Symbol::BuildOrFind(const std::string &name) {
   }
 
   return sp;
+}
+
+bool Symbol::IsProctype() {
+
+  for (auto tmp = Pnames; tmp; tmp = tmp->next) {
+    if (name == tmp->nm->name) {
+      return true;
+    }
+  }
+  return false;
 }
 
 } // namespace models

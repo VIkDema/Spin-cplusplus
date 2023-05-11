@@ -24,7 +24,6 @@ struct LaunchSettings {
   bool reverse_eval_order_of_nested_unlesses = false; // OLD: like_java
   bool need_save_trail = false;                       // OLD: s_trail
   bool need_use_strict_lang_intersection = false;     // OLD: Strict
-  bool need_generate_mas_flow_tcl_tk = false;         // OLD:       columns = 2;
   bool need_lose_msgs_sent_to_full_queues = false;    // OLD: m_loss
   bool need_short_output = false;                     // OLD: tl_terse
   bool need_old_scope_rules =

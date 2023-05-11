@@ -14,9 +14,14 @@
 #else
 #include <stdint.h>
 #endif
+#include "../helpers/helpers.hpp"
 #include "../lexer/line_number.hpp"
 #include "../main/launch_settings.hpp"
-#include "../helpers/helpers.hpp"
+#include "../run/flow.hpp"
+#include "../structs/structs.hpp"
+#include "../symbol/symbol.hpp"
+#include "../trail/mesg.hpp"
+#include "../variable/variable.hpp"
 #include <fmt/core.h>
 
 extern LaunchSettings launch_settings;
@@ -49,9 +54,6 @@ static void tc_predef_np(void);
 static void put_pinit(models::ProcList *);
 static void multi_init(void);
 
-void walk_struct(FILE *, int, const std::string &, models::Symbol *,
-                 const std::string &, const std::string &, const std::string &);
-
 static void reverse_names(models::ProcList *p) {
   if (!p)
     return;
@@ -81,7 +83,7 @@ void genheader(void) {
   int i;
 
   if (launch_settings.separate_version == 2) {
-    putunames(fd_th);
+    structs::PrintUnames(fd_th);
     goto here;
   }
   /* 5.2.3: gcc 3 no longer seems to compute sizeof at compile time */
@@ -99,7 +101,7 @@ void genheader(void) {
   fprintf(fd_th, "	#endif\n");
   fprintf(fd_th, "#endif\n\n");
 
-  putunames(fd_th);
+  structs::PrintUnames(fd_th);
 
   fprintf(fd_tc, "\nshort Air[] = { ");
   for (p = ready, i = 0; p; p = p->next, i++)
@@ -519,7 +521,7 @@ void checktype(models::Symbol *sp, const std::string &s) {
       for (f = p->p; f; f = f->right) /* list of types */
         for (t = f->left; t; t = t->right, posnr++)
           if (t->symbol && t->symbol->name == sp->name) {
-            checkrun(sp, posnr);
+            symbol::CheckRun(sp, posnr);
             return;
           }
 
@@ -680,10 +682,9 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
 
   switch (sp->type) {
   case STRUCT:
-    /* c_struct(fd, pref, sp); */
     fprintf(fd, "\t\tprintf(\"\t(struct %s)\\n\");\n", sp->name.c_str());
     buf = fmt::format("{}{}.", pref, sp->name);
-    c_struct(fd, buf, sp);
+    structs::CStruct(fd, buf, sp);
     break;
   case MTYPE:
   case BIT:
@@ -693,9 +694,10 @@ void c_var(FILE *fd, const std::string &pref, models::Symbol *sp) {
   case UNSIGNED:
     helpers::PutType(buf, sp->type);
     if (sp->value_type == 1 && sp->is_array == 0) {
-      if (sp->type == MTYPE && ismtype(sp->name)) {
+      if (sp->type == MTYPE && symbol::IsMtype(sp->name)) {
         fprintf(fd, "\tprintf(\"\t%s %s:\t%d\\n\");\n", buf.c_str(),
-                std::string(ptr, sp->name.end()).c_str(), ismtype(sp->name));
+                std::string(ptr, sp->name.end()).c_str(),
+                symbol::IsMtype(sp->name));
       } else {
         fprintf(fd, "\tprintf(\"\t%s %s:\t%%d\\n\", %s%s);\n", buf.c_str(),
                 std::string(ptr, sp->name.end()).c_str(), pref.c_str(),
@@ -743,7 +745,7 @@ int c_splurge_any(models::ProcList *p) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
           sp->owner_name || (sp->hidden_flags & 1) ||
-          (sp->type == MTYPE && ismtype(sp->name)))
+          (sp->type == MTYPE && symbol::IsMtype(sp->name)))
         continue;
 
       return 1;
@@ -762,7 +764,7 @@ void c_splurge(FILE *fd, models::ProcList *p) {
       sp = walk->entry;
       if (!sp->context || sp->type == 0 || sp->context->name != p->n->name ||
           sp->owner_name || (sp->hidden_flags & 1) ||
-          (sp->type == MTYPE && ismtype(sp->name)))
+          (sp->type == MTYPE && symbol::IsMtype(sp->name)))
         continue;
 
       sprintf(pref, "((P%d *)pptr(pid))->", p->tn);
@@ -830,7 +832,7 @@ static int doglobal(char *pre, int dowhat) {
     for (walk = all_names; walk; walk = walk->next) {
       sp = walk->entry;
       if (!sp->context && !sp->owner_name && sp->type == Types[j]) {
-        if (Types[j] != MTYPE || !ismtype(sp->name))
+        if (Types[j] != MTYPE || !symbol::IsMtype(sp->name))
           switch (dowhat) {
           case models::LOGV:
             if (sp->type == CHAN && !verbose_flags.Active())
@@ -901,7 +903,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
     /* fall thru */
   case models::INIV:
     if (sp->type == STRUCT) { /* struct may contain a chan */
-      walk_struct(ofd, dowhat, s, sp, pre, sep, ter);
+      structs::WalkStruct(ofd, dowhat, s, sp, pre, sep, ter);
       break;
     }
     if (!sp->init_value && dowhat != models::LOGV) /* it defaults to 0 */
@@ -969,7 +971,7 @@ void do_var(FILE *ofd, int dowhat, const std::string &s, models::Symbol *sp,
 static void do_init(FILE *ofd, models::Symbol *sp) {
   int i;
 
-  if (sp->init_value && sp->type == CHAN && ((i = qmake(sp)) > 0)) {
+  if (sp->init_value && sp->type == CHAN && ((i = mesg::QMake(sp)) > 0)) {
     if (sp->init_value->node_type == CHAN) {
       fprintf(ofd, "addqueue(calling_pid, %d, %d)", i,
               ltab[i - 1]->nslots == 0);
@@ -1172,7 +1174,7 @@ static void put_pinit(models::ProcList *P) {
       }
       fprintf(fd_tc, "\t\t((P%d *)pptr(h))->", i);
       if (t->symbol->type == STRUCT) {
-        if (full_name(fd_tc, t, t->symbol, 1)) {
+        if (structs::GetFullName(fd_tc, t, t->symbol, 1)) {
           file::LineNumber::Set(t->line_number);
           Fname = t->file_name;
           loger::fatal("hidden_flags array in parameter %s",
@@ -1194,7 +1196,7 @@ static void put_pinit(models::ProcList *P) {
   fprintf(fd_tc, "\t\tlocinit%d(h);\n", i);
   fprintf(fd_tc, "#endif\n");
 
-  dumpclaims(fd_tc, i, s->name);
+  variable::DumpClaims(fd_tc, i, s->name);
   fprintf(fd_tc, "\t	break;\n");
 }
 
@@ -1234,14 +1236,14 @@ models::Element *huntele(models::Element *f, unsigned int o, int stopat) {
 
       switch (e->n->node_type) {
       case GOTO:
-        g = get_lab(e->n, 1);
+        g = flow::GetLabel(e->n, 1);
         if (e == g) {
           if (f && f->n) {
             file::LineNumber::Set(f->n->line_number);
           }
           loger::fatal("infinite goto loop");
         }
-        cross_dsteps(e->n, g->n);
+        flow::CrossDsteps(e->n, g->n);
         break;
       case '.':
       case BREAK:

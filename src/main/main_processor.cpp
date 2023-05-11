@@ -1,7 +1,10 @@
 #include "main_processor.hpp"
 
 #include "../lexer/scope.hpp"
+#include "../run/flow.hpp"
+#include "../run/sched.hpp"
 #include "../spin.hpp"
+#include "../symbol/symbol.hpp"
 #include "../utils/format/preprocessed_file_viewer.hpp"
 #include "../utils/format/pretty_print_viewer.hpp"
 #include "../utils/seed/seed.hpp"
@@ -11,8 +14,9 @@
 #include "launch_settings.hpp"
 #include "pan_processor.hpp"
 #include "pre_proc_settings.hpp"
-#include "stdio.h"
+
 #include <cassert>
+#include <cstdio>
 #include <cstdlib>
 #include <fmt/core.h>
 #include <string>
@@ -24,7 +28,6 @@ extern int depth; /* at least some steps were made */
 models::Symbol *Fname, *oFname;
 static char *ltl_claims = nullptr;
 extern PanProcessor pan_processor_;
-extern void putprelude(void);
 extern void ana_src(int, int);
 extern short has_accept;
 int nr_errs;
@@ -78,11 +81,6 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     format::PrettyPrintViewer pp;
     pp.view();
     Exit(0);
-  }
-
-  if (launch_settings.need_generate_mas_flow_tcl_tk &&
-      launch_settings.count_of_steps == 0) {
-    launch_settings.count_of_steps = 1024;
   }
 
   if (launch_settings.need_use_optimizations &&
@@ -144,8 +142,8 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     oFname = Fname = models::Symbol::BuildOrFind(cmd);
     if (oFname->name[0] == '\"') {
       oFname->name[oFname->name.length() - 1] = '\0';
-      oFname =
-          models::Symbol::BuildOrFind(std::string(oFname->name.begin() + 1, oFname->name.end()));
+      oFname = models::Symbol::BuildOrFind(
+          std::string(oFname->name.begin() + 1, oFname->name.end()));
     }
   } else {
     oFname = Fname = models::Symbol::BuildOrFind("<stdin>");
@@ -161,13 +159,6 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     Exit(1);
   }
 
-  if (launch_settings.need_generate_mas_flow_tcl_tk) {
-    if (verbose_flags.Active()) {
-      std::cout << "spin: -c precludes all flags except -t" << std::endl;
-      Exit(1);
-    }
-    putprelude();
-  }
   if (launch_settings.need_columnated_output &&
       !verbose_flags.NeedToPrintReceives() &&
       !verbose_flags.NeedToPrintSends()) {
@@ -196,14 +187,14 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     }
   }
 
-  loose_ends();
+  flow::TieUpLooseEnds();
 
   if (launch_settings.need_to_print_result_of_inlining_and_preprocessing) {
     format::PreprocessedFileViewer viewer;
     viewer.view();
     return true;
   }
-  chanaccess();
+  symbol::CheckChanAccess();
 
   if (!launch_settings.need_print_channel_access_info) {
     if (launch_settings.has_provided &&
@@ -218,8 +209,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
       ana_src(launch_settings.need_use_dataflow_optimizations,
               launch_settings.need_statemate_merging);
     }
-    // Запуск симуляции
-    sched();
+    sched::ScheduleProcesses();
     Exit(nr_errs);
   }
 

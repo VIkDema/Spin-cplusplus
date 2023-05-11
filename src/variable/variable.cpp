@@ -1,35 +1,101 @@
+#include "variable.hpp"
+
 /***** spin: vars.c *****/
 
-#include "fatal/fatal.hpp"
-#include "main/launch_settings.hpp"
-#include "models/symbol.hpp"
-#include "spin.hpp"
-#include "utils/verbose/verbose.hpp"
+#include "../fatal/fatal.hpp"
+#include "../lexer/line_number.hpp"
+#include "../main/launch_settings.hpp"
+#include "../models/lextok.hpp"
+#include "../models/symbol.hpp"
+#include "../run/flow.hpp"
+#include "../run/run.hpp"
+#include "../run/sched.hpp"
+#include "../spin.hpp"
+#include "../structs/structs.hpp"
+#include "../symbol/symbol.hpp"
+#include "../trail/mesg.hpp"
+#include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
 #include <fmt/core.h>
 #include <iostream>
-#include "models/lextok.hpp"
-#include "lexer/line_number.hpp"
 
 extern LaunchSettings launch_settings;
 
 extern char GBuf[];
 extern int nproc, nstop;
-extern int depth, verbose, limited_vis, Pid_nr;
+extern int depth, limited_vis, Pid_nr;
 extern models::Lextok *Xu_List;
 extern models::Ordered *all_names;
 extern models::RunList *X_lst, *LastX;
 extern short no_arrays, Have_claim, terse;
 extern models::Symbol *Fname;
 
-extern void sr_buf(int, int, const std::string &);
-extern void sr_mesg(FILE *, int, int, const std::string &);
 
-static int getglobal(models::Lextok *);
-static int setglobal(models::Lextok *, int);
 static int maxcolnr = 1;
 
-int getval(models::Lextok *sn) {
+namespace variable {
+namespace {
+
+int GetGlobal(models::Lextok *sn) {
+  models::Symbol *s = sn->symbol;
+  int i, n = run::Eval(sn->left);
+
+  if (s->type == 0 && X_lst &&
+      (i = flow::FindLabel(s, X_lst->n, 0))) /* getglobal */
+  {
+    std::cout << fmt::format("findlab through getglobal on {}", s->name)
+              << std::endl;
+    return i; /* can this happen? */
+  }
+  if (s->type == STRUCT) {
+    return structs::Rval_struct(sn, s, 1); /* 1 = check init */
+  }
+  if (CheckVar(s, n)) {
+    return CastValue(s->type, s->value[n], (int)s->nbits.value_or(0));
+  }
+  return 0;
+}
+
+int SetGlobal(models::Lextok *v, int m) {
+  if (v->symbol->type == STRUCT) {
+    structs::Lval_struct(v, v->symbol, 1, m);
+  } else {
+    int n = run::Eval(v->left);
+    if (CheckVar(v->symbol, n)) {
+      int oval = v->symbol->value[n];
+      int nval =
+          CastValue((int)v->symbol->type, m, v->symbol->nbits.value_or(0));
+      v->symbol->value[n] = nval;
+      if (oval != nval) {
+        v->symbol->last_depth = depth;
+      }
+    }
+  }
+  return 1;
+}
+
+void RemoveSelfRefs(models::Symbol *s, models::Lextok *i) {
+  if (!i)
+    return;
+
+  if (i->node_type == NAME && i->symbol->name == s->name &&
+      ((!i->symbol->context && !s->context) ||
+       (i->symbol->context && s->context &&
+        i->symbol->context->name == s->context->name))) {
+    file::LineNumber::Set(i->line_number);
+    Fname = i->file_name;
+    loger::non_fatal("self-reference initializing '%s'", s->name);
+    i->node_type = CONST;
+    i->value = 0;
+  } else {
+    RemoveSelfRefs(s, i->left);
+    RemoveSelfRefs(s, i->right);
+  }
+}
+
+} // namespace
+
+int GetValue(models::Lextok *sn) {
   models::Symbol *s = sn->symbol;
 
   if (s->name == "_") {
@@ -61,19 +127,19 @@ int getval(models::Lextok *sn) {
   }
 
   if (s->context && s->type) {
-    return getlocal(sn);
+    return sched::GetLocalValue(sn);
   }
 
   if (!s->type) /* not declared locally */
   {
     s = models::Symbol::BuildOrFind(s->name); /* try global */
-    sn->symbol = s;         /* fix it */
+    sn->symbol = s;                           /* fix it */
   }
 
-  return getglobal(sn);
+  return GetGlobal(sn);
 }
 
-int setval(models::Lextok *v, int n) {
+int SetVal(models::Lextok *v, int n) {
   if (v->symbol->name == "_last" || v->symbol->name == "_p" ||
       v->symbol->name == "_pid" || v->symbol->name == "_nr_qs" ||
       v->symbol->name == "_nr_pr") {
@@ -91,38 +157,21 @@ int setval(models::Lextok *v, int n) {
     X_lst->priority = n;
   }
 
-  if (v->symbol->context && v->symbol->type)
-    return setlocal(v, n);
-  if (!v->symbol->type)
-    v->symbol = models::Symbol::BuildOrFind(v->symbol->name);
-  return setglobal(v, n);
-}
-
-void rm_selfrefs(models::Symbol *s, models::Lextok *i) {
-  if (!i)
-    return;
-
-  if (i->node_type == NAME && i->symbol->name == s->name &&
-      ((!i->symbol->context && !s->context) ||
-       (i->symbol->context && s->context &&
-        i->symbol->context->name == s->context->name))) {
-    file::LineNumber::Set(i->line_number);
-    Fname = i->file_name;
-    loger::non_fatal("self-reference initializing '%s'", s->name);
-    i->node_type = CONST;
-    i->value = 0;
-  } else {
-    rm_selfrefs(s, i->left);
-    rm_selfrefs(s, i->right);
+  if (v->symbol->context && v->symbol->type) {
+    return sched::AssignLocalValue(v, n);
   }
+  if (!v->symbol->type) {
+    v->symbol = models::Symbol::BuildOrFind(v->symbol->name);
+  }
+  return SetGlobal(v, n);
 }
 
-int checkvar(models::Symbol *s, int n) {
-  int i, oln = file::LineNumber::Get(); /* calls on eval() change it */
+int CheckVar(models::Symbol *s, int n) {
+  int i, oln = file::LineNumber::Get(); /* calls on run::Eval() change it */
   models::Symbol *ofnm = Fname;
   models::Lextok *z, *y;
 
-  if (!in_bound(s, n))
+  if (!sched::IsIndexInBounds(s, n))
     return 0;
 
   if (s->type == 0) {
@@ -142,39 +191,20 @@ int checkvar(models::Symbol *s, int n) {
         y = z;
       }
       if (s->type != models::kChan) {
-        rm_selfrefs(s, y);
-        s->value[i] = eval(y);
+        RemoveSelfRefs(s, y);
+        s->value[i] = run::Eval(y);
       } else if (!launch_settings.need_to_analyze) {
-        s->value[i] = qmake(s);
+        s->value[i] = mesg::QMake(s);
       }
     }
   }
-      file::LineNumber::Set(oln);
+  file::LineNumber::Set(oln);
   Fname = ofnm;
 
   return 1;
 }
 
-static int getglobal(models::Lextok *sn) {
-  models::Symbol *s = sn->symbol;
-  int i, n = eval(sn->left);
-
-  if (s->type == 0 && X_lst && (i = find_lab(s, X_lst->n, 0))) /* getglobal */
-  {
-    std::cout << fmt::format("findlab through getglobal on {}", s->name)
-              << std::endl;
-    return i; /* can this happen? */
-  }
-  if (s->type == STRUCT) {
-    return Rval_struct(sn, s, 1); /* 1 = check init */
-  }
-  if (checkvar(s, n)) {
-    return cast_val(s->type, s->value[n], (int)s->nbits.value_or(0));
-  }
-  return 0;
-}
-
-int cast_val(int t, int v, int w) {
+int CastValue(int t, int v, int w) {
   int i = 0;
   short s = 0;
   unsigned int u = 0;
@@ -202,24 +232,7 @@ int cast_val(int t, int v, int w) {
   return (int)(i + s + (int)u);
 }
 
-static int setglobal(models::Lextok *v, int m) {
-  if (v->symbol->type == STRUCT) {
-    (void)Lval_struct(v, v->symbol, 1, m);
-  } else {
-    int n = eval(v->left);
-    if (checkvar(v->symbol, n)) {
-      int oval = v->symbol->value[n];
-      int nval = cast_val((int)v->symbol->type, m, v->symbol->nbits.value_or(0));
-      v->symbol->value[n] = nval;
-      if (oval != nval) {
-        v->symbol->last_depth = depth;
-      }
-    }
-  }
-  return 1;
-}
-
-void dumpclaims(FILE *fd, int pid, const std::string &s) {
+void DumpClaims(FILE *fd, int pid, const std::string &s) {
   models::Lextok *m;
   int cnt = 0;
   int oPid = Pid_nr;
@@ -250,20 +263,21 @@ void dumpclaims(FILE *fd, int pid, const std::string &s) {
   Pid_nr = oPid;
 }
 
-void dumpglobals(void) {
+void DumpGlobals(void) {
   models::Ordered *walk;
   static models::Lextok *dummy = ZN;
   models::Symbol *sp;
   int j;
   auto &verbose_flags = utils::verbose::Flags::getInstance();
   if (!dummy)
-    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
+    dummy =
+        models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
 
   for (walk = all_names; walk; walk = walk->next) {
     sp = walk->entry;
     if (!sp->type || sp->context || sp->owner_name || sp->type == PROCTYPE ||
         sp->type == PREDEF || sp->type == CODE_FRAG || sp->type == CODE_DECL ||
-        (sp->type == MTYPE && ismtype(sp->name)))
+        (sp->type == MTYPE && symbol::IsMtype(sp->name)))
       continue;
 
     if (sp->type == STRUCT) {
@@ -273,14 +287,14 @@ void dumpglobals(void) {
            launch_settings.count_of_skipping_steps != depth)) {
         continue;
       }
-      dump_struct(sp, sp->name, 0);
+      structs::DumpStruct(sp, sp->name, 0);
       continue;
     }
     for (j = 0; j < sp->value_type; j++) {
       int prefetch;
       std::string s;
       if (sp->type == CHAN) {
-        doq(sp, j, 0);
+        mesg::PrintQueueContents(sp, j, 0);
         continue;
       }
       if (verbose_flags.NeedToPrintAllProcessActions() &&
@@ -293,7 +307,7 @@ void dumpglobals(void) {
       dummy->symbol = sp;
       dummy->left->value = j;
       /* in case of cast_val warnings, do this first: */
-      prefetch = getglobal(dummy);
+      prefetch = GetGlobal(dummy);
       printf("\t\t%s", sp->name.c_str());
       if (sp->value_type > 1 || sp->is_array)
         printf("[%d]", j);
@@ -301,24 +315,15 @@ void dumpglobals(void) {
       if (sp->type == MTYPE && sp->mtype_name) {
         s = sp->mtype_name->name;
       }
-      sr_mesg(stdout, prefetch, sp->type == MTYPE, s);
+      mesg::PrintFormattedMessage(stdout, prefetch, sp->type == MTYPE, s);
       printf("\n");
       if (limited_vis && (sp->hidden_flags & 2)) {
-        int colpos;
         GBuf[0] = '\0';
-        if (launch_settings.need_generate_mas_flow_tcl_tk)
-          sprintf(GBuf, "~G%s = ", sp->name.c_str());
-        else
-          sprintf(GBuf, "%s = ", sp->name.c_str());
-        sr_buf(prefetch, sp->type == MTYPE, s);
+        sprintf(GBuf, "%s = ", sp->name.c_str());
+        mesg::FormatMessage(prefetch, sp->type == MTYPE, s);
         if (sp->color_number == 0) {
           sp->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
-        }
-        colpos = nproc + sp->color_number - 1;
-        if (launch_settings.need_generate_mas_flow_tcl_tk) {
-          pstext(colpos, GBuf);
-          continue;
         }
         printf("\t\t%s\n", GBuf);
         continue;
@@ -327,7 +332,7 @@ void dumpglobals(void) {
   }
 }
 
-void dumplocal(models::RunList *r, int final) {
+void DumpLocal(models::RunList *r, int final) {
   static models::Lextok *dummy = ZN;
   models::Symbol *z, *s;
   int i;
@@ -339,18 +344,19 @@ void dumplocal(models::RunList *r, int final) {
   s = r->symtab;
 
   if (!dummy) {
-    dummy = models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
+    dummy =
+        models::Lextok::nn(ZN, NAME, models::Lextok::nn(ZN, CONST, ZN, ZN), ZN);
   }
 
   for (z = s; z; z = z->next) {
     if (z->type == STRUCT) {
-      dump_struct(z, z->name, r);
+      structs::DumpStruct(z, z->name, r);
       continue;
     }
     for (i = 0; i < z->value_type; i++) {
       std::string t;
       if (z->type == CHAN) {
-        doq(z, i, r);
+        mesg::PrintQueueContents(z, i, r);
         continue;
       }
 
@@ -373,30 +379,23 @@ void dumplocal(models::RunList *r, int final) {
       if (z->type == MTYPE && z->mtype_name) {
         t = z->mtype_name->name;
       }
-      sr_mesg(stdout, getval(dummy), z->type == MTYPE, t);
+      mesg::PrintFormattedMessage(stdout, GetValue(dummy), z->type == MTYPE, t);
       printf("\n");
       if (limited_vis && (z->hidden_flags & 2)) {
         int colpos;
         GBuf[0] = '\0';
-        if (launch_settings.need_generate_mas_flow_tcl_tk)
-          sprintf(GBuf, "~G%s(%d):%s = ", r->n->name.c_str(), r->pid,
-                  z->name.c_str());
-        else
-          sprintf(GBuf, "%s(%d):%s = ", r->n->name.c_str(), r->pid,
-                  z->name.c_str());
-        sr_buf(getval(dummy), z->type == MTYPE, t);
+        sprintf(GBuf, "%s(%d):%s = ", r->n->name.c_str(), r->pid,
+                z->name.c_str());
+         mesg::FormatMessage(GetValue(dummy), z->type == MTYPE, t);
         if (z->color_number == 0) {
           z->color_number = (unsigned char)maxcolnr;
           maxcolnr = 1 + (maxcolnr % 10);
         }
         colpos = nproc + z->color_number - 1;
-        if (launch_settings.need_generate_mas_flow_tcl_tk) {
-          pstext(colpos, GBuf);
-          continue;
-        }
         printf("\t\t%s\n", GBuf);
         continue;
       }
     }
   }
 }
+} // namespace variable
