@@ -1,5 +1,6 @@
 #include "yylex.hpp"
 
+#include "../main/launch_settings.hpp"
 #include "../spin.hpp"
 #include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
 #include "lexer.hpp"
@@ -9,8 +10,9 @@
 extern std::string yytext;
 extern int need_arguments;
 extern YYSTYPE yylval;
-extern models::Symbol  *owner;
+extern models::Symbol *owner;
 lexer::Lexer lexer_;
+extern LaunchSettings launch_settings;
 
 namespace {
 constexpr std::array<int, 3> kConditionElse = {SEMI, ARROW, FI};
@@ -142,4 +144,30 @@ int yylex() {
     }
   }
   return temp_token;
+}
+
+void ltl_list(const std::string &nm, const std::string &fm) {
+  extern char *ltl_claims;
+  extern FILE *tl_out;
+  extern FILE *fd_ltl;
+  extern int nr_errs;
+  if (launch_settings.need_save_trail || launch_settings.need_to_analyze ||
+      launch_settings.need_produce_symbol_table_information) {
+
+    if (!ltl_claims) {
+      ltl_claims = "_spin_nvr.tmp";
+      if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
+        loger::fatal("cannot open tmp file %s", ltl_claims);
+      }
+      tl_out = fd_ltl;
+    }
+    launch_settings.add_ltl = (char **)emalloc(5 * sizeof(char *));
+    launch_settings.add_ltl[1] = "-c";
+    launch_settings.add_ltl[2] = strdup(nm.c_str());
+    launch_settings.add_ltl[3] = "-f";
+    std::string fm_modified = "!(" + fm + ")";
+    launch_settings.add_ltl[4] = strdup(fm_modified.c_str());
+    nr_errs += tl_main(4, launch_settings.add_ltl);
+    fflush(tl_out);
+  }
 }

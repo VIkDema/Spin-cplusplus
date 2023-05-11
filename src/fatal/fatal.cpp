@@ -12,7 +12,6 @@
 
 extern models::Symbol *Fname;
 extern models::Symbol *oFname;
-//TODO: fix it
 extern int nr_errs;
 extern int yychar;
 extern char yytext[];

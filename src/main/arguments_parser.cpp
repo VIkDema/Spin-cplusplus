@@ -1,8 +1,8 @@
 #include "arguments_parser.hpp"
 
+#include "../trail/mesg.hpp"
 #include "../utils/seed/seed.hpp"
 #include "../utils/verbose/verbose.hpp"
-#include "../trail/mesg.hpp"
 #include "pre_proc_settings.hpp"
 #include <cstdlib>
 #include <stdexcept>
@@ -55,15 +55,13 @@ LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
       break;
     }
     case 'F': {
-      for (int i = 2; i < argc; i++) {
-        result.ltl_file.push_back(argv[i]);
-      }
+      result.ltl_file = (char **)(argv + 2);
       argc--;
       argv++;
       break;
     }
     case 'f': {
-      result.ltl_add = std::vector<std::string>(argv, argv + argc);
+      result.add_ltl = (char **) argv;
       argc--;
       argv++;
       break;

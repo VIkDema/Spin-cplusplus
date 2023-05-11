@@ -28,9 +28,11 @@ bool Deferred::GetDeferred() {
   yyin = defer_fd;
   return true;
 }
-void Deferred::ZapDeferred() { (void)unlink(TMP_FILE2); }
 
-//TODO: refactor it
+void Deferred::ZapDeferred() { 
+  (void)unlink(TMP_FILE2); 
+}
+
 bool Deferred::PutDeffered() {
   int c, cnt;
   if (!defer_fd) {

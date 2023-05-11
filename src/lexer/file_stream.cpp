@@ -31,7 +31,6 @@ int FileStream::GetChar() {
   return curr;
 }
 
-// TODO: fix on function
 std::string FileStream::GetWord(int first, int (*Predicate)(int)) {
   int curr;
   std::string result;

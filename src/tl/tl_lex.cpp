@@ -10,17 +10,17 @@
  */
 
 #include "../helpers/helpers.hpp"
+#include "../utils/utils.hpp"
 #include "tl.hpp"
 #include <ctype.h>
 #include <stdlib.h>
-#include "../utils/utils.hpp"
 
 static Symbol *symtab[Nhash + 1];
 static int tl_lex(void);
 extern int tl_peek(int);
 
 extern YYSTYPE tl_yylval;
-extern char yytext[];
+extern std::string yytext;
 
 #define Token(y)                                                               \
   tl_yylval = tl_nn(y, ZN, ZN);                                                \
@@ -29,19 +29,15 @@ extern char yytext[];
 static void tl_getword(int first, int (*tst)(int)) {
   int i = 0;
   int c;
-
-  yytext[i++] = (char)first;
+  yytext = "";
+  yytext.push_back((char)first);
 
   c = tl_Getchar();
   while (c != -1 && tst(c)) {
-    yytext[i++] = (char)c;
+    yytext.push_back((char)c);
     c = tl_Getchar();
   }
 
-  /*	while (tst(c = tl_Getchar()))
-   *		yytext[i++] = c;
-   */
-  yytext[i] = '\0';
   tl_UnGetchar();
 }
 
@@ -61,9 +57,6 @@ static int tl_follow(int tok, int ifyes, int ifno) {
 
 int tl_yylex(void) {
   int c = tl_lex();
-#if 0
-	printf("c = %c (%d)\n", c, c);
-#endif
   return c;
 }
 
@@ -125,7 +118,7 @@ static void read_upto_closing(int z) {
   c = tl_Getchar();
   while ((c != want || nesting > 0) && c != -1 && i < 2047) /* yytext is 2048 */
   {
-    yytext[i++] = c;
+    yytext.push_back(c);
     if (c == z) {
       nesting++;
     }
@@ -134,7 +127,6 @@ static void read_upto_closing(int z) {
     }
     c = tl_Getchar();
   }
-  yytext[i] = '\0';
 }
 
 static int tl_lex(void) {
@@ -142,8 +134,8 @@ static int tl_lex(void) {
 
   do {
     c = tl_Getchar();
-    yytext[0] = (char)c;
-    yytext[1] = '\0';
+    yytext = "";
+    yytext.push_back((char)c);
 
     if (c <= 0) {
       Token(';');
@@ -159,7 +151,7 @@ static int tl_lex(void) {
       if (!tl_yylval) {
         loger::fatal("unexpected error 4");
       }
-      tl_yylval->symbol = tl_lookup(yytext);
+      tl_yylval->symbol = tl_lookup(yytext.c_str());
       return PREDICATE;
     }
   }
@@ -169,37 +161,37 @@ static int tl_lex(void) {
   }
   if (islower(c)) {
     tl_getword(c, helpers::isalnum_);
-    if (strcmp("true", yytext) == 0) {
+    if ("true" == yytext) {
       Token(TRUE);
     }
-    if (strcmp("false", yytext) == 0) {
+    if ("false" == yytext) {
       Token(FALSE);
     }
-    if (strcmp("always", yytext) == 0) {
+    if ("always" == yytext) {
       Token(ALWAYS);
     }
-    if (strcmp("eventually", yytext) == 0) {
+    if ("eventually" == yytext) {
       Token(EVENTUALLY);
     }
-    if (strcmp("until", yytext) == 0) {
+    if ("until" == yytext) {
       Token(U_OPER);
     }
 #ifdef NXT
-    if (strcmp("next", yytext) == 0) {
+    if ("next" == yytext) {
       Token(NEXT);
     }
 #endif
-    if (strcmp("c_expr", yytext) == 0) {
+    if ("c_expr" == yytext) {
       Token(CEXPR);
     }
-    if (strcmp("not", yytext) == 0) {
+    if ("not" == yytext) {
       Token(NOT);
     }
     tl_yylval = tl_nn(PREDICATE, ZN, ZN);
     if (!tl_yylval) {
       loger::fatal("unexpected error 5");
     }
-    tl_yylval->symbol = tl_lookup(yytext);
+    tl_yylval->symbol = tl_lookup(yytext.c_str());
     return PREDICATE;
   }
 
@@ -259,7 +251,7 @@ static int tl_lex(void) {
   Token(c);
 }
 
-Symbol *tl_lookup(char *s) {
+Symbol *tl_lookup(const char *s) {
   Symbol *sp;
   unsigned int h = utils::hash(s);
 

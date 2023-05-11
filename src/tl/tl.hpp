@@ -83,7 +83,7 @@ Node *push_negation(Node *);
 Node *right_linked(Node *);
 Node *tl_nn(int, Node *, Node *);
 
-Symbol *tl_lookup(char *);
+Symbol *tl_lookup(const char *);
 Symbol *getsym(Symbol *);
 Symbol *DoDump(Node *);
 

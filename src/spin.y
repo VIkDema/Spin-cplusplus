@@ -45,7 +45,7 @@ extern	void	any_runs(models::Lextok *);
 extern	std::string yytext;
 extern LaunchSettings launch_settings;
 
-void ltl_list(const std::string& , const std::string& );
+
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
@@ -204,11 +204,14 @@ init	: INIT		{
 	;
 
 ltl	: LTL optname2	{ 
-	lexer_.SetLtlMode(true);  
-ltl_name = new char[$2->symbol->name.length() + 1];
-strcpy(ltl_name, $2->symbol->name.c_str());
-}
-	  ltl_body	{ if ($4) ltl_list($2->symbol->name, $4->symbol->name);
+		lexer_.SetLtlMode(true);  
+		ltl_name = new char[$2->symbol->name.length() + 1];
+		strcpy(ltl_name, $2->symbol->name.c_str());
+	}
+	  ltl_body	{ 
+			  if ($4) {
+				ltl_list($2->symbol->name, $4->symbol->name);
+			  }
 			  lexer_.SetLtlMode(false);
 			}
 	;
@@ -243,7 +246,8 @@ optname : /* empty */	{ char tb[32];
 	| NAME		{ $$ = $1; }
 	;
 
-optname2 : /* empty */ { char tb[32]; static int nltl = 0;
+optname2 : /* empty */ { 
+			  char tb[32]; static int nltl = 0;
 			  memset(tb, 0, 32);
 			  sprintf(tb, "ltl_%d", nltl++);
 			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
@@ -1180,36 +1184,4 @@ void
 yyerror(char *fmt, ...)
 {
 	loger::non_fatal(fmt );
-}
-//TODO: 
-void ltl_list(const std::string &, const std::string &) {
-  if (true
-      // s_trail || launch_settings.need_to_analyze ||
-      //       dumptab
-      ) /* when generating pan.c or replaying a trace */
-  {
-   /* if (!ltl_claims) {
-      ltl_claims = "_spin_nvr.tmp";
-       if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
-         loger::fatal("cannot open tmp file %s", ltl_claims);
-       }
-       tl_out = fd_ltl;
-     */
-    }
-    /*
-    add_ltl = (char **)emalloc(5 * sizeof(char *));
-    add_ltl[1] = "-c";
-    add_ltl[2] = nm;
-    add_ltl[3] = "-f";
-    add_ltl[4] = (char *)emalloc(strlen(fm) + 4);
-    strcpy(add_ltl[4], "!(");
-    strcat(add_ltl[4], fm);
-    strcat(add_ltl[4], ")");
-    */
-    /* add_ltl[4] = fm; */
-    // TODO:    nr_errs += tl_main(4, add_ltl);
-
-    //fflush(tl_out);
-    /* should read this file after the main file is read */
- // }
 }

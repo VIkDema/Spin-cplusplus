@@ -339,11 +339,7 @@ again:
     }
   if (!ptr)
     tl_yyerror("syntax error");
-#if 0
-	printf("level %d:	", nr);
-	tl_explain(ptr->ntyp);
-	printf("\n");
-#endif
+
   return ptr;
 }
 
