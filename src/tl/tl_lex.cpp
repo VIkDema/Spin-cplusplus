@@ -116,6 +116,7 @@ static void read_upto_closing(int z) {
   int i = 0, nesting = 0;
 
   c = tl_Getchar();
+  yytext="";
   while ((c != want || nesting > 0) && c != -1 && i < 2047) /* yytext is 2048 */
   {
     yytext.push_back(c);
