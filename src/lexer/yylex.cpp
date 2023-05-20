@@ -2,7 +2,7 @@
 
 #include "../main/launch_settings.hpp"
 #include "../spin.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
+#include "y.tab.h"
 #include "lexer.hpp"
 #include <array>
 #include <fmt/core.h>

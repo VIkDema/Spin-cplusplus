@@ -6,7 +6,7 @@
 #include "../utils/verbose/verbose.hpp"
 #include "../structs/structs.hpp"
 #include "../symbol/symbol.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
+#include "y.tab.h"
 #include "inline_processor.hpp"
 #include "line_number.hpp"
 #include "names.hpp"

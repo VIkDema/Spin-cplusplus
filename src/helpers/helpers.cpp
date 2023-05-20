@@ -2,7 +2,6 @@
 
 #include "../fatal/fatal.hpp"
 #include "../models/symbol.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
 #include "y.tab.h"
 #include <algorithm>
 #include <array>
