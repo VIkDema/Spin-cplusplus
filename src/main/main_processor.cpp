@@ -1,5 +1,6 @@
 #include "main_processor.hpp"
 
+#include "../lexer/line_number.hpp"
 #include "../lexer/scope.hpp"
 #include "../run/flow.hpp"
 #include "../run/sched.hpp"
@@ -14,11 +15,10 @@
 #include "launch_settings.hpp"
 #include "pan_processor.hpp"
 #include "pre_proc_settings.hpp"
-#include "../lexer/line_number.hpp"
 #include <cassert>
-#include <stdio.h>
 #include <cstdlib>
 #include <fmt/core.h>
+#include <stdio.h>
 #include <string>
 #include <sys/stat.h>
 

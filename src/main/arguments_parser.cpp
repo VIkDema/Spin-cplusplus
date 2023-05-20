@@ -72,6 +72,7 @@ LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
     }
     case 'h': {
       seed.SetNeedToPrintSeed(true);
+      break;
     }
     case 'i': {
       result.need_to_run_in_interactive_mode = true;
@@ -131,7 +132,6 @@ LaunchSettings ArgumentsParser::Parse(int &argc, char **&argv) {
         result.SetOptimizationsOptions(argv[1][2]);
       } catch (const std::runtime_error &error) {
         std::cout << error.what();
-        // print help
       }
       break;
     }
