@@ -195,7 +195,7 @@ void HandleMultipleClaims(void) {
     printf("  only one claim is used in a verification run\n");
     printf("  choose which one with ./pan -a -N name (defaults to -N %s)\n",
            q ? q->n->name.c_str() : "--");
-    printf("  or use e.g.: spin -search -ltl %s %s\n",
+    printf("  or use e.g.: spin++ -search -ltl %s %s\n",
            q ? q->n->name.c_str() : "--",
            Fname ? Fname->name.c_str() : "filename");
   }
@@ -452,7 +452,7 @@ int FindProcessID(const std::string &n) {
   for (r = run_lst; r; r = r->next) {
     if (n == r->n->name) {
       if (rval >= 0) {
-        printf("spin: remote ref to proctype %s, ", n.c_str());
+        printf("spin++: remote ref to proctype %s, ", n.c_str());
         printf("has more than one match: %d and %d\n", rval, r->pid);
       } else
         rval = r->pid;
@@ -508,7 +508,7 @@ int ResolveRemoteVariableReference(models::Lextok *n) {
   for (Y = run_lst; Y; Y = Y->next)
     if (--i == prno) {
       if (Y->n->name != n->left->symbol->name) {
-        printf("spin: remote reference error on '%s[%d]'\n",
+        printf("spin++: remote reference error on '%s[%d]'\n",
                n->left->symbol->name.c_str(), prno - added);
         loger::non_fatal("refers to wrong proctype '%s'", Y->n->name.c_str());
       }
@@ -561,7 +561,7 @@ int ResolveRemoteLabelReference(models::Lextok *n) {
   file::LineNumber::Set(n->line_number);
   Fname = n->file_name;
   if (n->symbol->type != 0 && n->symbol->type != LABEL) {
-    printf("spin: error, type: %d\n", n->symbol->type);
+    printf("spin++: error, type: %d\n", n->symbol->type);
     loger::fatal("not a labelname: '%s'", n->symbol->name);
   }
   if (n->index_step >= 0) {
@@ -663,7 +663,7 @@ int IsIndexInBounds(models::Symbol *r, int n) {
     return 0;
 
   if (n >= r->value_type || n < 0) {
-    printf("spin: indexing %s[%d] - size is %d\n", r->name.c_str(), n,
+    printf("spin++: indexing %s[%d] - size is %d\n", r->name.c_str(), n,
            r->value_type);
     loger::non_fatal("indexing array \'%s\'", r->name);
     return 0;
@@ -773,12 +773,12 @@ void ScheduleProcesses() {
     return;
   }
   if (lexer_.GetHasCode() && !launch_settings.need_to_analyze) {
-    printf("spin: warning: c_code fragments remain uninterpreted\n");
-    printf("      in random simulations with spin; use ./pan -r instead\n");
+    printf("spin++: warning: c_code fragments remain uninterpreted\n");
+    printf("      in random simulations with spin++; use ./pan -r instead\n");
   }
 
   if (has_enabled && u_sync > 0) {
-    printf("spin: error, cannot use 'enabled()' in ");
+    printf("spin++: error, cannot use 'enabled()' in ");
     printf("models with synchronous channels.\n");
     nr_errs++;
   }
@@ -966,7 +966,7 @@ void InitializeClaimExecution(int n) {
       InitializeRunnableProcess(p, 1, 1);
       goto found;
     }
-  printf("spin: couldn't find claim %d (ignored)\n", n);
+  printf("spin++: couldn't find claim %d (ignored)\n", n);
   if (verbose_flags.NeedToPrintVerbose()) {
     for (p = ready; p; p = p->next) {
       printf("\t%d = %s\n", p->tn, p->n->name.c_str());
@@ -1013,7 +1013,7 @@ void ValidateParameterCount(int i, models::Lextok *m) {
           count++;
         }
       if (i != count) {
-        printf("spin: saw %d parameters, expected %d\n", i, count);
+        printf("spin++: saw %d parameters, expected %d\n", i, count);
         loger::non_fatal("wrong number of parameters");
       }
       break;
@@ -1032,7 +1032,7 @@ int ActivateProcess(models::Lextok *m) {
   for (p = ready; p; p = p->next) {
     if (s->name == p->n->name) {
       if (nproc - nstop >= kMaxNrOfProcesses) {
-        printf("spin: too many processes (%d max)\n", kMaxNrOfProcesses);
+        printf("spin++: too many processes (%d max)\n", kMaxNrOfProcesses);
         break;
       }
       InitializeRunnableProcess(p, m->value, 0);
@@ -1117,7 +1117,7 @@ void ValidateMTypeArguments(
         continue;
       }
       if (!at->left->symbol) {
-        printf("spin:%d unrecognized mtype value\n", pnm->line_number);
+        printf("spin++:%d unrecognized mtype value\n", pnm->line_number);
         continue;
       }
       s = "_unnamed_";
@@ -1132,7 +1132,7 @@ void ValidateMTypeArguments(
       s = symbol::GetMtypeName(at->left->symbol->name);
       if (s != "" && s != t) {
         printf(
-            "spin: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
+            "spin++: %s:%d, Error: '%s' is type '%s', but should be type '%s'\n",
             pnm->file_name->name.c_str(), pnm->line_number,
             at->left->symbol->name.c_str(), s.c_str(), t.c_str());
         loger::fatal("wrong arg type '%s'", at->left->symbol->name);
@@ -1158,7 +1158,7 @@ models::ProcList *CreateProcessEntry(models::Symbol *n, models::Lextok *p,
   n->sc = lexer::ScopeProcessor::GetCurrSegment(); /* scope_level should be 0 */
 
   if (det != 0 && det != 1) {
-    fprintf(stderr, "spin: bad value for det (cannot happen)\n");
+    fprintf(stderr, "spin++: bad value for det (cannot happen)\n");
   }
   r->det = (unsigned char)det;
   r->next = ready;

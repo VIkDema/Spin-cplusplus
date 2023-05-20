@@ -575,7 +575,7 @@ int Eval(models::Lextok *now) {
       if (TstOnly || Eval(now->left))
         return 1;
       loger::non_fatal("assertion violated");
-      printf("spin: text of failed assertion: assert(");
+      printf("spin++: text of failed assertion: assert(");
       comment(stdout, now->left, 0);
       printf(")\n");
       if (launch_settings.need_save_trail)
@@ -598,9 +598,9 @@ int Eval(models::Lextok *now) {
       return 0; /* not great, but safe */
 
     default:
-      printf("spin: bad node type %d (run)\n", now->node_type);
+      printf("spin++: bad node type %d (run)\n", now->node_type);
       if (launch_settings.need_save_trail)
-        printf("spin: trail file doesn't match spec?\n");
+        printf("spin++: trail file doesn't match spec?\n");
       loger::fatal("aborting");
     }
   }

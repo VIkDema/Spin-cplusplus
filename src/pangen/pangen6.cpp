@@ -811,7 +811,7 @@ static void AST_report(AST *a,
 {
   if (!(a->relevant & 2)) {
     a->relevant |= 2;
-    printf("spin: redundant in proctype %s (for given property):\n",
+    printf("spin++: redundant in proctype %s (for given property):\n",
            a->p->n->name.c_str());
   }
   printf("      %s:%d (state %d)", e->n ? e->n->file_name->name.c_str() : "-",
@@ -1005,7 +1005,7 @@ static void AST_def_use(AST *a) {
 static void name_AST_track(models::Lextok *n, int code) {
   extern int nr_errs;
   if (in_recv && (code & DEF) && (code & USE)) {
-    printf("spin: %s:%d, error: DEF and USE of same var in rcv stmnt: ",
+    printf("spin++: %s:%d, error: DEF and USE of same var in rcv stmnt: ",
            n->file_name->name.c_str(), n->line_number);
     AST_var(n, n->symbol, 1);
     printf(" -- %d\n", code);
@@ -1191,7 +1191,7 @@ static int AST_dump_rel(void) {
         && s->type != PROCTYPE && !s->owner_name && helpers::PutType(buf, s->type)) {
       if (!banner) {
         banner = 1;
-        printf("spin: redundant vars (for given property):\n");
+        printf("spin++: redundant vars (for given property):\n");
       }
       printf("\t");
       symbol::PrintSymbolVariable(s);
@@ -1216,7 +1216,7 @@ static void AST_suggestions(void) {
             s->type == MTYPE)) {
       if (!banner) {
         banner = 1;
-        printf("spin: consider using predicate");
+        printf("spin++: consider using predicate");
         printf(" abstraction to replace:\n");
       }
       printf("\t");
@@ -1263,11 +1263,11 @@ static void AST_suggestions(void) {
       }
   no_good:
     if (banner == 1 || banner == 2) {
-      printf("spin: proctype %s defines a %s process\n", a->p->n->name.c_str(),
+      printf("spin++: proctype %s defines a %s process\n", a->p->n->name.c_str(),
              banner == 1 ? "source" : "sink");
       talked |= banner;
     } else if (banner == 3) {
-      printf("spin: proctype %s mimics a buffer\n", a->p->n->name.c_str());
+      printf("spin++: proctype %s mimics a buffer\n", a->p->n->name.c_str());
       talked |= 4;
     }
   }
@@ -1328,7 +1328,7 @@ static void AST_data_dep(void) {
   for (auto sc = slicer; sc; sc = sc->next) {
     sc->used = 1;
     if (verbose_flags.NeedToPrintVerbose()) {
-      printf("spin: slice criterion ");
+      printf("spin++: slice criterion ");
       AST_var(sc->slice_criterion, sc->slice_criterion->symbol, 1);
       printf(" type=%d\n", sc->slice_criterion->ResolveSymbolType());
     }
@@ -1461,7 +1461,7 @@ static void AST_shouldconsider(AST *a, int s) {
                 relevant may be replaceable with arbitrary tokens
          */
         if (AST_suspect(t)) {
-          printf("spin: possibly redundant parameters in: ");
+          printf("spin++: possibly redundant parameters in: ");
           comment(stdout, t->step->n, 0);
           printf("\n");
         }
@@ -1675,7 +1675,7 @@ void AST_slice(void) {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (!slicer) {
-    printf("spin: warning: no slice criteria found (no assertions and no "
+    printf("spin++: warning: no slice criteria found (no assertions and no "
            "claim)\n");
     spurious = 1;
   }
@@ -1701,7 +1701,7 @@ void AST_slice(void) {
     }
     if (!AST_dump_rel() /* relevant variables */
         && spurious)
-      printf("spin: no redundancies found (for given property)\n");
+      printf("spin++: no redundancies found (for given property)\n");
   }
   AST_suggestions();
 

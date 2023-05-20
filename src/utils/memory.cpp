@@ -10,7 +10,7 @@ char *emalloc(size_t n) {
     return nullptr; /* robert shelton 10/20/06 */
 
   if (!(tmp = (char *)malloc(n))) {
-    printf("spin: allocated %ld Gb, wanted %d bytes more\n",
+    printf("spin++: allocated %ld Gb, wanted %d bytes more\n",
            count / (1024 * 1024 * 1024), (int)n);
     loger::fatal("not enough memory");
   }

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(spin VERSION 1.0.0)
+project(spin++ VERSION 1.0.0)
 
 # Compiler settings
 set(CMAKE_CXX_COMPILER g++)
@@ -133,6 +133,6 @@ find_package(fmt REQUIRED)
 include_directories(${fmt_INCLUDE_DIR})
 
 # Build targets
-add_executable(spin ${SPIN_SOURCES} ${TL_SOURCES} ${BISON_OUTPUT_FILE})
-target_include_directories(spin PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-target_link_libraries(spin fmt::fmt)
+add_executable(spin++ ${SPIN_SOURCES} ${TL_SOURCES} ${BISON_OUTPUT_FILE})
+target_include_directories(spin++ PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(spin++ fmt::fmt)

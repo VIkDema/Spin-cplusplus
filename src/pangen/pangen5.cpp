@@ -624,7 +624,7 @@ static void ana_stmnt(models::FSM_trans *t, models::Lextok *now, int usage) {
 
   default:
     if (0)
-      printf("spin: %s:%d, bad node type %d usage %d (ana_stmnt)\n",
+      printf("spin++: %s:%d, bad node type %d usage %d (ana_stmnt)\n",
              now->file_name->name.c_str(), now->line_number, now->node_type, usage);
     loger::fatal("aborting (ana_stmnt)");
   }

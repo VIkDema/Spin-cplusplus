@@ -465,7 +465,7 @@ static void end_labs(models::Symbol *s, int i) {
         complain:
           file::LineNumber::Set(l->e->n->line_number);
           Fname = l->e->n->file_name;
-          printf("spin: %3d:%s, warning, %s - is invisible\n",
+          printf("spin++: %3d:%s, warning, %s - is invisible\n",
                  file::LineNumber::Get(), Fname ? Fname->name.c_str() : "-",
                  foo);
         }
@@ -492,7 +492,7 @@ void ntimes(FILE *fd, int n, int m, const char *c[]) {
 void prehint(models::Symbol *s) {
   models::Lextok *n;
 
-  printf("spin: warning, ");
+  printf("spin++: warning, ");
   if (!s)
     return;
 
@@ -1303,7 +1303,7 @@ void typ2c(models::Symbol *sp) {
       break;
     } /* else fall through */
     if (!(sp->hidden_flags & 1) && verbose_flags.NeedToPrintVerbose())
-      printf("spin: warning: bit-array %s[%d] mapped to byte-array\n",
+      printf("spin++: warning: bit-array %s[%d] mapped to byte-array\n",
              sp->name.c_str(), sp->value_type);
     nBits += 8 * sp->value_type; /* mapped onto array of uchars */
   case MTYPE:

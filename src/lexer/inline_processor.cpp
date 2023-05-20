@@ -139,7 +139,7 @@ void InlineProcessor::CheckInline(models::IType *itype) {
     }
     sprintf(buf, "P%s->", p->n->name.c_str());
     if (strstr((char *)itype->cn, buf)) {
-      printf("spin: in proctype %s, ref to object in proctype %s\n",
+      printf("spin++:: in proctype %s, ref to object in proctype %s\n",
              X_lst->n->name.c_str(), p->n->name.c_str());
       loger::fatal("invalid variable ref in '%s'", itype->nm->name);
     }

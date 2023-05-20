@@ -3,7 +3,7 @@
 #include <string>
 
 namespace format {
-// считывает stdin и выводит в stdout
+
 class PreprocessedFileViewer {
 public:
   void view();

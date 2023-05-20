@@ -5,7 +5,7 @@ void PrintVersion() { std::cout << SpinVersion << std::endl; }
 
 void PrintHelp() {
   std::cout
-      << "use: spin [-option] ... [-option] file\n"
+      << "use: spin++: [-option] ... [-option] file\n"
       << "\tNote: file must always be the last argument\n"
       << "\t-A apply slicing algorithm\n"
       << "\t-a generate a verifier in pan.c\n"

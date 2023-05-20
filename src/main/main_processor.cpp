@@ -14,7 +14,7 @@
 #include "launch_settings.hpp"
 #include "pan_processor.hpp"
 #include "pre_proc_settings.hpp"
-
+#include "../lexer/line_number.hpp"
 #include <cassert>
 #include <stdio.h>
 #include <cstdlib>
@@ -84,7 +84,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
 
   if (launch_settings.need_use_optimizations &&
       !launch_settings.need_to_analyze) {
-    std::cout << "spin: warning -o[1..5] option ignored in simulations"
+    std::cout << "spin++: warning -o[1..5] option ignored in simulations"
               << std::endl;
   }
 
@@ -92,14 +92,14 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     launch_settings.add_ltl = launch_settings.ltl_file - 2;
     launch_settings.add_ltl[1][1] = 'f';
     if (!(tl_out = fopen(*launch_settings.ltl_file, "r"))) {
-      printf("spin: cannot open %s\n", *launch_settings.ltl_file);
+      printf("spin++: cannot open %s\n", *launch_settings.ltl_file);
       Exit(1);
     }
     size_t linebuffsize = 0;
     char *formula = nullptr;
     ssize_t length = getline(&formula, &linebuffsize, tl_out);
     if (!formula || !length) {
-      printf("spin: cannot read %s\n", *launch_settings.ltl_file);
+      printf("spin++: cannot read %s\n", *launch_settings.ltl_file);
     }
     fclose(tl_out);
     tl_out = stdout;
@@ -117,7 +117,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
       assert(strlen(argv[1]) + 6 < sizeof(out2));
       out2 = fmt::format("{}.nvr", argv[1]);
       if ((fd = fopen(out2.c_str(), MFLAGS)) == NULL) {
-        printf("spin: cannot create tmp file %s\n", out2.c_str());
+        printf("spin++: cannot create tmp file %s\n", out2.c_str());
         MainProcessor::Exit(1);
       }
       fprintf(fd, "#include \"%s\"\n", argv[1]);
@@ -192,6 +192,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     }
     r = oFname;
     oFname = Fname = models::Symbol::BuildOrFind(ltl_claims);
+    file::LineNumber::Set(0);
     yyparse();
     fclose(yyin);
     oFname = Fname = r;
@@ -272,7 +273,7 @@ void MainProcessor::Exit(int estatus) {
       !lexer_.GetHasCode() && !estatus) {
     std::string pan_runtime = launch_settings.BuildPanRuntime();
     std::string tmp;
-    tmp = fmt::format("spin -t {} {}", pan_runtime, Fname->name);
+    tmp = fmt::format("spin++ -t {} {}", pan_runtime, Fname->name);
     estatus = e_system(1, tmp);
     exit(estatus);
   }

@@ -230,7 +230,7 @@ void undostmnt(models::Lextok *now, int m) {
       break;
     } /* else fall thru */
   default:
-    printf("spin: bad node type %d (.b)\n", now->node_type);
+    printf("spin++: bad node type %d (.b)\n", now->node_type);
     MainProcessor::Exit(1);
   }
 }
@@ -406,7 +406,7 @@ int proper_enabler(models::Lextok *n) {
   default:
     break;
   }
-  printf("spin: saw ");
+  printf("spin++: saw ");
   loger::explainToString(n->node_type);
   printf("\n");
   return 0;

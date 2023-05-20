@@ -95,7 +95,7 @@ void ProcessTrailFile() {
   auto &verbose_flags = utils::verbose::Flags::getInstance();
 
   if (lexer_.GetHasCode()) {
-    printf("spin: important:\n");
+    printf("spin++: important:\n");
     printf("  =======================================warning====\n");
     printf("  this model contains embedded c code statements\n");
     printf("  these statements will not be executed when the trail\n");
@@ -153,7 +153,7 @@ void ProcessTrailFile() {
         if ((fd = fopen(snap.c_str(), "r")) != NULL)
           goto okay;
       }
-      printf("spin: cannot find trail file\n");
+      printf("spin++: cannot find trail file\n");
       MainProcessor::Exit(1);
     }
   }
@@ -162,7 +162,7 @@ void ProcessTrailFile() {
 
 okay:
   if (IsFileNewer(oFname->name, snap)) {
-    printf("spin: warning, \"%s\" is IsFileNewer than %s\n",
+    printf("spin++: warning, \"%s\" is IsFileNewer than %s\n",
            oFname->name.c_str(), snap.c_str());
   }
   Tval = 1;
@@ -196,7 +196,7 @@ okay:
       continue;
     }
     if (depth <= -5 && depth >= -8) {
-      printf("spin: used search permutation, replay with ./pan -r\n");
+      printf("spin++: used search permutation, replay with ./pan -r\n");
       return; /* permuted: -5, -6, -7, -8 */
     }
 
@@ -370,7 +370,7 @@ okay:
       printf("]\n");
     }
   }
-  printf("spin: trail ends after %d steps\n", depth);
+  printf("spin++: trail ends after %d steps\n", depth);
   sched::RenameWrapup(0);
 }
 

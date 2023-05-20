@@ -82,7 +82,7 @@ Lextok *Lextok::nn(models::Lextok *symbol, int type, models::Lextok *left,
     int forbidden = launch_settings.separate_version;
     switch (type) {
     case ASGN:
-      printf("spin: Warning, never claim has side-effect\n");
+      printf("spin++:: Warning, never claim has side-effect\n");
       break;
     case 'r':
     case 's':
@@ -105,7 +105,7 @@ Lextok *Lextok::nn(models::Lextok *symbol, int type, models::Lextok *left,
       if (n->symbol && !(n->symbol->xu & XX)) {
         n->symbol->xu |= XX;
         if (launch_settings.separate_version == 2) {
-          printf("spin: warning, make sure that the S1 model\n");
+          printf("spin++:: warning, make sure that the S1 model\n");
           printf("      also polls channel '%s' in its claim\n",
                  n->symbol->name.c_str());
         }
@@ -120,17 +120,17 @@ Lextok *Lextok::nn(models::Lextok *symbol, int type, models::Lextok *left,
       break;
     }
     if (forbidden) {
-      std::cout << "spin: never, saw " << loger::explainToString(type)
+      std::cout << "spin++:: never, saw " << loger::explainToString(type)
                 << std::endl;
       loger::fatal("incompatible with separate compilation");
     }
   } else if ((type == ENABLED || type == PC_VAL) && !(warn_nn & type)) {
-    std::cout << fmt::format("spin: Warning, using {} outside never claim",
+    std::cout << fmt::format("spin++: Warning, using {} outside never claim",
                              (type == ENABLED) ? "enabled()" : "pc_value()")
               << std::endl;
     warn_nn |= type;
   } else if (type == NONPROGRESS) {
-    loger::fatal("spin: Error, using np_ outside never claim\n");
+    loger::fatal("spin++: Error, using np_ outside never claim\n");
   }
   return n;
 }

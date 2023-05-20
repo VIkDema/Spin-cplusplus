@@ -91,7 +91,7 @@ void walk_atomic(models::Element *a, models::Element *b, int added) {
     switch (f->n->node_type) {
     case ATOMIC:
       if (verbose_flags.NeedToPrintVerbose()) {
-        printf("spin: %s:%d, warning, atomic inside %s (ignored)\n",
+        printf("spin++: %s:%d, warning, atomic inside %s (ignored)\n",
                f->n->file_name->name.c_str(), f->n->line_number,
                (added) ? "d_step" : "atomic");
       }
@@ -102,7 +102,7 @@ void walk_atomic(models::Element *a, models::Element *b, int added) {
           goto mknonat;
         break;
       }
-      printf("spin: %s:%d, warning, d_step inside ",
+      printf("spin++: %s:%d, warning, d_step inside ",
              f->n->file_name->name.c_str(), f->n->line_number);
       if (added) {
         printf("d_step (ignored)\n");
@@ -118,7 +118,7 @@ void walk_atomic(models::Element *a, models::Element *b, int added) {
       break;
     case UNLESS:
       if (added) {
-        printf("spin: error, %s:%d, unless in d_step (ignored)\n",
+        printf("spin++: error, %s:%d, unless in d_step (ignored)\n",
                f->n->file_name->name.c_str(), f->n->line_number);
       }
     }
@@ -413,7 +413,7 @@ void check_sequence(models::Sequence *s) {
       cnt++;
       if (cnt > 1 && n->node_type != PRINT && n->node_type != PRINTM) {
         if (verbose_flags.NeedToPrintVerbose()) {
-          printf("spin: %s:%d, redundant skip\n", n->file_name->name.c_str(),
+          printf("spin++: %s:%d, redundant skip\n", n->file_name->name.c_str(),
                  n->line_number);
         }
         if (e != s->frst && e != s->last && e != s->extent) {
@@ -783,11 +783,11 @@ void FixLabelRef(models::Symbol *c,
       break;
   }
   if (!l) {
-    printf("spin: label '%s' (proctype %s)\n", c->name.c_str(),
+    printf("spin++: label '%s' (proctype %s)\n", c->name.c_str(),
            a->name.c_str());
     loger::non_fatal("unknown label '%s'", c->name);
     if (context == a)
-      printf("spin: cannot remote ref a label inside the same proctype\n");
+      printf("spin++: cannot remote ref a label inside the same proctype\n");
     return;
   }
   if (!l->e || !l->e->n)
@@ -815,7 +815,7 @@ void FixLabelRef(models::Symbol *c,
   }
   l->e->status |= CHECK2; /* treat as if global */
   if (l->e->status & (ATOM | L_ATOM | D_ATOM)) {
-    printf("spin: %s:%d, warning, reference to label ", Fname->name.c_str(),
+    printf("spin++: %s:%d, warning, reference to label ", Fname->name.c_str(),
            file::LineNumber::Get());
     printf("from inside atomic or d_step (%s)\n", c->name.c_str());
   }
