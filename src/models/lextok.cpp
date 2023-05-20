@@ -1,5 +1,3 @@
-#pragma once
-
 #include "lextok.hpp"
 
 #include "../fatal/fatal.hpp"
