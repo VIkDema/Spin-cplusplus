@@ -291,7 +291,7 @@ void SetPname(models::Lextok *mtype_name, models::Lextok *n, int t,
     if (Expand_Ok) {
       n->symbol->hidden_flags |= (4 | 8 | 16); /* formal par */
       if (t == CHAN) {
-        n->left->symbol->AddAccess(ZS, cnt, 'F');
+        n->symbol->AddAccess(ZS, cnt, 'F');
       }
     }
 

@@ -1,5 +1,7 @@
 
 #include "fatal.hpp"
+#include "../lexer/line_number.hpp"
+#include "../main/main_processor.hpp"
 #include "../spin.hpp"
 #include "../utils/verbose/verbose.hpp"
 #include "y.tab.h"
@@ -7,14 +9,12 @@
 #include <fmt/core.h>
 #include <iostream>
 #include <sstream>
-#include "../main/main_processor.hpp"
-#include "../lexer/line_number.hpp"
 
 extern models::Symbol *Fname;
 extern models::Symbol *oFname;
 extern int nr_errs;
 extern int yychar;
-extern char yytext[];
+extern std::string yytext;
 
 namespace loger {
 static constexpr std::string_view kOperator = "operator: ";
@@ -29,10 +29,11 @@ void non_fatal(const std::string_view &s1,
       yychar == SEMI ? " statement separator"
                      : fmt::format(" saw '{}'", explainToString(yychar));
   std::string near =
-      strlen(yytext) > 1 ? fmt::format(" near '{}'", yytext) : "";
+      yytext.length() > 1 ? fmt::format(" near '{}'", yytext) : "";
 
-  std::cout << fmt::format("spin++: {0}:{1}, Error: {2}{3} {4}", fname, file::LineNumber::Get(),
-                           s1, s2.value_or(""), separator, near);
+  std::cout << fmt::format("spin++: {0}:{1}, Error: {2}{3} {4}", fname,
+                           file::LineNumber::Get(), fmt::format(s1, s2.value_or("")),
+                           separator, near);
   std::cout << std::endl;
   nr_errs++;
 }

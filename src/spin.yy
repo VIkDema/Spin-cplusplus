@@ -180,10 +180,10 @@ inst	: /* empty */	{ $$ = ZN; }
 			  $$ = models::Lextok::nn(ZN,CONST,ZN,ZN);
 			  $$->value = 0;
 			  if (!$3->symbol->type)
-				loger::fatal("undeclared variable %s",
+				loger::fatal("undeclared variable {}",
 					$3->symbol->name);
 			  else if ($3->symbol->init_value->node_type != CONST)
-				loger::fatal("need constant initializer for %s\n",
+				loger::fatal("need constant initializer for {}\n",
 					$3->symbol->name);
 			  else
 				$$->value = $3->symbol->init_value->value;
@@ -587,18 +587,21 @@ cmpnd	: pfld			{ Embedded++;
 				  if ($1->symbol->type ==  models::SymbolType::kStruct)
 					owner = $1->symbol->struct_name;
 				}
-	  sfld			{ $$ = $1; $$->right = $3;
-				  if ($3 && $1->symbol->type !=  models::SymbolType::kStruct)
-					$1->symbol->type = models::SymbolType::kStruct;
-				  Embedded--;
-				  if (!Embedded && !NamesNotAdded
-				  &&  !$1->symbol->type)
-				   loger::fatal("undeclared variable: %s",
-						$1->symbol->name);
-				  if ($3) structs::CheckValidRef($1, $3->left);
-				  owner = ZS;
-				}
-	;
+	  sfld		{ 
+					$$ = $1; 
+					$$->right = $3;
+				  	if ($3 && $1->symbol->type !=  models::SymbolType::kStruct){
+						$1->symbol->type = models::SymbolType::kStruct;
+					}
+				  	Embedded--;
+				  	if (!Embedded && !NamesNotAdded &&  !$1->symbol->type){
+				   		loger::fatal("undeclared variable: {}", $1->symbol->name);
+					}
+				  	if ($3) {
+						structs::CheckValidRef($1, $3->left);
+					}
+				  	owner = ZS;
+				};
 
 sfld	: /* empty */		{ $$ = ZN; }
 	| '.' cmpnd %prec DOT	{ $$ = models::Lextok::nn(ZN, '.', $2, ZN); }

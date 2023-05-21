@@ -3510,13 +3510,13 @@ void putname(FILE *fd, const std::string &pre, models::Lextok *n, int m,
 
   if (!s->type) {
     if (pre != ".") {
-      loger::fatal("undeclared variable '%s'", s->name);
+      loger::fatal("undeclared variable '{}'", s->name);
     }
     s->type = models::kInt;
   }
 
   if (s->type == PROCTYPE)
-    loger::fatal("proctype-name '%s' used as array-name", s->name);
+    loger::fatal("proctype-name '{}' used as array-name", s->name);
 
   fprintf(fd, pre.c_str(), 0);
   if (!terse && !s->owner_name && evalindex != 1) {

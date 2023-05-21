@@ -771,7 +771,7 @@ void Lexer::DefInline(models::Symbol *symbol, int ln, char *ptr, char *prc,
   for (tmp = lexer::InlineProcessor::GetSeqNames(); tmp;
        cnt++, tmp = tmp->next) {
       if (symbol->name != tmp->nm->name) {
-        loger::non_fatal("procedure name %s redefined", tmp->nm->name);
+        loger::non_fatal("procedure name {} redefined", tmp->nm->name);
         tmp->cn = (models::Lextok *)nw;
         tmp->params = lextok;
         tmp->dln = ln;
@@ -826,7 +826,7 @@ void Lexer::PickupInline(models::Symbol *t, models::Lextok *apars,
       j++;
   }
   if (p || q)
-      loger::fatal("wrong nr of params on call of '%s'", t->name);
+      loger::fatal("wrong nr of params on call of '{}'", t->name);
 
   tmp->anms = (char **)emalloc(j * sizeof(char *));
   for (p = apars, j = 0; p; p = p->right, j++) {
