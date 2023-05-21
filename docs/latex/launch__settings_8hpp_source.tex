@@ -1,0 +1,72 @@
+\doxysection{launch\+\_\+settings.\+hpp}
+\hypertarget{launch__settings_8hpp_source}{}\label{launch__settings_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch\_settings.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch\_settings.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}../lexer/lexer.hpp"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <iostream>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <stdexcept>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00008\ \textcolor{preprocessor}{\#include\ <sys/\_types/\_size\_t.h>}}
+\DoxyCodeLine{00009\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_launch_settings}{LaunchSettings}}\ \{}
+\DoxyCodeLine{00012\ \ \ \textcolor{keywordtype}{bool}\ need\_export\_ast\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:export\_ast}}
+\DoxyCodeLine{00013\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_analyze\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:analyze}}
+\DoxyCodeLine{00014\ \ \ \textcolor{keywordtype}{bool}\ need\_disable\_final\_state\_reporting\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ no\_wrapup}}
+\DoxyCodeLine{00015\ \ \ \textcolor{keywordtype}{bool}\ need\_dont\_execute\_printfs\_in\_sumulation\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ no\_print}}
+\DoxyCodeLine{00016\ \ \ \textcolor{keywordtype}{bool}\ need\_print\_channel\_access\_info\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ Caccess}}
+\DoxyCodeLine{00017\ \ \ \textcolor{keywordtype}{bool}\ need\_columnated\_output\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ columns}}
+\DoxyCodeLine{00018\ \ \ \textcolor{keywordtype}{bool}\ need\_produce\_symbol\_table\_information\ =\ \textcolor{keyword}{false};\ \ \ \textcolor{comment}{//\ OLD:dumptab}}
+\DoxyCodeLine{00019\ \ \ \textcolor{keywordtype}{bool}\ need\_compute\_synchronous\_product\_multiple\_never\_claims\ =}
+\DoxyCodeLine{00020\ \ \ \ \ \ \ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:product}}
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_run\_in\_interactive\_mode\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ interactive}}
+\DoxyCodeLine{00022\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_print\_result\_of\_inlining\_and\_preprocessing\ =}
+\DoxyCodeLine{00023\ \ \ \ \ \ \ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ inlineonly}}
+\DoxyCodeLine{00024\ \ \ \textcolor{keywordtype}{bool}\ reverse\_eval\_order\_of\_nested\_unlesses\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ like\_java}}
+\DoxyCodeLine{00025\ \ \ \textcolor{keywordtype}{bool}\ need\_save\_trail\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ s\_trail}}
+\DoxyCodeLine{00026\ \ \ \textcolor{keywordtype}{bool}\ need\_use\_strict\_lang\_intersection\ =\ \textcolor{keyword}{false};\ \ \ \ \ \textcolor{comment}{//\ OLD:\ Strict}}
+\DoxyCodeLine{00027\ \ \ \textcolor{keywordtype}{bool}\ need\_lose\_msgs\_sent\_to\_full\_queues\ =\ \textcolor{keyword}{false};\ \ \ \ \textcolor{comment}{//\ OLD:\ m\_loss}}
+\DoxyCodeLine{00028\ \ \ \textcolor{keywordtype}{bool}\ need\_short\_output\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ tl\_terse}}
+\DoxyCodeLine{00029\ \ \ \textcolor{keywordtype}{bool}\ need\_old\_scope\_rules\ =}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ old\_scope\_ruless\ возможно\ стоит\ выпилить}}
+\DoxyCodeLine{00031\ \ \ \textcolor{keywordtype}{bool}\ need\_use\_optimizations\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ usedopts}}
+\DoxyCodeLine{00032\ \ \ \textcolor{keywordtype}{bool}\ need\_pretty\_print\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_tabs\ =\ \textcolor{keyword}{true};\ \textcolor{comment}{//\ OLD:\ notabs}}
+\DoxyCodeLine{00034\ \ \ \textcolor{comment}{//\ optimizations}}
+\DoxyCodeLine{00035\ \ \ \textcolor{keywordtype}{bool}\ need\_use\_dataflow\_optimizations\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ dataflow}}
+\DoxyCodeLine{00036\ \ \ \textcolor{keywordtype}{bool}\ need\_hide\_write\_only\_variables\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \textcolor{comment}{//\ oLD:\ deadvar}}
+\DoxyCodeLine{00037\ \ \ \textcolor{keywordtype}{bool}\ need\_statemate\_merging\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:merger}}
+\DoxyCodeLine{00038\ \ \ \textcolor{keywordtype}{bool}\ need\_rendezvous\_optimizations\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ rvopt}}
+\DoxyCodeLine{00039\ \ \ \textcolor{keywordtype}{bool}\ need\_case\_caching\ =\ \textcolor{keyword}{true};\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ ccache}}
+\DoxyCodeLine{00040\ \ \ \textcolor{keywordtype}{bool}\ need\_revert\_old\_rultes\_for\_priority\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ old\_priority\_rules}}
+\DoxyCodeLine{00041\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_print\_version\_and\_stop\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_print\_help\_and\_stop\ =\ \textcolor{keyword}{false};}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_recompile\ =\ \textcolor{keyword}{true};\ \ \ \ \ \textcolor{comment}{//\ OLD:\ norecompile}}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{bool}\ need\_to\_replay\ =\ \textcolor{keyword}{false};\ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ replay}}
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{bool}\ need\_preprocess\_only\ =\ \textcolor{keyword}{false};\ \textcolor{comment}{//\ OLD:\ preprocessonly}}
+\DoxyCodeLine{00046\ \ \ \textcolor{keywordtype}{int}\ buzzed\ =\ 0;}
+\DoxyCodeLine{00047\ \ \ \textcolor{keywordtype}{short}\ has\_provided\ =\ 0;}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{int}\ separate\_version\ =\ 0;\ \textcolor{comment}{//\ OLD:\ separate}}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{int}\ nubmer\_trail\ =\ 0;\ \ \ \ \ \textcolor{comment}{//\ OLD:\ ntrail}}
+\DoxyCodeLine{00051\ }
+\DoxyCodeLine{00052\ \ \ std::vector<std::string>\ trail\_file\_name;\ \ \ \ \ \ \ \textcolor{comment}{//\ old:\ trailfilename}}
+\DoxyCodeLine{00053\ \ \ std::vector<std::string>\ never\_claim\_file\_name;\ \textcolor{comment}{//\ old:\ nvr\_file}}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \ \ \textcolor{keywordtype}{char}\ \ **add\_ltl\ \ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00056\ \ \ \textcolor{keywordtype}{char}\ \ **ltl\_file\ =\ \textcolor{keyword}{nullptr};}
+\DoxyCodeLine{00057\ }
+\DoxyCodeLine{00058\ \ \ std::vector<std::string>\ pre\_args\ =}
+\DoxyCodeLine{00059\ \ \ \ \ \ \ \{\};\ \textcolor{comment}{//\ OLD:\ PreArg[++PreCnt]\ =\ (char\ *)\&argv[1][0];}}
+\DoxyCodeLine{00060\ }
+\DoxyCodeLine{00061\ \ \ std::size\_t\ count\_of\_skipping\_steps\ =\ 0;\ \textcolor{comment}{//\ OLD:\ jumpsteps}}
+\DoxyCodeLine{00062\ \ \ std::size\_t\ count\_of\_steps\ =\ 0;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{//\ OLD:\ cutoff}}
+\DoxyCodeLine{00063\ }
+\DoxyCodeLine{00064\ \ \ \textcolor{keywordtype}{void}\ SetOptimizationsOptions(\textcolor{keywordtype}{int}\ value);}
+\DoxyCodeLine{00065\ \ \ std::string\ BuildPanRuntime();}
+\DoxyCodeLine{00066\ \};}
+
+\end{DoxyCode}

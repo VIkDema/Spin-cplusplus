@@ -1,0 +1,41 @@
+\doxysection{fms.\+hpp}
+\hypertarget{fms_8hpp_source}{}\label{fms_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/models/fms.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/models/fms.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}models\_fwd.hpp"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{namespace\ }models\ \{}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__state}{FSM\_state}}\ \{\ \textcolor{comment}{/*\ used\ in\ pangen5.c\ -\/\ dataflow\ */}}
+\DoxyCodeLine{00008\ \ \ \textcolor{keywordtype}{int}\ from;\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ state\ number\ */}}
+\DoxyCodeLine{00009\ \ \ \textcolor{keywordtype}{int}\ seen;\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ used\ for\ dfs\ */}}
+\DoxyCodeLine{00010\ \ \ \textcolor{keywordtype}{int}\ in;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ nr\ of\ incoming\ edges\ */}}
+\DoxyCodeLine{00011\ \ \ \textcolor{keywordtype}{int}\ cr;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ has\ reachable\ 1-\/relevant\ successor\ */}}
+\DoxyCodeLine{00012\ \ \ \textcolor{keywordtype}{int}\ scratch;}
+\DoxyCodeLine{00013\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ *dom;}
+\DoxyCodeLine{00014\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{long}\ *mod;\ \textcolor{comment}{/*\ to\ mark\ dominant\ nodes\ */}}
+\DoxyCodeLine{00015\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__trans}{FSM\_trans}}\ *t;\ \ \ \ \ \ \textcolor{comment}{/*\ outgoing\ edges\ */}}
+\DoxyCodeLine{00016\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__trans}{FSM\_trans}}\ *p;\ \ \ \ \ \ \textcolor{comment}{/*\ incoming\ edges,\ predecessors\ */}}
+\DoxyCodeLine{00017\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__state}{FSM\_state}}\ *next;\ \ \ \ \textcolor{comment}{/*\ linked\ list\ of\ all\ states\ */}}
+\DoxyCodeLine{00018\ \};}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__trans}{FSM\_trans}}\ \{\ \textcolor{comment}{/*\ used\ in\ pangen5.c\ -\/\ dataflow\ */}}
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{int}\ to;}
+\DoxyCodeLine{00022\ \ \ \textcolor{keywordtype}{short}\ relevant;\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ when\ sliced\ */}}
+\DoxyCodeLine{00023\ \ \ \textcolor{keywordtype}{short}\ round;\ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ ditto:\ iteration\ when\ marked\ */}}
+\DoxyCodeLine{00024\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__use}{FSM\_use}}\ *Val[2];\ \textcolor{comment}{/*\ 0=reads,\ 1=writes\ */}}
+\DoxyCodeLine{00025\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_element}{Element}}\ *step;}
+\DoxyCodeLine{00026\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__trans}{FSM\_trans}}\ *next;}
+\DoxyCodeLine{00027\ \};}
+\DoxyCodeLine{00028\ }
+\DoxyCodeLine{00029\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__use}{FSM\_use}}\ \{\ \textcolor{comment}{/*\ used\ in\ pangen5.c\ -\/\ dataflow\ */}}
+\DoxyCodeLine{00030\ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *n;}
+\DoxyCodeLine{00031\ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *var;}
+\DoxyCodeLine{00032\ \ \ \textcolor{keywordtype}{int}\ special;}
+\DoxyCodeLine{00033\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_f_s_m__use}{FSM\_use}}\ *next;}
+\DoxyCodeLine{00034\ \};}
+\DoxyCodeLine{00035\ \}\ \textcolor{comment}{//\ namespace\ models}}
+
+\end{DoxyCode}

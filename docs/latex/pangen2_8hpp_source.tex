@@ -1,0 +1,1249 @@
+\doxysection{pangen2.\+hpp}
+\hypertarget{pangen2_8hpp_source}{}\label{pangen2_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/pangen/pangen2.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/pangen/pangen2.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/*****\ spin:\ pangen2.h\ *****/}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \ }
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *Pre0[]\ =\ \{}
+\DoxyCodeLine{00006\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ SC"{}},}
+\DoxyCodeLine{00007\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ \_FILE\_OFFSET\_BITS\ \ \ 64"{}},\ \textcolor{comment}{/*\ allows\ file\ sizes\ greater\ than}}
+\DoxyCodeLine{00008\ \textcolor{comment}{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ 2Gb\ */}}
+\DoxyCodeLine{00009\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00010\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <stdio.h>"{}},}
+\DoxyCodeLine{00011\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <signal.h>"{}},}
+\DoxyCodeLine{00012\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <stdlib.h>"{}},}
+\DoxyCodeLine{00013\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <stdarg.h>"{}},}
+\DoxyCodeLine{00014\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <string.h>"{}},}
+\DoxyCodeLine{00015\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <ctype.h>"{}},}
+\DoxyCodeLine{00016\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <errno.h>"{}},}
+\DoxyCodeLine{00017\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ defined(WIN32)\ ||\ defined(WIN64)"{}},}
+\DoxyCodeLine{00018\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <time.h>"{}},}
+\DoxyCodeLine{00019\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00020\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <unistd.h>"{}},}
+\DoxyCodeLine{00021\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <sys/times.h>"{}},}
+\DoxyCodeLine{00022\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00023\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <sys/types.h>"{}},\ \textcolor{comment}{/*\ defines\ off\_t\ */}}
+\DoxyCodeLine{00024\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <sys/stat.h>"{}},}
+\DoxyCodeLine{00025\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <limits.h>"{}},}
+\DoxyCodeLine{00026\ \ \ \ \ \textcolor{stringliteral}{"{}\#include\ <fcntl.h>"{}},}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ Offsetof(X,\ Y)\ ((ulong)(\&(((X\ *)0)-\/>Y)))"{}},}
+\DoxyCodeLine{00029\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ max"{}},}
+\DoxyCodeLine{00030\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ max(a,b)\ (((a)<(b))\ ?\ (b)\ :\ (a))"{}},}
+\DoxyCodeLine{00031\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00032\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ PRINTF"{}},}
+\DoxyCodeLine{00033\ \ \ \ \ \textcolor{stringliteral}{"{}int\ Printf(const\ char\ *fmt,\ ...);\ /*\ prototype\ only\ */"{}},}
+\DoxyCodeLine{00034\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00035\ \ \ \ \ 0,}
+\DoxyCodeLine{00036\ \};}
+\DoxyCodeLine{00037\ }
+\DoxyCodeLine{00038\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *Separate[]\ =\ \{}
+\DoxyCodeLine{00039\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ COLLAPSE"{}},}
+\DoxyCodeLine{00040\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#if\ (NCORE>1\ \&\&\ !defined(SEP\_STATE))\ ||\ defined(BFS\_PAR)"{}},}
+\DoxyCodeLine{00041\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ volatile\ ulong\ *ncomps;\ /*\ in\ shared\ memory\ */"{}},}
+\DoxyCodeLine{00042\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#else"{}},}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ ulong\ ncomps[256+2];"{}},}
+\DoxyCodeLine{00044\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#endif"{}},}
+\DoxyCodeLine{00045\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00046\ \ \ \ \ \textcolor{stringliteral}{"{}Trans\ ***trans;\ \ \ \ /*\ 1\ ptr\ per\ state\ per\ proctype\ */\(\backslash\)n"{}},}
+\DoxyCodeLine{00047\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00048\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ VECTORSZ>32000"{}},}
+\DoxyCodeLine{00049\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ P\_o[MAXPROC],\ P\_o\_tmp[MAXPROC+1];"{}},}
+\DoxyCodeLine{00050\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ Q\_o[MAXQ],\ \ \ \ Q\_o\_tmp[MAXPROC+1];"{}},}
+\DoxyCodeLine{00051\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00052\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ *proc\_offset\ =\ (int\ *)\ P\_o;"{}},}
+\DoxyCodeLine{00053\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ *q\_offset\ \ \ \ =\ (int\ *)\ Q\_o;"{}},}
+\DoxyCodeLine{00054\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00055\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ short\ P\_o[MAXPROC],\ P\_o\_tmp[MAXPROC+1];"{}},}
+\DoxyCodeLine{00056\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ short\ Q\_o[MAXQ],\ \ \ \ Q\_o\_tmp[MAXPROC+1];"{}},}
+\DoxyCodeLine{00057\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00058\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ short\ *proc\_offset\ =\ (short\ *)\ P\_o;"{}},}
+\DoxyCodeLine{00059\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ short\ *q\_offset\ \ \ \ =\ (short\ *)\ Q\_o;"{}},}
+\DoxyCodeLine{00060\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00061\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ P\_s[MAXPROC+1],\ P\_s\_tmp[MAXPROC+1];"{}},}
+\DoxyCodeLine{00062\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ Q\_s[MAXQ+1],\ \ \ \ Q\_s\_tmp[MAXQ+1];"{}},}
+\DoxyCodeLine{00063\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ *proc\_skip\ =\ (uchar\ *)\ P\_s;"{}},}
+\DoxyCodeLine{00064\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ *q\_skip\ \ \ \ =\ (uchar\ *)\ Q\_s;"{}},}
+\DoxyCodeLine{00065\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00066\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ TRIX"{}},}
+\DoxyCodeLine{00067\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ TRIX\_v6\ *freebodies;"{}},}
+\DoxyCodeLine{00068\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ TRIX\_v6\ *processes[MAXPROC+1];"{}},}
+\DoxyCodeLine{00069\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ TRIX\_v6\ *channels[MAXQ+1];"{}},}
+\DoxyCodeLine{00070\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ long\ \_p\_count[MAXPROC];"{}},}
+\DoxyCodeLine{00071\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ long\ \_c\_count[MAXPROC];"{}},}
+\DoxyCodeLine{00072\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif\(\backslash\)n"{}},}
+\DoxyCodeLine{00073\ \ \ \ \ \textcolor{stringliteral}{"{}ulong\ \ vsize;\ \ /*\ vector\ size\ in\ bytes\ */"{}},}
+\DoxyCodeLine{00074\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ SVDUMP"{}},}
+\DoxyCodeLine{00075\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ vprefix=0,\ svfd;\ \ \ \ /*\ runtime\ option\ -\/pN\ */"{}},}
+\DoxyCodeLine{00076\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00077\ \ \ \ \ \textcolor{stringliteral}{"{}char\ *tprefix\ =\ \(\backslash\)"{}trail\(\backslash\)"{};\ /*\ runtime\ option\ -\/tsuffix\ */"{}},}
+\DoxyCodeLine{00078\ \ \ \ \ \textcolor{stringliteral}{"{}short\ boq\ =\ -\/1;\ \ \ \ \ \ \ \ /*\ blocked\_on\_queue\ status\ */"{}},}
+\DoxyCodeLine{00079\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \_;\ /*\ predefined\ write-\/only\ variable\ */"{}},}
+\DoxyCodeLine{00080\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ PEG"{}},}
+\DoxyCodeLine{00081\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ long\ peg[NTRANS];"{}},}
+\DoxyCodeLine{00082\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00083\ \ \ \ \ 0,}
+\DoxyCodeLine{00084\ \};}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *Preamble[]\ =\ \{}
+\DoxyCodeLine{00087\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ RANDOMIZE"{}},}
+\DoxyCodeLine{00088\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ T\_RAND\ \ RANDOMIZE"{}},}
+\DoxyCodeLine{00089\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00090\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ CNTRSTACK"{}},}
+\DoxyCodeLine{00091\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ onstack\_now()\ \ \ (LL[trpt-\/>j6]\ \&\&\ LL[trpt-\/>j7])"{}},}
+\DoxyCodeLine{00092\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ onstack\_put()\ \ \ \ LL[trpt-\/>j6]++;\ LL[trpt-\/>j7]++"{}},}
+\DoxyCodeLine{00093\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ onstack\_zap()\ \ \ \ LL[trpt-\/>j6]-\/-\/;\ LL[trpt-\/>j7]-\/-\/"{}},}
+\DoxyCodeLine{00094\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00095\ }
+\DoxyCodeLine{00096\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ !defined(SAFETY)\ \&\&\ !defined(NOCOMP)"{}},}
+\DoxyCodeLine{00097\ \ \ \ \ \textcolor{comment}{/*}}
+\DoxyCodeLine{00098\ \textcolor{comment}{\ \ \ \ \ *\ V\_A\ identifies\ states\ in\ the\ current\ statespace}}
+\DoxyCodeLine{00099\ \textcolor{comment}{\ \ \ \ \ *\ A\_V\ identifies\ states\ in\ the\ 'other'\ statespace}}
+\DoxyCodeLine{00100\ \textcolor{comment}{\ \ \ \ \ *\ S\_A\ remembers\ how\ many\ leading\ bytes\ in\ the\ sv}}
+\DoxyCodeLine{00101\ \textcolor{comment}{\ \ \ \ \ *\ are\ used\ for\ these\ markers\ +\ fairness\ bits}}
+\DoxyCodeLine{00102\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00103\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ V\_A\ (((now.\_a\_t\&1)?2:1)\ <<\ (now.\_a\_t\&2))"{}},}
+\DoxyCodeLine{00104\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ A\_V\ (((now.\_a\_t\&1)?1:2)\ <<\ (now.\_a\_t\&2))"{}},}
+\DoxyCodeLine{00105\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ S\_A\ =\ 0;"{}},}
+\DoxyCodeLine{00106\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00107\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ V\_A\ 0"{}},}
+\DoxyCodeLine{00108\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ A\_V\ 0"{}},}
+\DoxyCodeLine{00109\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ S\_A\ 0"{}},}
+\DoxyCodeLine{00110\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00111\ }
+\DoxyCodeLine{00112\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ MA"{}},}
+\DoxyCodeLine{00113\ \ \ \ \ \textcolor{stringliteral}{"{}\#undef\ onstack\_now"{}},}
+\DoxyCodeLine{00114\ \ \ \ \ \textcolor{stringliteral}{"{}\#undef\ onstack\_put"{}},}
+\DoxyCodeLine{00115\ \ \ \ \ \textcolor{stringliteral}{"{}\#undef\ onstack\_zap"{}},}
+\DoxyCodeLine{00116\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ onstack\_put()\ \ ;"{}},}
+\DoxyCodeLine{00117\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ onstack\_zap()\ \ g\_store((char\ *)\ \&now,\ vsize,\ 4)"{}},}
+\DoxyCodeLine{00118\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00119\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ defined(FULLSTACK)\ \&\&\ !defined(BITSTATE)"{}},}
+\DoxyCodeLine{00120\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ onstack\_put()\ \ trpt-\/>ostate\ =\ Lstate"{}},}
+\DoxyCodeLine{00121\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ onstack\_zap()\ \ \{\ \(\backslash\)\(\backslash\)"{}},}
+\DoxyCodeLine{00122\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (trpt-\/>ostate)\ \(\backslash\)\(\backslash\)"{}},}
+\DoxyCodeLine{00123\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ trpt-\/>ostate-\/>tagged\ =\ \(\backslash\)\(\backslash\)"{}},}
+\DoxyCodeLine{00124\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ (S\_A)?\ (trpt-\/>ostate-\/>tagged\&\string~V\_A)\ :\ 0;\ \(\backslash\)\(\backslash\)"{}},}
+\DoxyCodeLine{00125\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00126\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00127\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00128\ \ \ \ \ \textcolor{stringliteral}{"{}H\_el\ \ \ **H\_tab,\ **S\_Tab;"{}},}
+\DoxyCodeLine{00129\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ \#ifndef\ BFS\_PAR\ */"{}},}
+\DoxyCodeLine{00130\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ H\_el\ \ \ *Lstate;"{}},}
+\DoxyCodeLine{00131\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ \#endif\ */"{}},}
+\DoxyCodeLine{00132\ \ \ \ \ \textcolor{stringliteral}{"{}Trail\ \ *trail,\ *trpt;"{}},}
+\DoxyCodeLine{00133\ \ \ \ \ \textcolor{stringliteral}{"{}FILE\ \ \ *efd;"{}},}
+\DoxyCodeLine{00134\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ *\_this;"{}},}
+\DoxyCodeLine{00135\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ maxdepth=10000;"{}},}
+\DoxyCodeLine{00136\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ omaxdepth=10000;"{}},}
+\DoxyCodeLine{00137\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BCS"{}},}
+\DoxyCodeLine{00138\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ bitflags\ in\ trpt-\/>bcs\ */"{}},}
+\DoxyCodeLine{00139\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ B\_PHASE1\ \ \ \ 1"{}},}
+\DoxyCodeLine{00140\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ B\_PHASE2\ \ \ \ 2"{}},}
+\DoxyCodeLine{00141\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ B\_FORCED\ \ \ \ 4"{}},}
+\DoxyCodeLine{00142\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ sched\_max\ =\ 0;"{}},}
+\DoxyCodeLine{00143\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00144\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00145\ \ \ \ \ \textcolor{stringliteral}{"{}double\ quota;\ \ /*\ time\ limit\ */"{}},}
+\DoxyCodeLine{00146\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ NCORE>1"{}},}
+\DoxyCodeLine{00147\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ long\ \ \ \ z\_handoff\ =\ -\/1;"{}},}
+\DoxyCodeLine{00148\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00149\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ SC"{}},\ \textcolor{comment}{/*\ stack\ cycling\ */}}
+\DoxyCodeLine{00150\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ char\ \ \ \ *stackfile;"{}},}
+\DoxyCodeLine{00151\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00152\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ *SS,\ *LL;"{}},}
+\DoxyCodeLine{00153\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00154\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ reversing\ =\ 0;"{}},}
+\DoxyCodeLine{00155\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ HASH\_NR\ =\ 0;"{}},}
+\DoxyCodeLine{00156\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00157\ \ \ \ \ \textcolor{stringliteral}{"{}double\ memcnt\ =\ (double)\ 0;"{}},}
+\DoxyCodeLine{00158\ \ \ \ \ \textcolor{stringliteral}{"{}double\ memlim\ =\ (double)\ (1<<30);\ /*\ 1\ GB\ */"{}},}
+\DoxyCodeLine{00159\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ NCORE>1"{}},}
+\DoxyCodeLine{00160\ \ \ \ \ \textcolor{stringliteral}{"{}double\ mem\_reserved\ =\ (double)\ 0;"{}},}
+\DoxyCodeLine{00161\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00162\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00163\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ for\ emalloc:\ */"{}},}
+\DoxyCodeLine{00164\ \ \ \ \ \textcolor{stringliteral}{"{}static\ char\ *have;"{}},}
+\DoxyCodeLine{00165\ \ \ \ \ \textcolor{stringliteral}{"{}static\ long\ left\ =\ 0L;"{}},}
+\DoxyCodeLine{00166\ \ \ \ \ \textcolor{stringliteral}{"{}static\ double\ fragment\ =\ (double)\ 0;"{}},}
+\DoxyCodeLine{00167\ \ \ \ \ \textcolor{stringliteral}{"{}static\ ulong\ grow;"{}},}
+\DoxyCodeLine{00168\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00169\ \textcolor{preprocessor}{\#if\ 1}}
+\DoxyCodeLine{00170\ \ \ \ \ \textcolor{stringliteral}{"{}unsigned\ int\ HASH\_CONST[]\ =\ \{"{}},}
+\DoxyCodeLine{00171\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ generated\ by\ hashgen\ 421\ -\/-\/\ assumes\ 4\ bytes\ per\ int\ */"{}},}
+\DoxyCodeLine{00172\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x100d4e63,\ 0x0fc22f87,\ 0xa7155c77,\ 0x78f2c3b9,"{}},}
+\DoxyCodeLine{00173\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xde32d207,\ 0xc27d305b,\ 0x1bb3fb2b,\ 0x2798c7a5,"{}},}
+\DoxyCodeLine{00174\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9c675ffd,\ 0x777d9081,\ 0x07aef2f1,\ 0xae08922f,"{}},}
+\DoxyCodeLine{00175\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5bd365b7,\ 0xed51c47b,\ 0x9b5aeea1,\ 0xbcc9d431,"{}},}
+\DoxyCodeLine{00176\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x396d8fff,\ 0xa2fd1367,\ 0x08616521,\ 0x5e84991f,"{}},}
+\DoxyCodeLine{00177\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x87495bc5,\ 0x2930039b,\ 0xceb6a593,\ 0xfe522d63,"{}},}
+\DoxyCodeLine{00178\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7ff60baf,\ 0xf89b1fbf,\ 0x74c01755,\ 0xe0c559bf,"{}},}
+\DoxyCodeLine{00179\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x3669fc47,\ 0x8756d3bf,\ 0x14f78445,\ 0x24c41779,"{}},}
+\DoxyCodeLine{00180\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0af7b129,\ 0xde22368d,\ 0x3e1c01e3,\ 0xaf773e49,"{}},}
+\DoxyCodeLine{00181\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5b762459,\ 0x86d12911,\ 0x0953a3af,\ 0xb66dc23d,"{}},}
+\DoxyCodeLine{00182\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x96b3bd4f,\ 0x19b1dd51,\ 0xd886fbc3,\ 0xa7f3a025,"{}},}
+\DoxyCodeLine{00183\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xccb48e63,\ 0x87d8f027,\ 0x2bea270d,\ 0xdb0e9379,"{}},}
+\DoxyCodeLine{00184\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x78c09f21,\ 0x0cbbfe07,\ 0xea4bc7c3,\ 0x5bfbc3c9,"{}},}
+\DoxyCodeLine{00185\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x3c6e53fd,\ 0xab320cdd,\ 0x31041409,\ 0x416e7485,"{}},}
+\DoxyCodeLine{00186\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe41d75fd,\ 0xc3c5060f,\ 0x201a9dc1,\ 0x93dee72b,"{}},}
+\DoxyCodeLine{00187\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x6461305f,\ 0xc571dec5,\ 0xa1fd21c5,\ 0xfb421ce1,"{}},}
+\DoxyCodeLine{00188\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7f024b05,\ 0xfa518819,\ 0x6c9777fb,\ 0x0d4d9351,"{}},}
+\DoxyCodeLine{00189\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x08b33861,\ 0xccb9d0f3,\ 0x34112791,\ 0xe962d7c9,"{}},}
+\DoxyCodeLine{00190\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8d742211,\ 0xcd9c47a1,\ 0x64437b69,\ 0x5fe40feb,"{}},}
+\DoxyCodeLine{00191\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x806113cb,\ 0x10e1d593,\ 0x821851b3,\ 0x057a1ff3,"{}},}
+\DoxyCodeLine{00192\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8ededc0b,\ 0x90dd5b31,\ 0x635ff359,\ 0x68dbcd35,"{}},}
+\DoxyCodeLine{00193\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1050ff4f,\ 0xdbb07257,\ 0x486336db,\ 0x83af1e75,"{}},}
+\DoxyCodeLine{00194\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x432f1799,\ 0xc1d0e7e7,\ 0x21f4eb5b,\ 0x881ec2c1,"{}},}
+\DoxyCodeLine{00195\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x23f3b539,\ 0x6cdfb80d,\ 0x71d474cf,\ 0x97d5d4a9,"{}},}
+\DoxyCodeLine{00196\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xf721d2e5,\ 0xb5ff3711,\ 0x3f2e58cd,\ 0x4e06e3d9,"{}},}
+\DoxyCodeLine{00197\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7d711739,\ 0x927887df,\ 0x7d57ad71,\ 0x232eb767,"{}},}
+\DoxyCodeLine{00198\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe3f5cc51,\ 0x6576b443,\ 0xed17bf1f,\ 0x8828b637,"{}},}
+\DoxyCodeLine{00199\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xc940f6ab,\ 0xc7b830ef,\ 0x11ed8a13,\ 0xaff20949,"{}},}
+\DoxyCodeLine{00200\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xf28a8465,\ 0x0da10cf9,\ 0xb512497d,\ 0x44accae1,"{}},}
+\DoxyCodeLine{00201\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x95e0929f,\ 0xe08c8901,\ 0xfd22d6c9,\ 0xb6a5c029,"{}},}
+\DoxyCodeLine{00202\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xaadb428d,\ 0x6e8a453d,\ 0x3d5c0195,\ 0x8bf4ae39,"{}},}
+\DoxyCodeLine{00203\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xbf83ab19,\ 0x3e9dac33,\ 0xc4df075d,\ 0x39472d71,"{}},}
+\DoxyCodeLine{00204\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb8647725,\ 0x1a6d4887,\ 0x78a03577,\ 0xafd76ef7,"{}},}
+\DoxyCodeLine{00205\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xc1a1d6b3,\ 0x1afb33c5,\ 0x87896299,\ 0x5cc992ef,"{}},}
+\DoxyCodeLine{00206\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7f805d0d,\ 0x089a039b,\ 0xa353cc27,\ 0x57b296b3,"{}},}
+\DoxyCodeLine{00207\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x52badec9,\ 0xc916e431,\ 0x09171957,\ 0x14996d51,"{}},}
+\DoxyCodeLine{00208\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe87e32c7,\ 0xb4fdbb5d,\ 0xdd216a03,\ 0x4ddd3fff,"{}},}
+\DoxyCodeLine{00209\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x767d5c57,\ 0x79c97509,\ 0xab70543b,\ 0xc5feca4f,"{}},}
+\DoxyCodeLine{00210\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8eb37b89,\ 0x20a2cefd,\ 0xf4b00b91,\ 0xf166593d,"{}},}
+\DoxyCodeLine{00211\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7bf50f65,\ 0x753e6c8b,\ 0xfb5b81dd,\ 0xf2d45ef5,"{}},}
+\DoxyCodeLine{00212\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9741c04f,\ 0x300da48d,\ 0x01dc4121,\ 0xa112cd47,"{}},}
+\DoxyCodeLine{00213\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0223b24b,\ 0xa89fbce7,\ 0x681e1f7b,\ 0xe7c6aedf,"{}},}
+\DoxyCodeLine{00214\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1fd3d523,\ 0x561ba723,\ 0xf54042fb,\ 0x1a516751,"{}},}
+\DoxyCodeLine{00215\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xcd085bd5,\ 0xe74246d5,\ 0x8b170b5d,\ 0x249985e9,"{}},}
+\DoxyCodeLine{00216\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5b4d9cf7,\ 0xe9912323,\ 0x5fc0f339,\ 0x41f8f051,"{}},}
+\DoxyCodeLine{00217\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8a296fb1,\ 0x62909f51,\ 0x2c05d695,\ 0x095efccb,"{}},}
+\DoxyCodeLine{00218\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xa91574f1,\ 0x0f5cc6c3,\ 0x23a2ca2b,\ 0xc6053ec1,"{}},}
+\DoxyCodeLine{00219\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xeb19e081,\ 0x3d1b3997,\ 0xb0c5f3cd,\ 0xe5d85b35,"{}},}
+\DoxyCodeLine{00220\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1cb1bdf1,\ 0x0c8f278f,\ 0x518249c3,\ 0x9f61b68d,"{}},}
+\DoxyCodeLine{00221\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xade0919d,\ 0x779e29c3,\ 0xdbac9485,\ 0x2ce149a9,"{}},}
+\DoxyCodeLine{00222\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x254c2409,\ 0x205b34fb,\ 0xc8ab1a89,\ 0x6b4a2585,"{}},}
+\DoxyCodeLine{00223\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x2303d94b,\ 0x8fa186b9,\ 0x49826da5,\ 0xd23a37ad,"{}},}
+\DoxyCodeLine{00224\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x680b18c9,\ 0xa46fbd7f,\ 0xe42c2cf9,\ 0xf7cfcb5f,"{}},}
+\DoxyCodeLine{00225\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb4842b8b,\ 0xe483780d,\ 0x66cf756b,\ 0x3eb73781,"{}},}
+\DoxyCodeLine{00226\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x41ca17a5,\ 0x59f91b0f,\ 0x92fb67d9,\ 0x0a5c330f,"{}},}
+\DoxyCodeLine{00227\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x46013fdb,\ 0x3b0634af,\ 0x9024f533,\ 0x96a001a7,"{}},}
+\DoxyCodeLine{00228\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x15bcd793,\ 0x3a311fb1,\ 0x78913b8b,\ 0x9d4a5ddf,"{}},}
+\DoxyCodeLine{00229\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x33189b31,\ 0xa99e8283,\ 0xf7cb29e9,\ 0x12d64a27,"{}},}
+\DoxyCodeLine{00230\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xeda770ff,\ 0xa7320297,\ 0xbd3c14a5,\ 0x96d0156f,"{}},}
+\DoxyCodeLine{00231\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0115db95,\ 0x7f79f52b,\ 0xa6d52521,\ 0xa063d4bd,"{}},}
+\DoxyCodeLine{00232\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9cb5e039,\ 0x42cf8195,\ 0xcb716835,\ 0x1bc21273,"{}},}
+\DoxyCodeLine{00233\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5a67ad27,\ 0x4b3b0545,\ 0x162cda67,\ 0x0489166b,"{}},}
+\DoxyCodeLine{00234\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x85fd06a9,\ 0x562b037d,\ 0x995bc1f3,\ 0xe144e78b,"{}},}
+\DoxyCodeLine{00235\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1e749f69,\ 0xa36df057,\ 0xcfee1667,\ 0x8c4116b7,"{}},}
+\DoxyCodeLine{00236\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x94647fe3,\ 0xe6899df7,\ 0x6d218981,\ 0xf1069079,"{}},}
+\DoxyCodeLine{00237\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd1851a33,\ 0xf424fc83,\ 0x24467005,\ 0xad8caf59,"{}},}
+\DoxyCodeLine{00238\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1ae5da13,\ 0x497612f9,\ 0x10f6d1ef,\ 0xeaf4ff05,"{}},}
+\DoxyCodeLine{00239\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x405f030b,\ 0x693b041d,\ 0x2065a645,\ 0x9fec71b3,"{}},}
+\DoxyCodeLine{00240\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xc3bd1b0f,\ 0xf29217a3,\ 0x0f25e15d,\ 0xd48c2b97,"{}},}
+\DoxyCodeLine{00241\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xce8acf2d,\ 0x0629489b,\ 0x1a5b0e01,\ 0x32d0c059,"{}},}
+\DoxyCodeLine{00242\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x2d3664bf,\ 0xc45f3833,\ 0xd57f551b,\ 0xbdd991c5,"{}},}
+\DoxyCodeLine{00243\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9f97da9f,\ 0xa029c2a9,\ 0x5dd0cbdf,\ 0xe237ba41,"{}},}
+\DoxyCodeLine{00244\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x62bb0b59,\ 0x93e7d037,\ 0x7e495619,\ 0x51b8282f,"{}},}
+\DoxyCodeLine{00245\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x853e8ef3,\ 0x9b8abbeb,\ 0x055f66f9,\ 0x2736f7e5,"{}},}
+\DoxyCodeLine{00246\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8d7e6353,\ 0x143abb65,\ 0x4e2bb5b3,\ 0x872e1adf,"{}},}
+\DoxyCodeLine{00247\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8fcac853,\ 0xb7cf6e57,\ 0x12177f3d,\ 0x1d2da641,"{}},}
+\DoxyCodeLine{00248\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x07856425,\ 0xc0ed53dd,\ 0x252271d9,\ 0x79874843,"{}},}
+\DoxyCodeLine{00249\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0aa8c9b5,\ 0x7e804f93,\ 0x2d080e09,\ 0x3929ddfd,"{}},}
+\DoxyCodeLine{00250\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x36433dbd,\ 0xd6568c17,\ 0xe624e939,\ 0xb33189ef,"{}},}
+\DoxyCodeLine{00251\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x29e68bff,\ 0x8aae2433,\ 0xe6335499,\ 0xc5facd9d,"{}},}
+\DoxyCodeLine{00252\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xbd5afc65,\ 0x7a584fa7,\ 0xab191435,\ 0x64bbdeef,"{}},}
+\DoxyCodeLine{00253\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9f5cd8e1,\ 0xb3a1be05,\ 0xbd0c1753,\ 0xb00e2c7f,"{}},}
+\DoxyCodeLine{00254\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x6a96e315,\ 0x96a31589,\ 0x660af5af,\ 0xc0438d43,"{}},}
+\DoxyCodeLine{00255\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x17637373,\ 0x6460e8df,\ 0x7d458de9,\ 0xd76b923f,"{}},}
+\DoxyCodeLine{00256\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x316f045f,\ 0x3ccbd035,\ 0x63f64d81,\ 0xd990d969,"{}},}
+\DoxyCodeLine{00257\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7c860a93,\ 0x99269ff7,\ 0x6fbcac8f,\ 0xd8cc562b,"{}},}
+\DoxyCodeLine{00258\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x67141071,\ 0x09f85ea3,\ 0x1298f2dd,\ 0x41fa86e5,"{}},}
+\DoxyCodeLine{00259\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xce1d7cf5,\ 0x6b232c9d,\ 0x8f093d4b,\ 0x3203ad4b,"{}},}
+\DoxyCodeLine{00260\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x07d70d5f,\ 0x38c44c75,\ 0x0887c9ef,\ 0x1833acf5,"{}},}
+\DoxyCodeLine{00261\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xa3607f85,\ 0x7d367573,\ 0x0ea4ffc3,\ 0xad2d09c1,"{}},}
+\DoxyCodeLine{00262\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7a1e664f,\ 0xef41dff5,\ 0x03563491,\ 0x67f30a1f,"{}},}
+\DoxyCodeLine{00263\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5ce5f9ef,\ 0xa2487a27,\ 0xe5077957,\ 0x9beb36fd,"{}},}
+\DoxyCodeLine{00264\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x16e41251,\ 0x216799ef,\ 0x07181f8d,\ 0xc191c3cf,"{}},}
+\DoxyCodeLine{00265\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xba21cab5,\ 0x73944eb7,\ 0xdf9eb69d,\ 0x5fef6cfd,"{}},}
+\DoxyCodeLine{00266\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd750a6f5,\ 0x04f3fa43,\ 0x7cb2d063,\ 0xd3bdb369,"{}},}
+\DoxyCodeLine{00267\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x35f35981,\ 0x9f294633,\ 0x5e293517,\ 0x70e51d05,"{}},}
+\DoxyCodeLine{00268\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xf8db618d,\ 0x66ee05db,\ 0x835eaa77,\ 0x166a02c3,"{}},}
+\DoxyCodeLine{00269\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb516f283,\ 0x94102293,\ 0x1ace50a5,\ 0x64072651,"{}},}
+\DoxyCodeLine{00270\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x66df7b75,\ 0x02e1b261,\ 0x8e6a73b9,\ 0x19dddfe7,"{}},}
+\DoxyCodeLine{00271\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd551cf39,\ 0x391c17cb,\ 0xf4304de5,\ 0xcd67b8d1,"{}},}
+\DoxyCodeLine{00272\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x25873e8d,\ 0x115b4c71,\ 0x36e062f3,\ 0xaec0c7c9,"{}},}
+\DoxyCodeLine{00273\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd929f79d,\ 0x935a661b,\ 0xda762b47,\ 0x170bd76b,"{}},}
+\DoxyCodeLine{00274\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1a955cb5,\ 0x341fb0ef,\ 0x7f366cef,\ 0xc98f60c7,"{}},}
+\DoxyCodeLine{00275\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xa4181af3,\ 0xa94a8837,\ 0x5fa3bc43,\ 0x11c638c1,"{}},}
+\DoxyCodeLine{00276\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x4e66fabb,\ 0x30ab85cf,\ 0x250704ef,\ 0x8bf3bc07,"{}},}
+\DoxyCodeLine{00277\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x6d2cd5ab,\ 0x613ef9c3,\ 0xb8e62149,\ 0x0404fd91,"{}},}
+\DoxyCodeLine{00278\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xa04fd9b1,\ 0xa5e389eb,\ 0x9543bd23,\ 0xad6ca1f9,"{}},}
+\DoxyCodeLine{00279\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x210c49ab,\ 0xf8e9532b,\ 0x854fba89,\ 0xdc7fc6bb,"{}},}
+\DoxyCodeLine{00280\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x48a051a7,\ 0x6b2f383b,\ 0x61a4b433,\ 0xd3af231b,"{}},}
+\DoxyCodeLine{00281\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xc5023fc7,\ 0xa5aa85df,\ 0xa0cd1157,\ 0x4206f64d,"{}},}
+\DoxyCodeLine{00282\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x3fea31c3,\ 0x62d510a1,\ 0x13988957,\ 0x6a11a033,"{}},}
+\DoxyCodeLine{00283\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x46f2a3b7,\ 0x2784ef85,\ 0x229eb9eb,\ 0x9c0c3053,"{}},}
+\DoxyCodeLine{00284\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5b7ead39,\ 0x82ae9afb,\ 0xf99e9fb3,\ 0x914b6459,"{}},}
+\DoxyCodeLine{00285\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xaf05edd7,\ 0xc82710dd,\ 0x8fc1ea1f,\ 0x7e0d7a8d,"{}},}
+\DoxyCodeLine{00286\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7c7592e9,\ 0x65321017,\ 0xea57553f,\ 0x4aeb49ff,"{}},}
+\DoxyCodeLine{00287\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5239ae4d,\ 0x4b4b4585,\ 0x94091c21,\ 0x7eaaf4cb,"{}},}
+\DoxyCodeLine{00288\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x6b489d6f,\ 0xecb9c0c3,\ 0x29a7af63,\ 0xaf117a0d,"{}},}
+\DoxyCodeLine{00289\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x969ea6cd,\ 0x7658a34d,\ 0x5fc0bba9,\ 0x26e99b7f,"{}},}
+\DoxyCodeLine{00290\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7a6f260f,\ 0xe37c34f1,\ 0x1a1569bb,\ 0xc3bc7371,"{}},}
+\DoxyCodeLine{00291\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8567543d,\ 0xad0c46a9,\ 0xa1264fd9,\ 0x16f10b29,"{}},}
+\DoxyCodeLine{00292\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5e00dd3b,\ 0xf85b6bcd,\ 0xa2d32d8b,\ 0x4a3c8d43,"{}},}
+\DoxyCodeLine{00293\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x6b33b959,\ 0x4fd1e6c9,\ 0x7938b8a9,\ 0x1ec795c7,"{}},}
+\DoxyCodeLine{00294\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe2ef3409,\ 0x83c16b9d,\ 0x0d3fd9eb,\ 0xeb461ad7,"{}},}
+\DoxyCodeLine{00295\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb09c831d,\ 0xaf052001,\ 0x7911164d,\ 0x1a9dc191,"{}},}
+\DoxyCodeLine{00296\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb52a0815,\ 0x0f732157,\ 0xc68c4831,\ 0x12cf3cbb\ \};"{}},}
+\DoxyCodeLine{00297\ \textcolor{preprocessor}{\#else}}
+\DoxyCodeLine{00298\ \ \ \ \ \textcolor{stringliteral}{"{}unsigned\ int\ HASH\_CONST[]\ =\ \{"{}},}
+\DoxyCodeLine{00299\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ asuming\ 4\ bytes\ per\ int\ */"{}},}
+\DoxyCodeLine{00300\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x100d4e63,\ 0x0fc22f87,"{}},}
+\DoxyCodeLine{00301\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x3ff0c3ff,\ 0x38e84cd7,"{}},}
+\DoxyCodeLine{00302\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x02b148e9,\ 0x98b2e49d,"{}},}
+\DoxyCodeLine{00303\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb616d379,\ 0xa5247fd9,"{}},}
+\DoxyCodeLine{00304\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xbae92a15,\ 0xb91c8bc5,"{}},}
+\DoxyCodeLine{00305\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8e5880f3,\ 0xacd7c069,"{}},}
+\DoxyCodeLine{00306\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb4c44bb3,\ 0x2ead1fb7,"{}},}
+\DoxyCodeLine{00307\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8e428171,\ 0xdbebd459,"{}},}
+\DoxyCodeLine{00308\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x00400007,\ 0x04c11db7,"{}},}
+\DoxyCodeLine{00309\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x828ae611,\ 0x6cb25933,"{}},}
+\DoxyCodeLine{00310\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x86cdd651,\ 0x9e8f5f21,"{}},}
+\DoxyCodeLine{00311\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd5f8d8e7,\ 0x9c4e956f,"{}},}
+\DoxyCodeLine{00312\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb5cf2c71,\ 0x2e805a6d,"{}},}
+\DoxyCodeLine{00313\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x33fc3a55,\ 0xaf203ed1,"{}},}
+\DoxyCodeLine{00314\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe31f5909,\ 0x5276db35,"{}},}
+\DoxyCodeLine{00315\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0c565ef7,\ 0x273d1aa5,"{}},}
+\DoxyCodeLine{00316\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x8923b1dd,\ 0xa9acaac5,"{}},}
+\DoxyCodeLine{00317\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd1f69207,\ 0xedfd944b,"{}},}
+\DoxyCodeLine{00318\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x9a68e46b,\ 0x5355e13f,"{}},}
+\DoxyCodeLine{00319\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7eeb44f9,\ 0x932beea9,"{}},}
+\DoxyCodeLine{00320\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x330c4cd3,\ 0x87f34e5f,"{}},}
+\DoxyCodeLine{00321\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1b5851b7,\ 0xb9ca6447,"{}},}
+\DoxyCodeLine{00322\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x58f96a8f,\ 0x1b3b5307,"{}},}
+\DoxyCodeLine{00323\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x31c387b3,\ 0xf35f0f35,"{}},}
+\DoxyCodeLine{00324\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xa0acc4df,\ 0xf3140303,"{}},}
+\DoxyCodeLine{00325\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x2446245d,\ 0xe4b8f4ef,"{}},}
+\DoxyCodeLine{00326\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5c007383,\ 0x68e648af,"{}},}
+\DoxyCodeLine{00327\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x1814fba7,\ 0xcdf731b5,"{}},}
+\DoxyCodeLine{00328\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xd09ccb4b,\ 0xb92d0eff,"{}},}
+\DoxyCodeLine{00329\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xcc3c6b67,\ 0xd3af6a57,"{}},}
+\DoxyCodeLine{00330\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xf44fc3f5,\ 0x5bb67623,"{}},}
+\DoxyCodeLine{00331\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xaeb9c953,\ 0x5e0ac739,"{}},}
+\DoxyCodeLine{00332\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x3a7fda09,\ 0x5edf39eb,"{}},}
+\DoxyCodeLine{00333\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x661eefd9,\ 0x6423f0d1,"{}},}
+\DoxyCodeLine{00334\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x910fe413,\ 0x9ec92297,"{}},}
+\DoxyCodeLine{00335\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x4bd8159d,\ 0xa7b16ee1,"{}},}
+\DoxyCodeLine{00336\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x89d484e9,\ 0x7f305cb3,"{}},}
+\DoxyCodeLine{00337\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xc5f303e7,\ 0x415deeef,"{}},}
+\DoxyCodeLine{00338\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x09986f89,\ 0x7e9c4117,"{}},}
+\DoxyCodeLine{00339\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x0b7cbedb,\ 0xf9ed7561,"{}},}
+\DoxyCodeLine{00340\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7a20ac99,\ 0xf05adef3,"{}},}
+\DoxyCodeLine{00341\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5893d75b,\ 0x44d73327,"{}},}
+\DoxyCodeLine{00342\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xb583c873,\ 0x324d2145,"{}},}
+\DoxyCodeLine{00343\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x7fa3829b,\ 0xe4b47a23,"{}},}
+\DoxyCodeLine{00344\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe256d94f,\ 0xb1fd8959,"{}},}
+\DoxyCodeLine{00345\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xe561a321,\ 0x1435ac09,"{}},}
+\DoxyCodeLine{00346\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0xdd62408b,\ 0x02ec0bcb,"{}},}
+\DoxyCodeLine{00347\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x5469b785,\ 0x2f4f50bb,"{}},}
+\DoxyCodeLine{00348\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x20f19395,\ 0xf96ba085,"{}},}
+\DoxyCodeLine{00349\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ 0x2381f937,\ 0x768e2a11\ \};"{}},}
+\DoxyCodeLine{00350\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00351\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00352\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ NCORE>1"{}},}
+\DoxyCodeLine{00353\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ int\ core\_id;"{}},}
+\DoxyCodeLine{00354\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00355\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ mreached=0;"{}},}
+\DoxyCodeLine{00356\ \ \ \ \ \textcolor{stringliteral}{"{}ulong\ \ errors=0;"{}},}
+\DoxyCodeLine{00357\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ done=0,\ Nrun=1;"{}},}
+\DoxyCodeLine{00358\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ c\_init\_done=0;"{}},}
+\DoxyCodeLine{00359\ \ \ \ \ \textcolor{stringliteral}{"{}char\ \ \ *c\_stack\_start\ =\ (char\ *)\ 0;"{}},}
+\DoxyCodeLine{00360\ \ \ \ \ \textcolor{stringliteral}{"{}double\ nstates=0,\ nlinks=0,\ truncs=0,\ truncs2=0;"{}},}
+\DoxyCodeLine{00361\ \ \ \ \ \textcolor{stringliteral}{"{}double\ nlost=0,\ nShadow=0,\ hcmp=0,\ ngrabs=0;"{}},}
+\DoxyCodeLine{00362\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BFS\_PAR"{}},}
+\DoxyCodeLine{00363\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ ulong\ bfs\_punt;"{}},}
+\DoxyCodeLine{00364\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00365\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ PUTPID"{}},}
+\DoxyCodeLine{00366\ \ \ \ \ \textcolor{stringliteral}{"{}char\ *progname;"{}},}
+\DoxyCodeLine{00367\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00368\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ defined(ZAPH)\ \&\&\ defined(BITSTATE)"{}},}
+\DoxyCodeLine{00369\ \ \ \ \ \textcolor{stringliteral}{"{}double\ zstates\ =\ 0;"{}},}
+\DoxyCodeLine{00370\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00371\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ int\ c\_init\_run;\ */"{}},}
+\DoxyCodeLine{00372\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ REVERSE"{}},}
+\DoxyCodeLine{00373\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#define\ P\_REVERSE"{}},}
+\DoxyCodeLine{00374\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00375\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ T\_REVERSE"{}},}
+\DoxyCodeLine{00376\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ t\_reverse\ =\ 1;"{}},\ \textcolor{comment}{/*\ can\ be\ modified\ with\ a\ parameter\ */}}
+\DoxyCodeLine{00377\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00378\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ t\_reverse\ =\ 0;"{}},}
+\DoxyCodeLine{00379\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00380\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BFS"{}},}
+\DoxyCodeLine{00381\ \ \ \ \ \textcolor{stringliteral}{"{}double\ midrv=0,\ failedrv=0,\ revrv=0;"{}},}
+\DoxyCodeLine{00382\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00383\ \ \ \ \ \textcolor{stringliteral}{"{}ulong\ \ nr\_states=0;\ /*\ nodes\ in\ DFA\ */"{}},}
+\DoxyCodeLine{00384\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ Fa=0,\ Fh=0,\ Zh=0,\ Zn=0;"{}},}
+\DoxyCodeLine{00385\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ PUT=0,\ PROBE=0,\ ZAPS=0;"{}},}
+\DoxyCodeLine{00386\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ Ccheck=0,\ Cholds=0;"{}},}
+\DoxyCodeLine{00387\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ a\_cycles=0,\ upto=1,\ strict=0,\ verbose\ =\ 0,\ signoff\ =\ 0;"{}},}
+\DoxyCodeLine{00388\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_CODE"{}},}
+\DoxyCodeLine{00389\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ gui\ =\ 0,\ coltrace\ =\ 0,\ readtrail\ =\ 0;"{}},}
+\DoxyCodeLine{00390\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ whichtrail\ =\ 0,\ whichclaim\ =\ -\/1,\ onlyproc\ =\ -\/1,\ silent\ =\ 0;"{}},}
+\DoxyCodeLine{00391\ \ \ \ \ \textcolor{stringliteral}{"{}char\ \ \ *claimname;"{}},}
+\DoxyCodeLine{00392\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00393\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ state\_tables=0,\ fairness=0,\ no\_rck=0,\ Nr\_Trails=0,\ dodot=0;"{}},}
+\DoxyCodeLine{00394\ \ \ \ \ \textcolor{stringliteral}{"{}char\ \ \ simvals[256];"{}},}
+\DoxyCodeLine{00395\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ INLINE"{}},}
+\DoxyCodeLine{00396\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ TstOnly=0;"{}},}
+\DoxyCodeLine{00397\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00398\ \ \ \ \ \textcolor{stringliteral}{"{}ulong\ mask,\ nmask;"{}},}
+\DoxyCodeLine{00399\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BITSTATE"{}},}
+\DoxyCodeLine{00400\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ ssize=27;\ \ \ /*\ 16\ Mb\ */"{}},}
+\DoxyCodeLine{00401\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00402\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ ssize=24;\ \ \ /*\ 16M\ slots\ */"{}},}
+\DoxyCodeLine{00403\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00404\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ hmax=0,\ svmax=0,\ smax=0;"{}},}
+\DoxyCodeLine{00405\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ \ \ Maxbody=0,\ XX;"{}},}
+\DoxyCodeLine{00406\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ *noptr,\ *noqptr;\ \ \ \ /*\ used\ by\ Pptr(x)\ and\ Qptr(x)\ */"{}},}
+\DoxyCodeLine{00407\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ VAR\_RANGES"{}},}
+\DoxyCodeLine{00408\ \ \ \ \ \textcolor{stringliteral}{"{}void\ logval(char\ *,\ int);"{}},}
+\DoxyCodeLine{00409\ \ \ \ \ \textcolor{stringliteral}{"{}void\ dumpranges(void);"{}},}
+\DoxyCodeLine{00410\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00411\ }
+\DoxyCodeLine{00412\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ MA"{}},}
+\DoxyCodeLine{00413\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ INLINE\_REV"{}},}
+\DoxyCodeLine{00414\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ void\ dfa\_init(unsigned\ short);"{}},}
+\DoxyCodeLine{00415\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ int\ \ dfa\_member(ulong);"{}},}
+\DoxyCodeLine{00416\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ int\ \ dfa\_store(uchar\ *);"{}},}
+\DoxyCodeLine{00417\ \ \ \ \ \textcolor{stringliteral}{"{}unsigned\ int\ \ \ maxgs\ =\ 0;"{}},}
+\DoxyCodeLine{00418\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00419\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00420\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ ALIGNED"{}},}
+\DoxyCodeLine{00421\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ State\ \ \ comp\_now\ \_\_attribute\_\_\ ((aligned\ (8)));"{}},}
+\DoxyCodeLine{00422\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ gcc\ 64-\/bit\ aligned\ for\ Itanium2\ systems\ */"{}},}
+\DoxyCodeLine{00423\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ MAJOR\ runtime\ penalty\ if\ not\ used\ on\ those\ systems\ */"{}},}
+\DoxyCodeLine{00424\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00425\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ State\ \ \ comp\_now;\ \ \ /*\ compressed\ state\ vector\ */"{}},}
+\DoxyCodeLine{00426\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00427\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00428\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ HC"{}},}
+\DoxyCodeLine{00429\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#ifdef\ BFS\_PAR"{}},}
+\DoxyCodeLine{00430\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ State\ tmp\_msk;"{}},}
+\DoxyCodeLine{00431\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#endif"{}},}
+\DoxyCodeLine{00432\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ State\ \ \ comp\_msk;"{}},}
+\DoxyCodeLine{00433\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ uchar\ \ \ *Mask\ =\ (uchar\ *)\ \&comp\_msk;"{}},}
+\DoxyCodeLine{00434\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00435\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ COLLAPSE"{}},}
+\DoxyCodeLine{00436\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ State\ \ \ comp\_tmp;"{}},}
+\DoxyCodeLine{00437\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ static\ char\ *scratch\ =\ (char\ *)\ \&comp\_tmp;"{}},}
+\DoxyCodeLine{00438\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00439\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00440\ \ \ \ \ \textcolor{stringliteral}{"{}\_Stack\ *stack;\ \ \ \ \ /*\ for\ queues,\ processes\ */"{}},}
+\DoxyCodeLine{00441\ \ \ \ \ \textcolor{stringliteral}{"{}Svtack\ *svtack;\ \ \ \ /*\ for\ old\ state\ vectors\ */"{}},}
+\DoxyCodeLine{00442\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BITSTATE"{}},}
+\DoxyCodeLine{00443\ \ \ \ \ \textcolor{stringliteral}{"{}static\ unsigned\ int\ hfns\ =\ 3;\ \ /*\ new\ default\ */"{}},}
+\DoxyCodeLine{00444\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00445\ \ \ \ \ \textcolor{stringliteral}{"{}static\ ulong\ j1\_spin,\ j2\_spin;\ /*\ 5.2.1:\ avoid\ nameclash\ with\ math.h\ */"{}},}
+\DoxyCodeLine{00446\ \ \ \ \ \textcolor{stringliteral}{"{}static\ ulong\ j3\_spin,\ j4\_spin;"{}},}
+\DoxyCodeLine{00447\ \ \ \ \ \textcolor{stringliteral}{"{}ulong\ K1,\ K2;"{}},}
+\DoxyCodeLine{00448\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BITSTATE"{}},}
+\DoxyCodeLine{00449\ \ \ \ \ \textcolor{stringliteral}{"{}long\ udmem;"{}},}
+\DoxyCodeLine{00450\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00451\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ BFS\_PAR"{}},}
+\DoxyCodeLine{00452\ \ \ \ \ \textcolor{stringliteral}{"{}static\ long\ \ \ \ A\_depth\ =\ 0;"{}},}
+\DoxyCodeLine{00453\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00454\ \ \ \ \ \textcolor{stringliteral}{"{}long\ \ \ depth\ =\ 0;"{}},}
+\DoxyCodeLine{00455\ \ \ \ \ \textcolor{stringliteral}{"{}long\ depthfound\ =\ -\/1;\ \ /*\ loop\ detection\ */"{}},}
+\DoxyCodeLine{00456\ \ \ \ \ \textcolor{comment}{/*\ depth:\ not\ static\ to\ support\ -\/S2,\ but\ possible\ clash\ with\ embedded\ code}}
+\DoxyCodeLine{00457\ \textcolor{comment}{\ \ \ \ \ */}}
+\DoxyCodeLine{00458\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ NCORE>1"{}},}
+\DoxyCodeLine{00459\ \ \ \ \ \textcolor{stringliteral}{"{}long\ nr\_handoffs\ =\ 0;"{}},}
+\DoxyCodeLine{00460\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00461\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ warned\ =\ 0,\ iterative\ =\ 0,\ exclusive\ =\ 0,\ like\_java\ =\ 0,\ "{}}}
+\DoxyCodeLine{00462\ \ \ \ \ \textcolor{stringliteral}{"{}every\_error\ =\ 0;"{}},}
+\DoxyCodeLine{00463\ \ \ \ \ \textcolor{stringliteral}{"{}uchar\ \ noasserts\ =\ 0,\ noends\ =\ 0,\ bounded\ =\ 0;"{}},}
+\DoxyCodeLine{00464\ \ \ \ \ \textcolor{stringliteral}{"{}uint\ \ \ s\_rand\ =\ 12345;\ /*\ default\ seed\ */"{}},}
+\DoxyCodeLine{00465\ }
+\DoxyCodeLine{00466\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ SYNC>0\ \&\&\ ASYNC==0"{}},}
+\DoxyCodeLine{00467\ \ \ \ \ \textcolor{stringliteral}{"{}void\ set\_recvs(void);"{}},}
+\DoxyCodeLine{00468\ \ \ \ \ \textcolor{stringliteral}{"{}int\ \ no\_recvs(int);"{}},}
+\DoxyCodeLine{00469\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00470\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ SYNC"{}},}
+\DoxyCodeLine{00471\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ IfNotBlocked\ \ \ if\ (boq\ !=\ -\/1)\ continue;"{}},}
+\DoxyCodeLine{00472\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ UnBlock\ \ \ \ \ \ \ \ boq\ =\ -\/1"{}},}
+\DoxyCodeLine{00473\ \ \ \ \ \textcolor{stringliteral}{"{}\#else"{}},}
+\DoxyCodeLine{00474\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ IfNotBlocked\ \ \ /*\ cannot\ block\ */"{}},}
+\DoxyCodeLine{00475\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ UnBlock\ \ \ \ \ \ \ \ /*\ don't\ bother\ */"{}},}
+\DoxyCodeLine{00476\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif\(\backslash\)n"{}},}
+\DoxyCodeLine{00477\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BITSTATE"{}},}
+\DoxyCodeLine{00478\ \ \ \ \ \textcolor{stringliteral}{"{}int\ (*b\_store)(char\ *,\ int);"{}},}
+\DoxyCodeLine{00479\ \ \ \ \ \textcolor{stringliteral}{"{}int\ bstore\_reg(char\ *,\ int);"{}},}
+\DoxyCodeLine{00480\ \ \ \ \ \textcolor{stringliteral}{"{}int\ bstore\_mod(char\ *,\ int);"{}},}
+\DoxyCodeLine{00481\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00482\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00483\ \ \ \ \ \textcolor{stringliteral}{"{}void\ dfs\_uerror(char\ *);"{}},}
+\DoxyCodeLine{00484\ \ \ \ \ \textcolor{stringliteral}{"{}void\ dfs\_Uerror(char\ *);"{}},}
+\DoxyCodeLine{00485\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ BFS\_PAR"{}},}
+\DoxyCodeLine{00486\ \ \ \ \ \textcolor{stringliteral}{"{}void\ bfs\_uerror(char\ *);"{}},}
+\DoxyCodeLine{00487\ \ \ \ \ \textcolor{stringliteral}{"{}void\ bfs\_Uerror(char\ *);"{}},}
+\DoxyCodeLine{00488\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00489\ \ \ \ \ \textcolor{stringliteral}{"{}void\ (*uerror)(char\ *);"{}},}
+\DoxyCodeLine{00490\ \ \ \ \ \textcolor{stringliteral}{"{}void\ (*Uerror)(char\ *);"{}},}
+\DoxyCodeLine{00491\ \ \ \ \ \textcolor{stringliteral}{"{}void\ (*hasher)(uchar\ *,\ int);"{}},}
+\DoxyCodeLine{00492\ \ \ \ \ \textcolor{stringliteral}{"{}void\ (*o\_hash)(uchar\ *,\ int,\ int);"{}},}
+\DoxyCodeLine{00493\ \ \ \ \ \textcolor{stringliteral}{"{}void\ d\_hash(uchar\ *,\ int);"{}},}
+\DoxyCodeLine{00494\ \ \ \ \ \textcolor{stringliteral}{"{}void\ m\_hash(uchar\ *,\ int);"{}},}
+\DoxyCodeLine{00495\ \ \ \ \ \textcolor{stringliteral}{"{}void\ d\_sfh(uchar\ *,\ int);"{}},}
+\DoxyCodeLine{00496\ \ \ \ \ \textcolor{stringliteral}{"{}void\ o\_hash32(uchar\ *,\ int,\ int);"{}},}
+\DoxyCodeLine{00497\ \ \ \ \ \textcolor{stringliteral}{"{}void\ o\_hash64(uchar\ *,\ int,\ int);"{}},}
+\DoxyCodeLine{00498\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00499\ \ \ \ \ \textcolor{stringliteral}{"{}void\ active\_procs(void);"{}},}
+\DoxyCodeLine{00500\ \ \ \ \ \textcolor{stringliteral}{"{}void\ cleanup(void);"{}},}
+\DoxyCodeLine{00501\ \ \ \ \ \textcolor{stringliteral}{"{}void\ do\_the\_search(void);"{}},}
+\DoxyCodeLine{00502\ \ \ \ \ \textcolor{stringliteral}{"{}void\ find\_shorter(int);"{}},}
+\DoxyCodeLine{00503\ \ \ \ \ \textcolor{stringliteral}{"{}void\ iniglobals(int);"{}},}
+\DoxyCodeLine{00504\ \ \ \ \ \textcolor{stringliteral}{"{}void\ stopped(int);"{}},}
+\DoxyCodeLine{00505\ \ \ \ \ \textcolor{stringliteral}{"{}void\ wrapup(void);"{}},}
+\DoxyCodeLine{00506\ \ \ \ \ \textcolor{stringliteral}{"{}int\ *grab\_ints(int);"{}},}
+\DoxyCodeLine{00507\ \ \ \ \ \textcolor{stringliteral}{"{}void\ ungrab\_ints(int\ *,\ int);"{}},}
+\DoxyCodeLine{00508\ \ \ \ \ 0,}
+\DoxyCodeLine{00509\ \};}
+\DoxyCodeLine{00510\ }
+\DoxyCodeLine{00511\ \textcolor{keyword}{static}\ \textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *Tail[]\ =\ \{}
+\DoxyCodeLine{00512\ \ \ \ \ \textcolor{stringliteral}{"{}Trans\ *"{}},}
+\DoxyCodeLine{00513\ \ \ \ \ \textcolor{stringliteral}{"{}settr(\ int\ t\_id,\ int\ a,\ int\ b,\ int\ c,\ int\ d,"{}},}
+\DoxyCodeLine{00514\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ char\ *t,\ int\ g,\ int\ tpe0,\ int\ tpe1)"{}},}
+\DoxyCodeLine{00515\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *tmp\ =\ (Trans\ *)\ emalloc(sizeof(Trans));\(\backslash\)n"{}},}
+\DoxyCodeLine{00516\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>atom\ \ =\ a\&(6|32);\ \ /*\ only\ (2|8|32)\ have\ meaning\ */"{}},}
+\DoxyCodeLine{00517\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!g)\ tmp-\/>atom\ |=\ 8;\ /*\ no\ global\ references\ */"{}},}
+\DoxyCodeLine{00518\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>st\ \ \ \ =\ b;"{}},}
+\DoxyCodeLine{00519\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tpe[0]\ =\ tpe0;"{}},}
+\DoxyCodeLine{00520\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tpe[1]\ =\ tpe1;"{}},}
+\DoxyCodeLine{00521\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tp\ \ \ \ =\ t;"{}},}
+\DoxyCodeLine{00522\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>t\_id\ \ =\ t\_id;"{}},}
+\DoxyCodeLine{00523\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>forw\ \ =\ c;"{}},}
+\DoxyCodeLine{00524\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>back\ \ =\ d;"{}},}
+\DoxyCodeLine{00525\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ tmp;"{}},}
+\DoxyCodeLine{00526\ \ \ \ \ \textcolor{stringliteral}{"{}\}\(\backslash\)n"{}},}
+\DoxyCodeLine{00527\ \ \ \ \ \textcolor{stringliteral}{"{}Trans\ *"{}},}
+\DoxyCodeLine{00528\ \ \ \ \ \textcolor{stringliteral}{"{}cpytr(Trans\ *a)"{}},}
+\DoxyCodeLine{00529\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *tmp\ =\ (Trans\ *)\ emalloc(sizeof(Trans));\(\backslash\)n"{}},}
+\DoxyCodeLine{00530\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ i;"{}},}
+\DoxyCodeLine{00531\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>atom\ \ =\ a-\/>atom;"{}},}
+\DoxyCodeLine{00532\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>st\ \ \ \ =\ a-\/>st;"{}},}
+\DoxyCodeLine{00533\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00534\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>e\_trans\ =\ a-\/>e\_trans;"{}},}
+\DoxyCodeLine{00535\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ i\ <\ HAS\_UNLESS;\ i++)"{}},}
+\DoxyCodeLine{00536\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ tmp-\/>escp[i]\ =\ a-\/>escp[i];"{}},}
+\DoxyCodeLine{00537\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00538\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tpe[0]\ =\ a-\/>tpe[0];"{}},}
+\DoxyCodeLine{00539\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tpe[1]\ =\ a-\/>tpe[1];"{}},}
+\DoxyCodeLine{00540\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ i\ <\ 6;\ i++)"{}},}
+\DoxyCodeLine{00541\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ tmp-\/>qu[i]\ =\ a-\/>qu[i];"{}},}
+\DoxyCodeLine{00542\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ tmp-\/>ty[i]\ =\ a-\/>ty[i];"{}},}
+\DoxyCodeLine{00543\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00544\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>tp\ \ \ \ =\ (char\ *)\ emalloc(strlen(a-\/>tp)+1);"{}},}
+\DoxyCodeLine{00545\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ strcpy(tmp-\/>tp,\ a-\/>tp);"{}},}
+\DoxyCodeLine{00546\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>t\_id\ \ =\ a-\/>t\_id;"{}},}
+\DoxyCodeLine{00547\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>forw\ \ =\ a-\/>forw;"{}},}
+\DoxyCodeLine{00548\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>back\ \ =\ a-\/>back;"{}},}
+\DoxyCodeLine{00549\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ tmp;"{}},}
+\DoxyCodeLine{00550\ \ \ \ \ \textcolor{stringliteral}{"{}\}\(\backslash\)n"{}},}
+\DoxyCodeLine{00551\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ NOREDUCE"{}},}
+\DoxyCodeLine{00552\ \ \ \ \ \textcolor{stringliteral}{"{}int"{}},}
+\DoxyCodeLine{00553\ \ \ \ \ \textcolor{stringliteral}{"{}srinc\_set(int\ n)"{}},}
+\DoxyCodeLine{00554\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ if\ (n\ <=\ 2)\ return\ LOCAL;"{}},}
+\DoxyCodeLine{00555\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ <=\ 2+\ \ DELTA)\ return\ Q\_FULL\_F;\ /*\ 's'\ or\ nfull\ \ */"{}},}
+\DoxyCodeLine{00556\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ <=\ 2+2*DELTA)\ return\ Q\_EMPT\_F;\ /*\ 'r'\ or\ nempty\ */"{}},}
+\DoxyCodeLine{00557\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ <=\ 2+3*DELTA)\ return\ Q\_EMPT\_T;\ /*\ empty\ */"{}},}
+\DoxyCodeLine{00558\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ <=\ 2+4*DELTA)\ return\ Q\_FULL\_T;\ /*\ full\ \ */"{}},}
+\DoxyCodeLine{00559\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ ==\ \ \ 5*DELTA)\ return\ GLOBAL;"{}},}
+\DoxyCodeLine{00560\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ ==\ \ \ 6*DELTA)\ return\ TIMEOUT\_F;"{}},}
+\DoxyCodeLine{00561\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (n\ ==\ \ \ 7*DELTA)\ return\ ALPHA\_F;"{}},}
+\DoxyCodeLine{00562\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ Uerror(\(\backslash\)"{}cannot\ happen\ srinc\_class\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00563\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ BAD;"{}},}
+\DoxyCodeLine{00564\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{00565\ \ \ \ \ \textcolor{stringliteral}{"{}int"{}},}
+\DoxyCodeLine{00566\ \ \ \ \ \textcolor{stringliteral}{"{}srunc(int\ n,\ int\ m)"{}},}
+\DoxyCodeLine{00567\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ switch(m)\ \{"{}},}
+\DoxyCodeLine{00568\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ Q\_FULL\_F:\ return\ n-\/2;"{}},}
+\DoxyCodeLine{00569\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ Q\_EMPT\_F:\ return\ n-\/2-\/DELTA;"{}},}
+\DoxyCodeLine{00570\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ Q\_EMPT\_T:\ return\ n-\/2-\/2*DELTA;"{}},}
+\DoxyCodeLine{00571\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ Q\_FULL\_T:\ return\ n-\/2-\/3*DELTA;"{}},}
+\DoxyCodeLine{00572\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ ALPHA\_F:"{}},}
+\DoxyCodeLine{00573\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ case\ TIMEOUT\_F:\ return\ 257;\ /*\ non-\/zero,\ and\ >\ MAXQ\ */"{}},}
+\DoxyCodeLine{00574\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00575\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ Uerror(\(\backslash\)"{}cannot\ happen\ srunc\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00576\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ 0;"{}},}
+\DoxyCodeLine{00577\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{00578\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00579\ \ \ \ \ \textcolor{stringliteral}{"{}int\ cnt;"{}},}
+\DoxyCodeLine{00580\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00581\ \ \ \ \ \textcolor{stringliteral}{"{}int"{}},}
+\DoxyCodeLine{00582\ \ \ \ \ \textcolor{stringliteral}{"{}isthere(Trans\ *a,\ int\ b)"{}},\ \textcolor{comment}{/*\ is\ b\ already\ in\ a's\ list?\ */}}
+\DoxyCodeLine{00583\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *t;"{}},}
+\DoxyCodeLine{00584\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (t\ =\ a;\ t;\ t\ =\ t-\/>next)"{}},}
+\DoxyCodeLine{00585\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (t-\/>t\_id\ ==\ b)"{}},}
+\DoxyCodeLine{00586\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ return\ 1;"{}},}
+\DoxyCodeLine{00587\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ 0;"{}},}
+\DoxyCodeLine{00588\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{00589\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00590\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ NOREDUCE"{}},}
+\DoxyCodeLine{00591\ \ \ \ \ \textcolor{stringliteral}{"{}int"{}},}
+\DoxyCodeLine{00592\ \ \ \ \ \textcolor{stringliteral}{"{}mark\_safety(Trans\ *t)\ /*\ for\ conditional\ safety\ */"{}},}
+\DoxyCodeLine{00593\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ int\ g\ =\ 0,\ i,\ j,\ k;"{}},}
+\DoxyCodeLine{00594\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00595\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!t)\ return\ 0;"{}},}
+\DoxyCodeLine{00596\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (t-\/>qu[0])"{}},}
+\DoxyCodeLine{00597\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return\ (t-\/>qu[1])?2:1;\ \ /*\ marked\ */"{}},}
+\DoxyCodeLine{00598\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00599\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ i\ <\ 2;\ i++)"{}},}
+\DoxyCodeLine{00600\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ j\ =\ srinc\_set(t-\/>tpe[i]);"{}},}
+\DoxyCodeLine{00601\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (j\ >=\ GLOBAL\ \&\&\ j\ !=\ ALPHA\_F)"{}},}
+\DoxyCodeLine{00602\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ return\ -\/1;"{}},}
+\DoxyCodeLine{00603\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (j\ !=\ LOCAL)"{}},}
+\DoxyCodeLine{00604\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ k\ =\ srunc(t-\/>tpe[i],\ j);"{}},}
+\DoxyCodeLine{00605\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (g\ ==\ 0"{}},}
+\DoxyCodeLine{00606\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ ||\ \ t-\/>qu[0]\ !=\ k"{}},}
+\DoxyCodeLine{00607\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ ||\ \ t-\/>ty[0]\ !=\ j)"{}},}
+\DoxyCodeLine{00608\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ t-\/>qu[g]\ =\ k;"{}},}
+\DoxyCodeLine{00609\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ t-\/>ty[g]\ =\ j;"{}},}
+\DoxyCodeLine{00610\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g++;"{}},}
+\DoxyCodeLine{00611\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00612\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return\ g;"{}},}
+\DoxyCodeLine{00613\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{00614\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00615\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{00616\ \ \ \ \ \textcolor{stringliteral}{"{}retrans(int\ n,\ int\ m,\ int\ is,\ short\ srcln[],\ uchar\ reach[],\ uchar\ "{}}}
+\DoxyCodeLine{00617\ \ \ \ \ \textcolor{stringliteral}{"{}lpstate[])"{}},}
+\DoxyCodeLine{00618\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ process\ n,\ with\ m\ states,\ is=initial\ state\ */"{}},}
+\DoxyCodeLine{00619\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *T0,\ *T1,\ *T2,\ *T3;"{}},}
+\DoxyCodeLine{00620\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ Trans\ *T4,\ *T5;\ /*\ t\_reverse\ or\ has\_unless\ */"{}},}
+\DoxyCodeLine{00621\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ i;"{}},}
+\DoxyCodeLine{00622\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ defined(HAS\_UNLESS)\ ||\ !defined(NOREDUCE)"{}},}
+\DoxyCodeLine{00623\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ k;"{}},}
+\DoxyCodeLine{00624\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00625\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ NOREDUCE"{}},}
+\DoxyCodeLine{00626\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ g,\ h,\ j,\ aa;"{}},}
+\DoxyCodeLine{00627\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00628\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00629\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ int\ p;"{}},}
+\DoxyCodeLine{00630\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00631\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables\ >=\ 4)"{}},}
+\DoxyCodeLine{00632\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}STEP\ 1\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ "{}},}
+\DoxyCodeLine{00633\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{00634\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00635\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00636\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ crack(n,\ i,\ T0,\ srcln);"{}},}
+\DoxyCodeLine{00637\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{00638\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00639\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ do\ \{"{}},}
+\DoxyCodeLine{00640\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1,\ cnt\ =\ 0;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00641\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ T2\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00642\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T1\ =\ T2?T2-\/>next:(Trans\ *)0;"{}},}
+\DoxyCodeLine{00643\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ prescan:\ */\ \ \ \ \ for\ (T0\ =\ T1;\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00644\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ choice\ in\ choice\ */\ \{\ \ \ if\ (T0-\/>st\ \&\&\ trans[n][T0-\/>st]"{}},}
+\DoxyCodeLine{00645\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ \ trans[n][T0-\/>st]-\/>next)"{}},}
+\DoxyCodeLine{00646\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break;"{}},}
+\DoxyCodeLine{00647\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00648\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ 0"{}},}
+\DoxyCodeLine{00649\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (T0)"{}},}
+\DoxyCodeLine{00650\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)tstate\ \%\%d\ /\ \%\%d:\ choice\ in\ choice\(\backslash\)\(\backslash\)n\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00651\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ i,\ T0-\/>st);"{}},}
+\DoxyCodeLine{00652\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00653\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (T0)"{}},}
+\DoxyCodeLine{00654\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T0\ =\ T1;\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00655\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T3\ =\ trans[n][T0-\/>st];"{}},}
+\DoxyCodeLine{00656\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (!T3-\/>next)"{}},}
+\DoxyCodeLine{00657\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T2-\/>next\ =\ cpytr(T0);"{}},}
+\DoxyCodeLine{00658\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2\ =\ T2-\/>next;"{}},}
+\DoxyCodeLine{00659\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ imed(T2,\ T0-\/>st,\ n,\ i);"{}},}
+\DoxyCodeLine{00660\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;"{}},}
+\DoxyCodeLine{00661\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00662\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ do\ \{\ \ \ \ T3\ =\ T3-\/>next;"{}},}
+\DoxyCodeLine{00663\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2-\/>next\ =\ cpytr(T3);"{}},}
+\DoxyCodeLine{00664\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2\ =\ T2-\/>next;"{}},}
+\DoxyCodeLine{00665\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ imed(T2,\ T0-\/>st,\ n,\ i);"{}},}
+\DoxyCodeLine{00666\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ while\ (T3-\/>next);"{}},}
+\DoxyCodeLine{00667\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ cnt++;"{}},}
+\DoxyCodeLine{00668\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00669\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00670\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ while\ (cnt);"{}},}
+\DoxyCodeLine{00671\ }
+\DoxyCodeLine{00672\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables\ >=\ 3)"{}},}
+\DoxyCodeLine{00673\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}STEP\ 2\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ "{}},}
+\DoxyCodeLine{00674\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{00675\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00676\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00677\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ crack(n,\ i,\ T0,\ srcln);"{}},}
+\DoxyCodeLine{00678\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{00679\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00680\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00681\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (trans[n][i]\ \&\&\ trans[n][i]-\/>next)\ /*\ optimize\ */"{}},}
+\DoxyCodeLine{00682\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ T1\ =\ trans[n][i]-\/>next;"{}},}
+\DoxyCodeLine{00683\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ 0"{}},}
+\DoxyCodeLine{00684\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)t\(\backslash\)\(\backslash\)tpull\ \%\%d\ (\%\%d)\ to\ \%\%d\(\backslash\)\(\backslash\)n\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00685\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T1-\/>st,\ T1-\/>forw,\ i);"{}},}
+\DoxyCodeLine{00686\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},\ \textcolor{comment}{/*\ pull\ linenumber\ ref\ as\ well:\ */}}
+\DoxyCodeLine{00687\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ srcln[i]\ =\ srcln[T1-\/>st];\ \ \ /*\ Oyvind\ Teig,\ 5.2.0\ "{}}}
+\DoxyCodeLine{00688\ \ \ \ \ \textcolor{stringliteral}{"{}*/"{}},}
+\DoxyCodeLine{00689\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00690\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (!trans[n][T1-\/>st])\ continue;"{}},}
+\DoxyCodeLine{00691\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T0\ =\ cpytr(trans[n][T1-\/>st]);"{}},}
+\DoxyCodeLine{00692\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ trans[n][i]\ =\ T0;"{}},}
+\DoxyCodeLine{00693\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ reach[T1-\/>st]\ =\ 1;"{}},}
+\DoxyCodeLine{00694\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ imed(T0,\ T1-\/>st,\ n,\ i);"{}},}
+\DoxyCodeLine{00695\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T1\ =\ T1-\/>next;\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00696\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{"{}},}
+\DoxyCodeLine{00697\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ 0"{}},}
+\DoxyCodeLine{00698\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)t\(\backslash\)\(\backslash\)tpull\ \%\%d\ (\%\%d)\ to\ \%\%d\(\backslash\)\(\backslash\)n\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00699\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T1-\/>st,\ T1-\/>forw,\ i);"{}},}
+\DoxyCodeLine{00700\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00701\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ \ \ \ \ \ srcln[i]\ =\ srcln[T1-\/>st];\ \ gh:\ not\ useful\ */"{}},}
+\DoxyCodeLine{00702\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (!trans[n][T1-\/>st])\ continue;"{}},}
+\DoxyCodeLine{00703\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T0-\/>next\ =\ cpytr(trans[n][T1-\/>st]);"{}},}
+\DoxyCodeLine{00704\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T0\ =\ T0-\/>next;"{}},}
+\DoxyCodeLine{00705\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ reach[T1-\/>st]\ =\ 1;"{}},}
+\DoxyCodeLine{00706\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ imed(T0,\ T1-\/>st,\ n,\ i);"{}},}
+\DoxyCodeLine{00707\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00708\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables\ >=\ 2)"{}},}
+\DoxyCodeLine{00709\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}STEP\ 3\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ "{}},}
+\DoxyCodeLine{00710\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{00711\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00712\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00713\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ crack(n,\ i,\ T0,\ srcln);"{}},}
+\DoxyCodeLine{00714\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{00715\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00716\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00717\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00718\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (!trans[n][i])\ continue;"{}},}
+\DoxyCodeLine{00719\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ check\ for\ each\ state\ i\ if\ an"{}},}
+\DoxyCodeLine{00720\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ *\ escape\ to\ some\ state\ p\ is\ defined"{}},}
+\DoxyCodeLine{00721\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ *\ if\ so,\ copy\ and\ mark\ p's\ transitions"{}},}
+\DoxyCodeLine{00722\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ *\ and\ prepend\ them\ to\ the\ transition-\/"{}},}
+\DoxyCodeLine{00723\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ *\ list\ of\ state\ i"{}},}
+\DoxyCodeLine{00724\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ */"{}},}
+\DoxyCodeLine{00725\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ if\ (!like\_java)\ /*\ the\ default\ */"{}},}
+\DoxyCodeLine{00726\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \{\ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00727\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (k\ =\ HAS\_UNLESS-\/1;\ k\ >=\ 0;\ k-\/-\/)"{}},}
+\DoxyCodeLine{00728\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ if\ (p\ =\ T0-\/>escp[k])"{}},}
+\DoxyCodeLine{00729\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T1\ =\ trans[n][p];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00730\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (isthere(trans[n][i],\ T1-\/>t\_id))"{}},}
+\DoxyCodeLine{00731\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;"{}},}
+\DoxyCodeLine{00732\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2\ =\ cpytr(T1);"{}},}
+\DoxyCodeLine{00733\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2-\/>e\_trans\ =\ p;"{}},}
+\DoxyCodeLine{00734\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2-\/>next\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00735\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ trans[n][i]\ =\ T2;"{}},}
+\DoxyCodeLine{00736\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00737\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \}\ else\ /*\ outermost\ unless\ checked\ first\ */"{}},}
+\DoxyCodeLine{00738\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \{\ \ T4\ =\ T3\ =\ (Trans\ *)\ 0;"{}},}
+\DoxyCodeLine{00739\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00740\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (k\ =\ HAS\_UNLESS-\/1;\ k\ >=\ 0;\ k-\/-\/)"{}},}
+\DoxyCodeLine{00741\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ if\ (p\ =\ T0-\/>escp[k])"{}},}
+\DoxyCodeLine{00742\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T1\ =\ trans[n][p];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00743\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (isthere(trans[n][i],\ T1-\/>t\_id))"{}},}
+\DoxyCodeLine{00744\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;"{}},}
+\DoxyCodeLine{00745\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2\ =\ cpytr(T1);"{}},}
+\DoxyCodeLine{00746\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2-\/>next\ =\ (Trans\ *)\ 0;"{}},}
+\DoxyCodeLine{00747\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T2-\/>e\_trans\ =\ p;"{}},}
+\DoxyCodeLine{00748\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (T3)\ T3-\/>next\ =\ T2;"{}},}
+\DoxyCodeLine{00749\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ else\ \ \ \ T4\ =\ T2;"{}},}
+\DoxyCodeLine{00750\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T3\ =\ T2;"{}},}
+\DoxyCodeLine{00751\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00752\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (T4)"{}},}
+\DoxyCodeLine{00753\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ T3-\/>next\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00754\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ trans[n][i]\ =\ T4;"{}},}
+\DoxyCodeLine{00755\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00756\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \}"{}},}
+\DoxyCodeLine{00757\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00758\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00759\ }
+\DoxyCodeLine{00760\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifndef\ NOREDUCE"{}},}
+\DoxyCodeLine{00761\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00762\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (a\_cycles)"{}},}
+\DoxyCodeLine{00763\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ /*\ moves\ through\ these\ states\ are\ visible\ */"{}},}
+\DoxyCodeLine{00764\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#if\ PROG\_LAB>0\ \&\&\ defined(HAS\_NP)"{}},}
+\DoxyCodeLine{00765\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (progstate[n][i])"{}},}
+\DoxyCodeLine{00766\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00767\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T1\ =\ trans[n][i];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00768\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (progstate[n][T1-\/>st])"{}},}
+\DoxyCodeLine{00769\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00770\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#endif"{}},}
+\DoxyCodeLine{00771\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (accpstate[n][i]\ ||\ visstate[n][i])"{}},}
+\DoxyCodeLine{00772\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00773\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T1\ =\ trans[n][i];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00774\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (accpstate[n][T1-\/>st])"{}},}
+\DoxyCodeLine{00775\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00776\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00777\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ T1\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00778\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (!T1)\ continue;"{}},}
+\DoxyCodeLine{00779\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ g\ =\ mark\_safety(T1);\ \ \ \ /*\ V3.3.1\ */"{}},}
+\DoxyCodeLine{00780\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (g\ <\ 0)\ goto\ degrade;\ /*\ global\ */"{}},}
+\DoxyCodeLine{00781\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ check\ if\ mixing\ of\ guards\ preserves\ reduction\ */"{}},}
+\DoxyCodeLine{00782\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (T1-\/>next)"{}},}
+\DoxyCodeLine{00783\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ k\ =\ 0;"{}},}
+\DoxyCodeLine{00784\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T0\ =\ T1;\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00785\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (!(T0-\/>atom\&8))"{}},}
+\DoxyCodeLine{00786\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00787\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ for\ (aa\ =\ 0;\ aa\ <\ 2;\ aa++)"{}},}
+\DoxyCodeLine{00788\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ j\ =\ srinc\_set(T0-\/>tpe[aa]);"{}},}
+\DoxyCodeLine{00789\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (j\ >=\ GLOBAL\ \&\&\ j\ !=\ ALPHA\_F)"{}},}
+\DoxyCodeLine{00790\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00791\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (T0-\/>tpe[aa]"{}},}
+\DoxyCodeLine{00792\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ \ T0-\/>tpe[aa]"{}},}
+\DoxyCodeLine{00793\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ !=\ \ T1-\/>tpe[0])"{}},}
+\DoxyCodeLine{00794\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ k\ =\ 1;"{}},}
+\DoxyCodeLine{00795\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00796\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ g\ =\ 0;\ \ \ V3.3.1\ */"{}},}
+\DoxyCodeLine{00797\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (k)\ \ /*\ non-\/uniform\ selection\ */"{}},}
+\DoxyCodeLine{00798\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T0\ =\ T1;\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00799\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (aa\ =\ 0;\ aa\ <\ 2;\ aa++)"{}},}
+\DoxyCodeLine{00800\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ j\ =\ srinc\_set(T0-\/>tpe[aa]);"{}},}
+\DoxyCodeLine{00801\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (j\ !=\ LOCAL)"{}},}
+\DoxyCodeLine{00802\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ k\ =\ srunc(T0-\/>tpe[aa],\ j);"{}},}
+\DoxyCodeLine{00803\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ for\ (h\ =\ 0;\ h\ <\ 6;\ h++)"{}},}
+\DoxyCodeLine{00804\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (T1-\/>qu[h]\ ==\ k"{}},}
+\DoxyCodeLine{00805\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ \ T1-\/>ty[h]\ ==\ j)"{}},}
+\DoxyCodeLine{00806\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ break;"{}},}
+\DoxyCodeLine{00807\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (h\ >=\ 6)"{}},}
+\DoxyCodeLine{00808\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T1-\/>qu[g\%\%6]\ =\ k;"{}},}
+\DoxyCodeLine{00809\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T1-\/>ty[g\%\%6]\ =\ j;"{}},}
+\DoxyCodeLine{00810\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g++;"{}},}
+\DoxyCodeLine{00811\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00812\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (g\ >\ 6)"{}},}
+\DoxyCodeLine{00813\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T1-\/>qu[0]\ =\ 0;\ \ /*\ turn\ it\ off\ */"{}},}
+\DoxyCodeLine{00814\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}pan:\ warning,\ line\ \%\%d,\ \(\backslash\)"{},"{}},}
+\DoxyCodeLine{00815\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ srcln[i]);"{}},}
+\DoxyCodeLine{00816\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}too\ many\ stmnt\ types\ (\%\%d)\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00817\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ g);"{}},}
+\DoxyCodeLine{00818\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ in\ selection\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00819\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00820\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00821\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00822\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ mark\ all\ options\ global\ if\ >=1\ is\ global\ */"{}},}
+\DoxyCodeLine{00823\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T1\ =\ trans[n][i];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00824\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (!(T1-\/>atom\&8))\ break;"{}},}
+\DoxyCodeLine{00825\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (T1)"{}},}
+\DoxyCodeLine{00826\ \ \ \ \ \textcolor{stringliteral}{"{}degrade:\ \ \ for\ (T1\ =\ trans[n][i];\ T1;\ T1\ =\ T1-\/>next)"{}},}
+\DoxyCodeLine{00827\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T1-\/>atom\ \&=\ \string~8;\ /*\ mark\ as\ unsafe\ */"{}},}
+\DoxyCodeLine{00828\ }
+\DoxyCodeLine{00829\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ can\ only\ mix\ 'r's\ or\ 's's\ if\ on\ same\ chan\ */"{}},}
+\DoxyCodeLine{00830\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ /*\ and\ not\ mixed\ with\ other\ local\ operations\ */"{}},}
+\DoxyCodeLine{00831\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ T1\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00832\ }
+\DoxyCodeLine{00833\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (!T1\ ||\ T1-\/>qu[0])\ continue;"{}},}
+\DoxyCodeLine{00834\ }
+\DoxyCodeLine{00835\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ j\ =\ T1-\/>tpe[0];"{}},}
+\DoxyCodeLine{00836\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (T1-\/>next\ \&\&\ T1-\/>atom\&8)"{}},}
+\DoxyCodeLine{00837\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ if\ (j\ ==\ 5*DELTA)"{}},}
+\DoxyCodeLine{00838\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \{\ printf(\(\backslash\)"{}warning:\ line\ \%\%d\ \(\backslash\)"{},\ srcln[i]);"{}},}
+\DoxyCodeLine{00839\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}mixed\ condition\ \(\backslash\)"{});"{}},}
+\DoxyCodeLine{00840\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}(defeats\ reduction)\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00841\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00842\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00843\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ for\ (T0\ =\ T1;\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00844\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ for\ (aa\ =\ 0;\ aa\ <\ 2;\ aa++)"{}},}
+\DoxyCodeLine{00845\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ if\ \ (T0-\/>tpe[aa]\ \&\&\ T0-\/>tpe[aa]\ !=\ j)"{}},}
+\DoxyCodeLine{00846\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \{\ printf(\(\backslash\)"{}warning:\ line\ \%\%d\ \(\backslash\)"{},\ srcln[i]);"{}},}
+\DoxyCodeLine{00847\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}[\%\%d-\/\%\%d]\ mixed\ \%\%stion\ \(\backslash\)"{},"{}},}
+\DoxyCodeLine{00848\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T0-\/>tpe[aa],\ j,\ "{}},}
+\DoxyCodeLine{00849\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (j==5*DELTA)?\(\backslash\)"{}condi\(\backslash\)"{}:\(\backslash\)"{}selec\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00850\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}(defeats\ reduction)\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00851\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ \ \ '\%\%s'\ <-\/>\ '\%\%s'\(\backslash\)\(\backslash\)n\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00852\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T1-\/>tp,\ T0-\/>tp);"{}},}
+\DoxyCodeLine{00853\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ goto\ degrade;"{}},}
+\DoxyCodeLine{00854\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \}"{}},}
+\DoxyCodeLine{00855\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00856\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00857\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},\ \textcolor{comment}{/*\ R\ */}}
+\DoxyCodeLine{00858\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ T2\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00859\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (!T2"{}},}
+\DoxyCodeLine{00860\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ ||\ \ T2-\/>next"{}},}
+\DoxyCodeLine{00861\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ ||\ \ strncmp(T2-\/>tp,\ \(\backslash\)"{}.(goto)\(\backslash\)"{},\ 7)"{}},}
+\DoxyCodeLine{00862\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ ||\ \ !stopstate[n][i])"{}},}
+\DoxyCodeLine{00863\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ continue;"{}},}
+\DoxyCodeLine{00864\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ stopstate[n][T2-\/>st]\ =\ 1;"{}},}
+\DoxyCodeLine{00865\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00866\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables\ \&\&\ !verbose)"{}},}
+\DoxyCodeLine{00867\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (dodot)"{}},}
+\DoxyCodeLine{00868\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ char\ buf[256],\ *q\ =\ buf,\ *p\ =\ procname[n];"{}},}
+\DoxyCodeLine{00869\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ while\ (*p\ !=\ '\(\backslash\)\(\backslash\)0')"{}},}
+\DoxyCodeLine{00870\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (*p\ !=\ ':')"{}},}
+\DoxyCodeLine{00871\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ *q++\ =\ *p;"{}},}
+\DoxyCodeLine{00872\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00873\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ p++;"{}},}
+\DoxyCodeLine{00874\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00875\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ *q\ =\ '\(\backslash\)\(\backslash\)0';"{}},}
+\DoxyCodeLine{00876\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}digraph\ \(\backslash\)"{});"{}},}
+\DoxyCodeLine{00877\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ switch\ (Btypes[n])\ \{"{}},}
+\DoxyCodeLine{00878\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ I\_PROC:\ \ printf(\(\backslash\)"{}init\ \{\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00879\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ N\_CLAIM:\ printf(\(\backslash\)"{}claim\_\%\%s\ \{\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ buf);\ break;"{}},}
+\DoxyCodeLine{00880\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ E\_TRACE:\ printf(\(\backslash\)"{}notrace\ \{\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00881\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ N\_TRACE:\ printf(\(\backslash\)"{}trace\ \{\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00882\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ default:\ \ \ \ \ \ printf(\(\backslash\)"{}p\_\%\%s\ \{\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ buf);\ break;"{}},}
+\DoxyCodeLine{00883\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00884\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}size=\(\backslash\)\(\backslash\)\(\backslash\)"{}8,10\(\backslash\)\(\backslash\)\(\backslash\)"{};\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00885\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ \ GT\ "{}}}
+\DoxyCodeLine{00886\ \ \ \ \ \textcolor{stringliteral}{"{}[shape=box,style=dotted,label=\(\backslash\)\(\backslash\)\(\backslash\)"{}\%\%s\(\backslash\)\(\backslash\)\(\backslash\)"{}];\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ buf);"{}},}
+\DoxyCodeLine{00887\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ \ GT\ -\/>\ S\%\%d;\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ is);"{}},}
+\DoxyCodeLine{00888\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ else"{}},}
+\DoxyCodeLine{00889\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ switch\ (Btypes[n])\ \{"{}},}
+\DoxyCodeLine{00890\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ I\_PROC:\ \ printf(\(\backslash\)"{}init\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00891\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ N\_CLAIM:\ printf(\(\backslash\)"{}claim\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ procname[n]);\ "{}}}
+\DoxyCodeLine{00892\ \ \ \ \ \textcolor{stringliteral}{"{}break;"{}},}
+\DoxyCodeLine{00893\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ E\_TRACE:\ printf(\(\backslash\)"{}notrace\ assertion\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00894\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ case\ N\_TRACE:\ printf(\(\backslash\)"{}trace\ assertion\(\backslash\)\(\backslash\)n\(\backslash\)"{});\ break;"{}},}
+\DoxyCodeLine{00895\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ default:\ \ \ \ \ \ printf(\(\backslash\)"{}proctype\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ "{}}}
+\DoxyCodeLine{00896\ \ \ \ \ \textcolor{stringliteral}{"{}procname[n]);\ break;"{}},}
+\DoxyCodeLine{00897\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00898\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00899\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ reach[i]\ =\ 1;"{}},}
+\DoxyCodeLine{00900\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00901\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ tagtable(n,\ m,\ is,\ srcln,\ reach);"{}},}
+\DoxyCodeLine{00902\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (dodot)\ printf(\(\backslash\)"{}\}\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00903\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ else"{}},}
+\DoxyCodeLine{00904\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{00905\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ int\ nrelse;"{}},}
+\DoxyCodeLine{00906\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (Btypes[n]\ !=\ N\_CLAIM)"{}},}
+\DoxyCodeLine{00907\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00908\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (T0-\/>st\ ==\ i"{}},}
+\DoxyCodeLine{00909\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \&\&\ strcmp(T0-\/>tp,\ \(\backslash\)"{}(1)\(\backslash\)"{})\ ==\ 0)"{}},}
+\DoxyCodeLine{00910\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ printf(\(\backslash\)"{}error:\ proctype\ '\%\%s'\ \(\backslash\)"{},"{}},}
+\DoxyCodeLine{00911\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{00912\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}line\ \%\%d,\ state\ \%\%d:\ has\ "{}}}
+\DoxyCodeLine{00913\ \ \ \ \ \textcolor{stringliteral}{"{}un\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00914\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ srcln[i],\ i);"{}},}
+\DoxyCodeLine{00915\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}conditional\ self-\/loop\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00916\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ pan\_exit(1);"{}},}
+\DoxyCodeLine{00917\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00918\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ nrelse\ =\ 0;"{}},}
+\DoxyCodeLine{00919\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{00920\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ if\ (strcmp(T0-\/>tp,\ \(\backslash\)"{}else\(\backslash\)"{})\ ==\ 0)"{}},}
+\DoxyCodeLine{00921\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ nrelse++;"{}},}
+\DoxyCodeLine{00922\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00923\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (nrelse\ >\ 1)"{}},}
+\DoxyCodeLine{00924\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ printf(\(\backslash\)"{}error:\ proctype\ '\%\%s'\ state\(\backslash\)"{},"{}},}
+\DoxyCodeLine{00925\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{00926\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ \%\%d,\ inherits\ \%\%d\(\backslash\)"{},\ i,\ nrelse);"{}},}
+\DoxyCodeLine{00927\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\ 'else'\ stmnts\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00928\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ pan\_exit(1);"{}},}
+\DoxyCodeLine{00929\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00930\ \ \ \ \ \textcolor{stringliteral}{"{}\#if\ !defined(LOOPSTATE)\ \&\&\ !defined(BFS\_PAR)"{}},}
+\DoxyCodeLine{00931\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables)"{}},}
+\DoxyCodeLine{00932\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{00933\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ do\_dfs(n,\ m,\ is,\ srcln,\ reach,\ lpstate);"{}},}
+\DoxyCodeLine{00934\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00935\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!t\_reverse)"{}},}
+\DoxyCodeLine{00936\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ return;"{}},}
+\DoxyCodeLine{00937\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{00938\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ /*\ process\ n,\ with\ m\ states,\ is=initial\ state\ -\/-\/\ reverse\ list\ */"{}},}
+\DoxyCodeLine{00939\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!state\_tables\ \&\&\ Btypes[n]\ !=\ N\_CLAIM)"{}},}
+\DoxyCodeLine{00940\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},\ \textcolor{comment}{/*\ for\ each\ state\ */}}
+\DoxyCodeLine{00941\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ Trans\ *Tx\ =\ (Trans\ *)\ 0;\ /*\ list\ of\ escapes\ */"{}},}
+\DoxyCodeLine{00942\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ Trans\ *Ty\ =\ (Trans\ *)\ 0;\ /*\ its\ tail\ element\ */"{}},}
+\DoxyCodeLine{00943\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T1\ =\ (Trans\ *)\ 0;\ /*\ reversed\ list\ */"{}},}
+\DoxyCodeLine{00944\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T2\ =\ (Trans\ *)\ 0;\ /*\ its\ tail\ */"{}},}
+\DoxyCodeLine{00945\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T3\ =\ (Trans\ *)\ 0;\ /*\ remembers\ possible\ 'else'\ */"{}},}
+\DoxyCodeLine{00946\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00947\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ find\ unless-\/escapes,\ they\ should\ go\ first\ */"{}},}
+\DoxyCodeLine{00948\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T4\ =\ T5\ =\ T0\ =\ trans[n][i];"{}},}
+\DoxyCodeLine{00949\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00950\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ while\ (T4\ \&\&\ T4-\/>e\_trans)\ /*\ escapes\ are\ first\ in\ orig\ "{}}}
+\DoxyCodeLine{00951\ \ \ \ \ \textcolor{stringliteral}{"{}list\ */"{}},}
+\DoxyCodeLine{00952\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T5\ =\ T4;\ \ \ \ \ \ /*\ remember\ predecessor\ */"{}},}
+\DoxyCodeLine{00953\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T4\ =\ T4-\/>next;"{}},}
+\DoxyCodeLine{00954\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00955\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#endif"{}},}
+\DoxyCodeLine{00956\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ T4\ points\ to\ first\ non-\/escape,\ T5\ to\ its\ parent,\ T0\ "{}}}
+\DoxyCodeLine{00957\ \ \ \ \ \textcolor{stringliteral}{"{}to\ original\ list\ */"{}},}
+\DoxyCodeLine{00958\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (T4\ !=\ T0)\ \ \ \ \ \ \ \ /*\ there\ was\ at\ least\ one\ "{}}}
+\DoxyCodeLine{00959\ \ \ \ \ \textcolor{stringliteral}{"{}escape\ */"{}},}
+\DoxyCodeLine{00960\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T3\ =\ T5-\/>next;\ \ \ \ \ \ \ /*\ start\ of\ "{}}}
+\DoxyCodeLine{00961\ \ \ \ \ \textcolor{stringliteral}{"{}non-\/escapes\ */"{}},}
+\DoxyCodeLine{00962\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T5-\/>next\ =\ (Trans\ *)\ 0;\ \ /*\ separate\ */"{}},}
+\DoxyCodeLine{00963\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Tx\ =\ T0;\ \ \ \ \ \ \ \ \ /*\ start\ of\ the\ "{}}}
+\DoxyCodeLine{00964\ \ \ \ \ \textcolor{stringliteral}{"{}escapes\ */"{}},}
+\DoxyCodeLine{00965\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ Ty\ =\ T5;\ \ \ \ \ \ \ \ \ /*\ its\ tail\ */"{}},}
+\DoxyCodeLine{00966\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T0\ =\ T3;\ \ \ \ \ \ \ \ \ /*\ the\ rest,\ to\ be\ "{}}}
+\DoxyCodeLine{00967\ \ \ \ \ \textcolor{stringliteral}{"{}reversed\ */"{}},}
+\DoxyCodeLine{00968\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00969\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ T0\ points\ to\ first\ non-\/escape,\ Tx\ to\ the\ list\ of\ "{}}}
+\DoxyCodeLine{00970\ \ \ \ \ \textcolor{stringliteral}{"{}escapes,\ Ty\ to\ its\ tail\ */"{}},}
+\DoxyCodeLine{00971\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{00972\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ first\ tail-\/add\ non-\/escape\ transitions,\ reversed\ */"{}},}
+\DoxyCodeLine{00973\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ T3\ =\ (Trans\ *)\ 0;"{}},\ \textcolor{comment}{/*\ remember\ a\ possible\ 'else'\ */}}
+\DoxyCodeLine{00974\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ for\ (T5\ =\ T0;\ T5;\ T5\ =\ T4)"{}},}
+\DoxyCodeLine{00975\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T4\ =\ T5-\/>next;"{}},}
+\DoxyCodeLine{00976\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{00977\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (T5-\/>e\_trans)"{}},}
+\DoxyCodeLine{00978\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ printf(\(\backslash\)"{}error:\ cannot\ happen!\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{00979\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ continue;"{}},}
+\DoxyCodeLine{00980\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{00981\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \#endif"{}},}
+\DoxyCodeLine{00982\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (strcmp(T5-\/>tp,\ \(\backslash\)"{}else\(\backslash\)"{})\ ==\ 0)"{}},}
+\DoxyCodeLine{00983\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T3\ =\ T5;"{}},}
+\DoxyCodeLine{00984\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T5-\/>next\ =\ (Trans\ *)\ 0;"{}},}
+\DoxyCodeLine{00985\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ else"{}},}
+\DoxyCodeLine{00986\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T5-\/>next\ =\ T1;"{}},}
+\DoxyCodeLine{00987\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ if\ (!T1)\ \{\ T2\ =\ T5;\ \}"{}},}
+\DoxyCodeLine{00988\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ T1\ =\ T5;"{}},}
+\DoxyCodeLine{00989\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{00990\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ T3\ points\ to\ a\ possible\ else,\ which\ is\ removed\ from\ "{}}}
+\DoxyCodeLine{00991\ \ \ \ \ \textcolor{stringliteral}{"{}the\ list\ */"{}},}
+\DoxyCodeLine{00992\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ T1\ points\ to\ the\ reversed\ list\ so\ far\ (without\ "{}}}
+\DoxyCodeLine{00993\ \ \ \ \ \textcolor{stringliteral}{"{}escapes)\ */"{}},}
+\DoxyCodeLine{00994\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ T2\ points\ to\ the\ tail\ element\ -\/-\/\ where\ the\ else\ "{}}}
+\DoxyCodeLine{00995\ \ \ \ \ \textcolor{stringliteral}{"{}should\ go\ */"{}},}
+\DoxyCodeLine{00996\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (T2\ \&\&\ T3)"{}},}
+\DoxyCodeLine{00997\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T2-\/>next\ =\ T3;\ \ /*\ add\ else\ */"{}},}
+\DoxyCodeLine{00998\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}\ else"{}},}
+\DoxyCodeLine{00999\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (T3)\ /*\ there\ was\ an\ else,\ but\ there's\ no\ "{}}}
+\DoxyCodeLine{01000\ \ \ \ \ \textcolor{stringliteral}{"{}tail\ */"{}},}
+\DoxyCodeLine{01001\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ if\ (!T1)\ \ \ \ /*\ and\ no\ reversed\ "{}}}
+\DoxyCodeLine{01002\ \ \ \ \ \textcolor{stringliteral}{"{}list\ */"{}},}
+\DoxyCodeLine{01003\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T1\ =\ T3;\ /*\ odd,\ but\ possible\ "{}}}
+\DoxyCodeLine{01004\ \ \ \ \ \textcolor{stringliteral}{"{}*/"{}},}
+\DoxyCodeLine{01005\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \}\ else\ \ \ \ \ \ /*\ even\ stranger\ */"{}},}
+\DoxyCodeLine{01006\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \{\ \ \ T1-\/>next\ =\ T3;"{}},}
+\DoxyCodeLine{01007\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01008\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01009\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ add\ in\ the\ escapes,\ to\ that\ they\ appear\ at\ the\ "{}}}
+\DoxyCodeLine{01010\ \ \ \ \ \textcolor{stringliteral}{"{}front\ */"{}},}
+\DoxyCodeLine{01011\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (Tx\ \&\&\ Ty)\ \{\ Ty-\/>next\ =\ T1;\ T1\ =\ Tx;\ \}"{}},}
+\DoxyCodeLine{01012\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01013\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ trans[n][i]\ =\ T1;"{}},}
+\DoxyCodeLine{01014\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ /*\ reversed,\ with\ escapes\ first\ and\ else\ last\ */"{}},}
+\DoxyCodeLine{01015\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01016\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables\ \&\&\ verbose)"{}},}
+\DoxyCodeLine{01017\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}FINAL\ proctype\ \%\%s\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ "{}},}
+\DoxyCodeLine{01018\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ procname[n]);"{}},}
+\DoxyCodeLine{01019\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 1;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{01020\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (T0\ =\ trans[n][i];\ T0;\ T0\ =\ T0-\/>next)"{}},}
+\DoxyCodeLine{01021\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ crack(n,\ i,\ T0,\ srcln);"{}},}
+\DoxyCodeLine{01022\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01023\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01024\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01025\ \ \ \ \ \textcolor{stringliteral}{"{}imed(Trans\ *T,\ int\ v,\ int\ n,\ int\ j)\ \ \ \ /*\ set\ intermediate\ state\ */"{}},}
+\DoxyCodeLine{01026\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ progstate[n][T-\/>st]\ |=\ progstate[n][v];"{}},}
+\DoxyCodeLine{01027\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ accpstate[n][T-\/>st]\ |=\ accpstate[n][v];"{}},}
+\DoxyCodeLine{01028\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ stopstate[n][T-\/>st]\ |=\ stopstate[n][v];"{}},}
+\DoxyCodeLine{01029\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ mapstate[n][j]\ =\ T-\/>st;"{}},}
+\DoxyCodeLine{01030\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01031\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01032\ \ \ \ \ \textcolor{stringliteral}{"{}tagtable(int\ n,\ int\ m,\ int\ is,\ short\ srcln[],\ uchar\ reach[])"{}},}
+\DoxyCodeLine{01033\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *z;\(\backslash\)n"{}},}
+\DoxyCodeLine{01034\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (is\ >=\ m\ ||\ !trans[n][is]"{}},}
+\DoxyCodeLine{01035\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ ||\ \ is\ <=\ 0\ ||\ reach[is]\ ==\ 0)"{}},}
+\DoxyCodeLine{01036\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{01037\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ reach[is]\ =\ 0;"{}},}
+\DoxyCodeLine{01038\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (state\_tables)"{}},}
+\DoxyCodeLine{01039\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (z\ =\ trans[n][is];\ z;\ z\ =\ z-\/>next)"{}},}
+\DoxyCodeLine{01040\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (dodot)"{}},}
+\DoxyCodeLine{01041\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ dot\_crack(n,\ is,\ z);"{}},}
+\DoxyCodeLine{01042\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ else"{}},}
+\DoxyCodeLine{01043\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ crack(n,\ is,\ z,\ srcln);"{}},}
+\DoxyCodeLine{01044\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01045\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01046\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (z\ =\ trans[n][is];\ z;\ z\ =\ z-\/>next)"{}},}
+\DoxyCodeLine{01047\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{"{}},}
+\DoxyCodeLine{01048\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{01049\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ int\ i,\ j;"{}},}
+\DoxyCodeLine{01050\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01051\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ tagtable(n,\ m,\ z-\/>st,\ srcln,\ reach);"{}},}
+\DoxyCodeLine{01052\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{01053\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 0;\ i\ <\ HAS\_UNLESS;\ i++)"{}},}
+\DoxyCodeLine{01054\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ j\ =\ trans[n][is]-\/>escp[i];"{}},}
+\DoxyCodeLine{01055\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (!j)\ break;"{}},}
+\DoxyCodeLine{01056\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ tagtable(n,\ m,\ j,\ srcln,\ reach);"{}},}
+\DoxyCodeLine{01057\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{01058\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01059\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01060\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01061\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01062\ \ \ \ \ \textcolor{stringliteral}{"{}extern\ Trans\ *t\_id\_lkup[];"{}},\ \textcolor{comment}{/*\ needed\ by\ BFS\_PAR\ */}}
+\DoxyCodeLine{01063\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01064\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01065\ \ \ \ \ \textcolor{stringliteral}{"{}dfs\_table(int\ n,\ int\ m,\ int\ is,\ short\ srcln[],\ uchar\ reach[],\ uchar\ "{}}}
+\DoxyCodeLine{01066\ \ \ \ \ \textcolor{stringliteral}{"{}lpstate[])"{}},}
+\DoxyCodeLine{01067\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Trans\ *z;\(\backslash\)n"{}},}
+\DoxyCodeLine{01068\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (is\ >=\ m\ ||\ is\ <=\ 0\ ||\ !trans[n][is])"{}},}
+\DoxyCodeLine{01069\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{01070\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ ((reach[is]\ \&\ (4|8|16))\ !=\ 0)"{}},}
+\DoxyCodeLine{01071\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ ((reach[is]\ \&\ (8|16))\ ==\ 16)\ /*\ on\ stack,\ not\ yet\ recorded\ "{}}}
+\DoxyCodeLine{01072\ \ \ \ \ \textcolor{stringliteral}{"{}*/"{}},}
+\DoxyCodeLine{01073\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ lpstate[is]\ =\ 1;"{}},}
+\DoxyCodeLine{01074\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ reach[is]\ |=\ 8;\ /*\ recorded\ */"{}},}
+\DoxyCodeLine{01075\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (state\_tables\ \&\&\ verbose)"{}},}
+\DoxyCodeLine{01076\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \{\ \ \ printf(\(\backslash\)"{}state\ \%\%d\ line\ \%\%d\ is\ a\ "{}}}
+\DoxyCodeLine{01077\ \ \ \ \ \textcolor{stringliteral}{"{}loopstate\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ is,\ srcln[is]);"{}},}
+\DoxyCodeLine{01078\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01079\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ return;"{}},}
+\DoxyCodeLine{01080\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01081\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ reach[is]\ |=\ (4|16);\ \ \ \ /*\ visited\ |\ onstack\ */"{}},}
+\DoxyCodeLine{01082\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (z\ =\ trans[n][is];\ z;\ z\ =\ z-\/>next)"{}},}
+\DoxyCodeLine{01083\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ t\_id\_lkup[z-\/>t\_id]\ =\ z;"{}},\ \textcolor{comment}{/*\ needed\ by\ BFS\_PAR\ */}}
+\DoxyCodeLine{01084\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{01085\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ int\ i,\ j;"{}},}
+\DoxyCodeLine{01086\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01087\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ dfs\_table(n,\ m,\ z-\/>st,\ srcln,\ reach,\ lpstate);"{}},}
+\DoxyCodeLine{01088\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{01089\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 0;\ i\ <\ HAS\_UNLESS;\ i++)"{}},}
+\DoxyCodeLine{01090\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ j\ =\ trans[n][is]-\/>escp[i];"{}},}
+\DoxyCodeLine{01091\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (!j)\ break;"{}},}
+\DoxyCodeLine{01092\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ dfs\_table(n,\ m,\ j,\ srcln,\ reach,\ lpstate);"{}},}
+\DoxyCodeLine{01093\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}"{}},}
+\DoxyCodeLine{01094\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01095\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01096\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ reach[is]\ \&=\ \string~16;\ /*\ no\ longer\ on\ stack\ */"{}},}
+\DoxyCodeLine{01097\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01098\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01099\ \ \ \ \ \textcolor{stringliteral}{"{}do\_dfs(int\ n,\ int\ m,\ int\ is,\ short\ srcln[],\ uchar\ reach[],\ uchar\ "{}}}
+\DoxyCodeLine{01100\ \ \ \ \ \textcolor{stringliteral}{"{}lpstate[])"{}},}
+\DoxyCodeLine{01101\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ int\ i;"{}},}
+\DoxyCodeLine{01102\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ dfs\_table(n,\ m,\ is,\ srcln,\ reach,\ lpstate);"{}},}
+\DoxyCodeLine{01103\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ i\ <\ m;\ i++)"{}},}
+\DoxyCodeLine{01104\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ reach[i]\ \&=\ \string~(4|8|16);"{}},}
+\DoxyCodeLine{01105\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01106\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01107\ \ \ \ \ \textcolor{stringliteral}{"{}crack(int\ n,\ int\ j,\ Trans\ *z,\ short\ srcln[])"{}},}
+\DoxyCodeLine{01108\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ int\ i;\(\backslash\)n"{}},}
+\DoxyCodeLine{01109\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!z)\ return;"{}},}
+\DoxyCodeLine{01110\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\(\backslash\)tstate\ \%\%3d\ -\/(tr\ \%\%3d)-\/>\ state\ \%\%3d\ \ \(\backslash\)"{},"{}},}
+\DoxyCodeLine{01111\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ j,\ z-\/>forw,\ z-\/>st);"{}},}
+\DoxyCodeLine{01112\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}[id\ \%\%3d\ tp\ \%\%3d\(\backslash\)"{},\ z-\/>t\_id,\ z-\/>tpe[0]);"{}},}
+\DoxyCodeLine{01113\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (z-\/>tpe[1])\ printf(\(\backslash\)"{},\%\%d\(\backslash\)"{},\ z-\/>tpe[1]);"{}},}
+\DoxyCodeLine{01114\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ HAS\_UNLESS"{}},}
+\DoxyCodeLine{01115\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (z-\/>e\_trans)"{}},}
+\DoxyCodeLine{01116\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}\ org\ \%\%3d\(\backslash\)"{},\ z-\/>e\_trans);"{}},}
+\DoxyCodeLine{01117\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ else\ if\ (state\_tables\ >=\ 2)"{}},}
+\DoxyCodeLine{01118\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ i\ <\ HAS\_UNLESS;\ i++)"{}},}
+\DoxyCodeLine{01119\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (!z-\/>escp[i])\ break;"{}},}
+\DoxyCodeLine{01120\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}\ esc\ \%\%d\(\backslash\)"{},\ z-\/>escp[i]);"{}},}
+\DoxyCodeLine{01121\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01122\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01123\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}]\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01124\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\ [\%\%s\%\%s\%\%s\%\%s\%\%s]\ \%\%s:\%\%d\ =>\ \(\backslash\)"{},"{}},}
+\DoxyCodeLine{01125\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ z-\/>atom\&6?\(\backslash\)"{}A\(\backslash\)"{}:z-\/>atom\&32?\(\backslash\)"{}D\(\backslash\)"{}:\(\backslash\)"{}-\/\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01126\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ accpstate[n][j]?\(\backslash\)"{}a\(\backslash\)"{}\ :\(\backslash\)"{}-\/\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01127\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ stopstate[n][j]?\(\backslash\)"{}e\(\backslash\)"{}\ :\ \(\backslash\)"{}-\/\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01128\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ progstate[n][j]?\(\backslash\)"{}p\(\backslash\)"{}\ :\ \(\backslash\)"{}-\/\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01129\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ z-\/>atom\ \&\ 8\ ?\(\backslash\)"{}L\(\backslash\)"{}:\(\backslash\)"{}G\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01130\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ PanSource,\ srcln[j]);"{}},}
+\DoxyCodeLine{01131\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ z-\/>tp[i];\ i++)"{}},}
+\DoxyCodeLine{01132\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (z-\/>tp[i]\ ==\ \(\backslash\)'\(\backslash\)\(\backslash\)n\(\backslash\)')"{}},}
+\DoxyCodeLine{01133\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01134\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ else"{}},}
+\DoxyCodeLine{01135\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ putchar(z-\/>tp[i]);"{}},}
+\DoxyCodeLine{01136\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (verbose\ \&\&\ z-\/>qu[0])"{}},}
+\DoxyCodeLine{01137\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)t[\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01138\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ for\ (i\ =\ 0;\ i\ <\ 6;\ i++)"{}},}
+\DoxyCodeLine{01139\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ if\ (z-\/>qu[i])"{}},}
+\DoxyCodeLine{01140\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}(\%\%d,\%\%d)\(\backslash\)"{},"{}},}
+\DoxyCodeLine{01141\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ z-\/>qu[i],\ z-\/>ty[i]);"{}},}
+\DoxyCodeLine{01142\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}]\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01143\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01144\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01145\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ fflush(stdout);"{}},}
+\DoxyCodeLine{01146\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01147\ \ \ \ \ \textcolor{stringliteral}{"{}/*\ spin\ -\/a\ m.pml;\ cc\ -\/o\ pan\ pan.c;\ ./pan\ -\/D\ |\ dot\ -\/Tps\ >\ foo.ps;\ ps2pdf\ "{}}}
+\DoxyCodeLine{01148\ \ \ \ \ \textcolor{stringliteral}{"{}foo.ps\ */"{}},}
+\DoxyCodeLine{01149\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01150\ \ \ \ \ \textcolor{stringliteral}{"{}dot\_crack(int\ n,\ int\ j,\ Trans\ *z)"{}},}
+\DoxyCodeLine{01151\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ int\ i;\(\backslash\)n"{}},}
+\DoxyCodeLine{01152\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (!z)\ return;"{}},}
+\DoxyCodeLine{01153\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\(\backslash\)tS\%\%d\ -\/>\ S\%\%d\ \ [color=black\(\backslash\)"{},\ j,\ z-\/>st);"{}},}
+\DoxyCodeLine{01154\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01155\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (z-\/>atom\&6)\ printf(\(\backslash\)"{},style=dashed\(\backslash\)"{});"{}},\ \ \ \ \ \ \ \textcolor{comment}{/*\ A\ */}}
+\DoxyCodeLine{01156\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ else\ if\ (z-\/>atom\&32)\ printf(\(\backslash\)"{},style=dotted\(\backslash\)"{});"{}},\ \textcolor{comment}{/*\ D\ */}}
+\DoxyCodeLine{01157\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ else\ if\ (z-\/>atom\&8)\ printf(\(\backslash\)"{},style=solid\(\backslash\)"{});"{}},\ \ \ \textcolor{comment}{/*\ L\ */}}
+\DoxyCodeLine{01158\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ else\ printf(\(\backslash\)"{},style=bold\(\backslash\)"{});"{}},\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ G\ */}}
+\DoxyCodeLine{01159\ \ \ \ \ \textcolor{comment}{/*\ other\ styles:\ filled\ dotted\ */}}
+\DoxyCodeLine{01160\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01161\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{},label=\(\backslash\)\(\backslash\)\(\backslash\)"{}\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01162\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (i\ =\ 0;\ z-\/>tp[i];\ i++)"{}},}
+\DoxyCodeLine{01163\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ if\ (z-\/>tp[i]\ ==\ \(\backslash\)'\(\backslash\)\(\backslash\)\(\backslash\)\(\backslash\)\(\backslash\)'"{}},}
+\DoxyCodeLine{01164\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \&\&\ \ z-\/>tp[i+1]\ ==\ \(\backslash\)'n\(\backslash\)')"{}},}
+\DoxyCodeLine{01165\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ i++;\ printf(\(\backslash\)"{}\ \(\backslash\)"{});"{}},}
+\DoxyCodeLine{01166\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \}\ else"{}},}
+\DoxyCodeLine{01167\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ putchar(z-\/>tp[i]);"{}},}
+\DoxyCodeLine{01168\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01169\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)\(\backslash\)"{}];\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01170\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (accpstate[n][j])\ printf(\(\backslash\)"{}\ \ S\%\%d\ [color=red,style=bold];\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ j);"{}},}
+\DoxyCodeLine{01171\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ else\ if\ (progstate[n][j])\ printf(\(\backslash\)"{}\ \ S\%\%d\ "{}}}
+\DoxyCodeLine{01172\ \ \ \ \ \textcolor{stringliteral}{"{}[color=green,style=bold];\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ j);"{}},}
+\DoxyCodeLine{01173\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (stopstate[n][j])\ printf(\(\backslash\)"{}\ \ S\%\%d\ "{}}}
+\DoxyCodeLine{01174\ \ \ \ \ \textcolor{stringliteral}{"{}[color=blue,style=bold,shape=box];\(\backslash\)\(\backslash\)n\(\backslash\)"{},\ j);"{}},}
+\DoxyCodeLine{01175\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01176\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01177\ \ \ \ \ \textcolor{stringliteral}{"{}\#ifdef\ VAR\_RANGES"{}},}
+\DoxyCodeLine{01178\ \ \ \ \ \textcolor{stringliteral}{"{}\#define\ BYTESIZE\ \ \ 32\ \ /*\ 2\string^8\ :\ 2\string^3\ =\ 256:8\ =\ 32\ */"{}},}
+\DoxyCodeLine{01179\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01180\ \ \ \ \ \textcolor{stringliteral}{"{}typedef\ struct\ Vr\_Ptr\ \{"{}},}
+\DoxyCodeLine{01181\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ char\ \ \ \ *nm;"{}},}
+\DoxyCodeLine{01182\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ uchar\ \ \ vals[BYTESIZE];"{}},}
+\DoxyCodeLine{01183\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ struct\ Vr\_Ptr\ *next;"{}},}
+\DoxyCodeLine{01184\ \ \ \ \ \textcolor{stringliteral}{"{}\}\ Vr\_Ptr;"{}},}
+\DoxyCodeLine{01185\ \ \ \ \ \textcolor{stringliteral}{"{}Vr\_Ptr\ *ranges\ =\ (Vr\_Ptr\ *)\ 0;"{}},}
+\DoxyCodeLine{01186\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01187\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01188\ \ \ \ \ \textcolor{stringliteral}{"{}logval(char\ *s,\ int\ v)"{}},}
+\DoxyCodeLine{01189\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Vr\_Ptr\ *tmp;"{}},}
+\DoxyCodeLine{01190\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01191\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (v<0\ ||\ v\ >\ 255)\ return;"{}},}
+\DoxyCodeLine{01192\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (tmp\ =\ ranges;\ tmp;\ tmp\ =\ tmp-\/>next)"{}},}
+\DoxyCodeLine{01193\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ if\ (!strcmp(tmp-\/>nm,\ s))"{}},}
+\DoxyCodeLine{01194\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ goto\ found;"{}},}
+\DoxyCodeLine{01195\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp\ =\ (Vr\_Ptr\ *)\ emalloc(sizeof(Vr\_Ptr));"{}},}
+\DoxyCodeLine{01196\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>next\ =\ ranges;"{}},}
+\DoxyCodeLine{01197\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ ranges\ =\ tmp;"{}},}
+\DoxyCodeLine{01198\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>nm\ =\ s;"{}},}
+\DoxyCodeLine{01199\ \ \ \ \ \textcolor{stringliteral}{"{}found:"{}},}
+\DoxyCodeLine{01200\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ tmp-\/>vals[(v)/8]\ |=\ 1<<((v)\%\%8);"{}},}
+\DoxyCodeLine{01201\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01202\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01203\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01204\ \ \ \ \ \textcolor{stringliteral}{"{}dumpval(uchar\ X[],\ int\ range)"{}},}
+\DoxyCodeLine{01205\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ int\ w,\ x,\ i,\ j\ =\ -\/1;"{}},}
+\DoxyCodeLine{01206\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01207\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (w\ =\ i\ =\ 0;\ w\ <\ range;\ w++)"{}},}
+\DoxyCodeLine{01208\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (x\ =\ 0;\ x\ <\ 8;\ x++,\ i++)"{}},}
+\DoxyCodeLine{01209\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{"{}},}
+\DoxyCodeLine{01210\ \ \ \ \ \textcolor{stringliteral}{"{}from:\ \ \ \ \ \ if\ ((X[w]\ \&\ (1<<x)))"{}},}
+\DoxyCodeLine{01211\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ printf(\(\backslash\)"{}\%\%d\(\backslash\)"{},\ i);"{}},}
+\DoxyCodeLine{01212\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ j\ =\ i;"{}},}
+\DoxyCodeLine{01213\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ goto\ upto;"{}},}
+\DoxyCodeLine{01214\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01215\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ return;"{}},}
+\DoxyCodeLine{01216\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (w\ =\ 0;\ w\ <\ range;\ w++)"{}},}
+\DoxyCodeLine{01217\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (x\ =\ 0;\ x\ <\ 8;\ x++,\ i++)"{}},}
+\DoxyCodeLine{01218\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{"{}},}
+\DoxyCodeLine{01219\ \ \ \ \ \textcolor{stringliteral}{"{}upto:\ \ \ \ \ \ if\ (!(X[w]\ \&\ (1<<x)))"{}},}
+\DoxyCodeLine{01220\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \{\ \ \ if\ (i-\/1\ ==\ j)"{}},}
+\DoxyCodeLine{01221\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{},\ \(\backslash\)"{});"{}},}
+\DoxyCodeLine{01222\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ else"{}},}
+\DoxyCodeLine{01223\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ printf(\(\backslash\)"{}-\/\%\%d,\ \(\backslash\)"{},\ i-\/1);"{}},}
+\DoxyCodeLine{01224\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ \ \ \ \ goto\ from;"{}},}
+\DoxyCodeLine{01225\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}\ \ \ \}"{}},}
+\DoxyCodeLine{01226\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ if\ (j\ >=\ 0\ \&\&\ j\ !=\ 255)"{}},}
+\DoxyCodeLine{01227\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}-\/255\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01228\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01229\ \ \ \ \ \textcolor{stringliteral}{"{}"{}},}
+\DoxyCodeLine{01230\ \ \ \ \ \textcolor{stringliteral}{"{}void"{}},}
+\DoxyCodeLine{01231\ \ \ \ \ \textcolor{stringliteral}{"{}dumpranges(void)"{}},}
+\DoxyCodeLine{01232\ \ \ \ \ \textcolor{stringliteral}{"{}\{\ \ Vr\_Ptr\ *tmp;"{}},}
+\DoxyCodeLine{01233\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)nValues\ assigned\ within\ \(\backslash\)"{});"{}},}
+\DoxyCodeLine{01234\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ printf(\(\backslash\)"{}interval\ [0..255]:\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01235\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ for\ (tmp\ =\ ranges;\ tmp;\ tmp\ =\ tmp-\/>next)"{}},}
+\DoxyCodeLine{01236\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \{\ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)t\%\%s\(\backslash\)\(\backslash\)t:\ \(\backslash\)"{},\ tmp-\/>nm);"{}},}
+\DoxyCodeLine{01237\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ dumpval(tmp-\/>vals,\ BYTESIZE);"{}},}
+\DoxyCodeLine{01238\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \ \ \ \ printf(\(\backslash\)"{}\(\backslash\)\(\backslash\)n\(\backslash\)"{});"{}},}
+\DoxyCodeLine{01239\ \ \ \ \ \textcolor{stringliteral}{"{}\ \ \ \}"{}},}
+\DoxyCodeLine{01240\ \ \ \ \ \textcolor{stringliteral}{"{}\}"{}},}
+\DoxyCodeLine{01241\ \ \ \ \ \textcolor{stringliteral}{"{}\#endif"{}},}
+\DoxyCodeLine{01242\ \ \ \ \ 0,}
+\DoxyCodeLine{01243\ \};}
+
+\end{DoxyCode}

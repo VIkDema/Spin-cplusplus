@@ -1,0 +1,165 @@
+\doxysection{tl.\+hpp}
+\hypertarget{tl_8hpp_source}{}\label{tl_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/tl/tl.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/tl/tl.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{comment}{/*****\ tl\_spin:\ tl.h\ *****/}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{comment}{/*}}
+\DoxyCodeLine{00004\ \textcolor{comment}{\ *\ This\ file\ is\ part\ of\ the\ public\ release\ of\ Spin.\ It\ is\ subject\ to\ the}}
+\DoxyCodeLine{00005\ \textcolor{comment}{\ *\ terms\ in\ the\ LICENSE\ file\ that\ is\ included\ in\ this\ source\ directory.}}
+\DoxyCodeLine{00006\ \textcolor{comment}{\ *\ Tool\ documentation\ is\ available\ at\ http://spinroot.com}}
+\DoxyCodeLine{00007\ \textcolor{comment}{\ *}}
+\DoxyCodeLine{00008\ \textcolor{comment}{\ *\ Based\ on\ the\ translation\ algorithm\ by\ Gerth,\ Peled,\ Vardi,\ and\ Wolper,}}
+\DoxyCodeLine{00009\ \textcolor{comment}{\ *\ presented\ at\ the\ PSTV\ Conference,\ held\ in\ 1995,\ Warsaw,\ Poland\ 1995.}}
+\DoxyCodeLine{00010\ \textcolor{comment}{\ */}}
+\DoxyCodeLine{00011\ }
+\DoxyCodeLine{00012\ \textcolor{preprocessor}{\#ifndef\ TLH}}
+\DoxyCodeLine{00013\ \textcolor{preprocessor}{\#define\ TLH}}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{preprocessor}{\#include\ "{}../fatal/fatal.hpp"{}}}
+\DoxyCodeLine{00016\ \textcolor{preprocessor}{\#include\ <cstdlib>}}
+\DoxyCodeLine{00017\ \textcolor{preprocessor}{\#include\ <stdio.h>}}
+\DoxyCodeLine{00018\ \textcolor{preprocessor}{\#include\ <string.h>}}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_symbol}{Symbol}}\ \{}
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{char}\ *name;}
+\DoxyCodeLine{00022\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_symbol}{Symbol}}\ *next;\ \textcolor{comment}{/*\ linked\ list,\ symbol\ table\ */}}
+\DoxyCodeLine{00023\ \};}
+\DoxyCodeLine{00024\ }
+\DoxyCodeLine{00025\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_node}{Node}}\ \{}
+\DoxyCodeLine{00026\ \ \ \textcolor{keywordtype}{short}\ ntyp;\ \textcolor{comment}{/*\ node\ type\ */}}
+\DoxyCodeLine{00027\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_symbol}{Symbol}}\ *symbol;}
+\DoxyCodeLine{00028\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_node}{Node}}\ *left;\ \textcolor{comment}{/*\ tree\ */}}
+\DoxyCodeLine{00029\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_node}{Node}}\ *right;\ \textcolor{comment}{/*\ tree\ */}}
+\DoxyCodeLine{00030\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_node}{Node}}\ *next;\ \textcolor{comment}{/*\ if\ linked\ list\ */}}
+\DoxyCodeLine{00031\ \};}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_graph}{Graph}}\ \{}
+\DoxyCodeLine{00034\ \ \ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *name;}
+\DoxyCodeLine{00035\ \ \ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *incoming;}
+\DoxyCodeLine{00036\ \ \ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *outgoing;}
+\DoxyCodeLine{00037\ \ \ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *oldstring;}
+\DoxyCodeLine{00038\ \ \ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *nxtstring;}
+\DoxyCodeLine{00039\ \ \ \mbox{\hyperlink{struct_node}{Node}}\ *New;}
+\DoxyCodeLine{00040\ \ \ \mbox{\hyperlink{struct_node}{Node}}\ *Old;}
+\DoxyCodeLine{00041\ \ \ \mbox{\hyperlink{struct_node}{Node}}\ *Other;}
+\DoxyCodeLine{00042\ \ \ \mbox{\hyperlink{struct_node}{Node}}\ *Next;}
+\DoxyCodeLine{00043\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ isred[64],\ isgrn[64];}
+\DoxyCodeLine{00044\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ redcnt,\ grncnt;}
+\DoxyCodeLine{00045\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ reachable;}
+\DoxyCodeLine{00046\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_graph}{Graph}}\ *next;}
+\DoxyCodeLine{00047\ \};}
+\DoxyCodeLine{00048\ }
+\DoxyCodeLine{00049\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_mapping}{Mapping}}\ \{}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{char}\ *from;}
+\DoxyCodeLine{00051\ \ \ \mbox{\hyperlink{struct_graph}{Graph}}\ *to;}
+\DoxyCodeLine{00052\ \ \ \textcolor{keyword}{struct\ }\mbox{\hyperlink{struct_mapping}{Mapping}}\ *next;}
+\DoxyCodeLine{00053\ \};}
+\DoxyCodeLine{00054\ }
+\DoxyCodeLine{00055\ \textcolor{keyword}{enum}\ \{}
+\DoxyCodeLine{00056\ \ \ ALWAYS\ =\ 257,}
+\DoxyCodeLine{00057\ \ \ AND,\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ 258\ */}}
+\DoxyCodeLine{00058\ \ \ EQUIV,\ \ \ \ \ \ \textcolor{comment}{/*\ 259\ */}}
+\DoxyCodeLine{00059\ \ \ EVENTUALLY,\ \textcolor{comment}{/*\ 260\ */}}
+\DoxyCodeLine{00060\ \ \ FALSE,\ \ \ \ \ \ \textcolor{comment}{/*\ 261\ */}}
+\DoxyCodeLine{00061\ \ \ IMPLIES,\ \ \ \ \textcolor{comment}{/*\ 262\ */}}
+\DoxyCodeLine{00062\ \ \ NOT,\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ 263\ */}}
+\DoxyCodeLine{00063\ \ \ OR,\ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ 264\ */}}
+\DoxyCodeLine{00064\ \ \ PREDICATE,\ \ \textcolor{comment}{/*\ 265\ */}}
+\DoxyCodeLine{00065\ \ \ TRUE,\ \ \ \ \ \ \ \textcolor{comment}{/*\ 266\ */}}
+\DoxyCodeLine{00066\ \ \ U\_OPER,\ \ \ \ \ \textcolor{comment}{/*\ 267\ */}}
+\DoxyCodeLine{00067\ \ \ V\_OPER\ \ \ \ \ \ \textcolor{comment}{/*\ 268\ */}}
+\DoxyCodeLine{00068\ \textcolor{preprocessor}{\#ifdef\ NXT}}
+\DoxyCodeLine{00069\ \ \ ,}
+\DoxyCodeLine{00070\ \ \ NEXT\ \textcolor{comment}{/*\ 269\ */}}
+\DoxyCodeLine{00071\ \textcolor{preprocessor}{\#endif}}
+\DoxyCodeLine{00072\ \ \ ,}
+\DoxyCodeLine{00073\ \ \ CEXPR\ \textcolor{comment}{/*\ 270\ */}}
+\DoxyCodeLine{00074\ \};}
+\DoxyCodeLine{00075\ }
+\DoxyCodeLine{00076\ \mbox{\hyperlink{struct_node}{Node}}\ *Canonical(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00077\ \mbox{\hyperlink{struct_node}{Node}}\ *canonical(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00078\ \mbox{\hyperlink{struct_node}{Node}}\ *cached(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00079\ \mbox{\hyperlink{struct_node}{Node}}\ *dupnode(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00080\ \mbox{\hyperlink{struct_node}{Node}}\ *getnode(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00081\ \mbox{\hyperlink{struct_node}{Node}}\ *in\_cache(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00082\ \mbox{\hyperlink{struct_node}{Node}}\ *push\_negation(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00083\ \mbox{\hyperlink{struct_node}{Node}}\ *right\_linked(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00084\ \mbox{\hyperlink{struct_node}{Node}}\ *tl\_nn(\textcolor{keywordtype}{int},\ \mbox{\hyperlink{struct_node}{Node}}\ *,\ \mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00085\ }
+\DoxyCodeLine{00086\ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *tl\_lookup(\textcolor{keyword}{const}\ \textcolor{keywordtype}{char}\ *);}
+\DoxyCodeLine{00087\ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *getsym(\mbox{\hyperlink{struct_symbol}{Symbol}}\ *);}
+\DoxyCodeLine{00088\ \mbox{\hyperlink{struct_symbol}{Symbol}}\ *DoDump(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00089\ }
+\DoxyCodeLine{00090\ \textcolor{keyword}{extern}\ \textcolor{keywordtype}{char}\ *emalloc(\textcolor{keywordtype}{size\_t});\ \textcolor{comment}{/*\ in\ main.c\ */}}
+\DoxyCodeLine{00091\ }
+\DoxyCodeLine{00092\ }
+\DoxyCodeLine{00093\ \textcolor{keywordtype}{int}\ anywhere(\textcolor{keywordtype}{int},\ \mbox{\hyperlink{struct_node}{Node}}\ *,\ \mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00094\ \textcolor{keywordtype}{int}\ dump\_cond(\mbox{\hyperlink{struct_node}{Node}}\ *,\ \mbox{\hyperlink{struct_node}{Node}}\ *,\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00095\ \textcolor{keywordtype}{int}\ isequal(\mbox{\hyperlink{struct_node}{Node}}\ *,\ \mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00096\ \textcolor{keywordtype}{int}\ tl\_Getchar(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00097\ }
+\DoxyCodeLine{00098\ \textcolor{keywordtype}{void}\ *tl\_emalloc(\textcolor{keywordtype}{int});}
+\DoxyCodeLine{00099\ \textcolor{keywordtype}{void}\ *tl\_erealloc(\textcolor{keywordtype}{void}\ *,\ \textcolor{keywordtype}{int},\ \textcolor{keywordtype}{int});}
+\DoxyCodeLine{00100\ \textcolor{keywordtype}{void}\ a\_stats(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00101\ \textcolor{keywordtype}{void}\ addtrans(\mbox{\hyperlink{struct_graph}{Graph}}\ *,\ \textcolor{keywordtype}{char}\ *,\ \mbox{\hyperlink{struct_node}{Node}}\ *,\ \textcolor{keywordtype}{char}\ *);}
+\DoxyCodeLine{00102\ \textcolor{keywordtype}{void}\ cache\_stats(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00103\ \textcolor{keywordtype}{void}\ dump(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00104\ \textcolor{keywordtype}{void}\ Fatal(\textcolor{keywordtype}{char}\ *,\ \textcolor{keywordtype}{char}\ *);}
+\DoxyCodeLine{00105\ \textcolor{keywordtype}{void}\ fatal(\textcolor{keywordtype}{char}\ *,\ \textcolor{keywordtype}{char}\ *);}
+\DoxyCodeLine{00106\ \textcolor{keywordtype}{void}\ fsm\_print(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00107\ \textcolor{keywordtype}{void}\ ini\_buchi(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00108\ \textcolor{keywordtype}{void}\ ini\_cache(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00109\ \textcolor{keywordtype}{void}\ ini\_rewrt(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00110\ \textcolor{keywordtype}{void}\ ini\_trans(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00111\ \textcolor{keywordtype}{void}\ releasenode(\textcolor{keywordtype}{int},\ \mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00112\ \textcolor{keywordtype}{void}\ tfree(\textcolor{keywordtype}{void}\ *);}
+\DoxyCodeLine{00113\ \textcolor{keywordtype}{void}\ tl\_explain(\textcolor{keywordtype}{int});}
+\DoxyCodeLine{00114\ \textcolor{keywordtype}{void}\ tl\_UnGetchar(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00115\ \textcolor{keywordtype}{void}\ tl\_parse(\textcolor{keywordtype}{void});}
+\DoxyCodeLine{00116\ \textcolor{keywordtype}{void}\ tl\_yyerror(\textcolor{keywordtype}{char}\ *);}
+\DoxyCodeLine{00117\ \textcolor{keywordtype}{void}\ trans(\mbox{\hyperlink{struct_node}{Node}}\ *);}
+\DoxyCodeLine{00118\ }
+\DoxyCodeLine{00119\ \textcolor{preprocessor}{\#define\ ZN\ (Node\ *)0}}
+\DoxyCodeLine{00120\ \textcolor{preprocessor}{\#define\ ZS\ (Symbol\ *)0}}
+\DoxyCodeLine{00121\ \textcolor{preprocessor}{\#define\ Nhash\ 255\ }\textcolor{comment}{/*\ must\ match\ size\ in\ spin.h\ */}\textcolor{preprocessor}{}}
+\DoxyCodeLine{00122\ \textcolor{preprocessor}{\#define\ True\ tl\_nn(TRUE,\ ZN,\ ZN)}}
+\DoxyCodeLine{00123\ \textcolor{preprocessor}{\#define\ False\ tl\_nn(FALSE,\ ZN,\ ZN)}}
+\DoxyCodeLine{00124\ \textcolor{preprocessor}{\#define\ Not(a)\ push\_negation(tl\_nn(NOT,\ a,\ ZN))}}
+\DoxyCodeLine{00125\ \textcolor{preprocessor}{\#define\ rewrite(n)\ canonical(right\_linked(n))}}
+\DoxyCodeLine{00126\ }
+\DoxyCodeLine{00127\ \textcolor{keyword}{typedef}\ \mbox{\hyperlink{struct_node}{Node}}\ *\mbox{\hyperlink{struct_node}{Nodeptr}};}
+\DoxyCodeLine{00128\ \textcolor{preprocessor}{\#define\ YYSTYPE\ Nodeptr}}
+\DoxyCodeLine{00129\ }
+\DoxyCodeLine{00130\ \textcolor{preprocessor}{\#define\ Debug(x)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00131\ \textcolor{preprocessor}{\ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00132\ \textcolor{preprocessor}{\ \ \ \ if\ (tl\_verbose)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00133\ \textcolor{preprocessor}{\ \ \ \ \ \ printf(x);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00134\ \textcolor{preprocessor}{\ \ \}}}
+\DoxyCodeLine{00135\ \textcolor{preprocessor}{\#define\ Debug2(x,\ y)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00136\ \textcolor{preprocessor}{\ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00137\ \textcolor{preprocessor}{\ \ \ \ if\ (tl\_verbose)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00138\ \textcolor{preprocessor}{\ \ \ \ \ \ printf(x,\ y);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00139\ \textcolor{preprocessor}{\ \ \}}}
+\DoxyCodeLine{00140\ \textcolor{preprocessor}{\#define\ Dump(x)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00141\ \textcolor{preprocessor}{\ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00142\ \textcolor{preprocessor}{\ \ \ \ if\ (tl\_verbose)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00143\ \textcolor{preprocessor}{\ \ \ \ \ \ dump(x);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00144\ \textcolor{preprocessor}{\ \ \}}}
+\DoxyCodeLine{00145\ \textcolor{preprocessor}{\#define\ Explain(x)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00146\ \textcolor{preprocessor}{\ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00147\ \textcolor{preprocessor}{\ \ \ \ if\ (tl\_verbose)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00148\ \textcolor{preprocessor}{\ \ \ \ \ \ tl\_explain(x);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00149\ \textcolor{preprocessor}{\ \ \}}}
+\DoxyCodeLine{00150\ }
+\DoxyCodeLine{00151\ \textcolor{preprocessor}{\#define\ Assert(x,\ y)\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00152\ \textcolor{preprocessor}{\ \ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00153\ \textcolor{preprocessor}{\ \ \ \ if\ (!(x))\ \{\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00154\ \textcolor{preprocessor}{\ \ \ \ \ \ tl\_explain(y);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}}
+\DoxyCodeLine{00155\ \textcolor{preprocessor}{\ \ \ \ \ \ loger::fatal("{}:\ assertion\ failed\(\backslash\)n"{}},\ (char\ *)0);\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}
+\DoxyCodeLine{00156\ \ \ \ \ \}\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \(\backslash\)}
+\DoxyCodeLine{00157\ \ \ \}}
+\DoxyCodeLine{00158\ }
+\DoxyCodeLine{00159\ \textcolor{preprocessor}{\#endif}}
+
+\end{DoxyCode}

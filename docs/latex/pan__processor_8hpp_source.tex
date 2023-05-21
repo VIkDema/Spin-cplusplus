@@ -1,0 +1,36 @@
+\doxysection{pan\+\_\+processor.\+hpp}
+\hypertarget{pan__processor_8hpp_source}{}\label{pan__processor_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/main/pan\_processor.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/main/pan\_processor.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ <fmt/core.h>}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{class\ }\mbox{\hyperlink{class_pan_processor}{PanProcessor}}\ \{}
+\DoxyCodeLine{00006\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00007\ \ \ \textcolor{keywordtype}{void}\ AddRuntime(\textcolor{keyword}{const}\ std::string\ \&add);}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \ \ \textcolor{keywordtype}{void}\ SetItsr\_n(\textcolor{keyword}{const}\ std::string\ \&s);}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \ \ \textcolor{keywordtype}{void}\ AddComptime(\textcolor{keyword}{const}\ std::string\ \&add);}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \ \ std::string\&\ GetPanRuntime();}
+\DoxyCodeLine{00014\ \ \ std::string\&\ GetPanComptime();}
+\DoxyCodeLine{00015\ }
+\DoxyCodeLine{00016\ \ \ \textcolor{keywordtype}{int}\ GetItsr()\ \{\ \textcolor{keywordflow}{return}\ itsr\_;\ \}}
+\DoxyCodeLine{00017\ \ \ \textcolor{keywordtype}{void}\ IncItsr()\ \{\ itsr\_++;\ \}}
+\DoxyCodeLine{00018\ \ \ \textcolor{keywordtype}{void}\ DesItsr()\ \{\ itsr\_-\/-\/;\ \}}
+\DoxyCodeLine{00019\ \ \ \textcolor{keywordtype}{void}\ ReverseItsr()\ \{\ itsr\_\ =\ -\/itsr\_;\ \}}
+\DoxyCodeLine{00020\ }
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{int}\ GetSwOrBt()\ \{\ \textcolor{keywordflow}{return}\ sw\_or\_bt\_;\ \}}
+\DoxyCodeLine{00022\ \ \ \textcolor{keywordtype}{int}\ GetItsrN()\ \{\ \textcolor{keywordflow}{return}\ itsr\_n\_;\ \}}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00025\ \ \ std::string\ pan\_runtime\_;}
+\DoxyCodeLine{00026\ \ \ std::string\ pan\_comptime\_;}
+\DoxyCodeLine{00027\ \ \ \textcolor{keywordtype}{int}\ itsr\_;}
+\DoxyCodeLine{00028\ \ \ \textcolor{keywordtype}{int}\ sw\_or\_bt\_;}
+\DoxyCodeLine{00029\ \ \ \textcolor{keywordtype}{int}\ itsr\_n\_;}
+\DoxyCodeLine{00030\ \};}
+
+\end{DoxyCode}

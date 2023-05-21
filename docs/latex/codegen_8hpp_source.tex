@@ -1,0 +1,41 @@
+\doxysection{codegen.\+hpp}
+\hypertarget{codegen_8hpp_source}{}\label{codegen_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/codegen/codegen.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/codegen/codegen.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ <cstdio>}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ "{}../models/models\_fwd.hpp"{}}}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{namespace\ }codegen\ \{}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keywordtype}{void}\ GenCodeTable(FILE\ *fd);}
+\DoxyCodeLine{00010\ }
+\DoxyCodeLine{00011\ \textcolor{keywordtype}{void}\ PlunkInline(FILE\ *fd,\ \textcolor{keyword}{const}\ std::string\ \&s,\ \textcolor{keywordtype}{int}\ how,\ \textcolor{keywordtype}{int}\ gencode);}
+\DoxyCodeLine{00012\ }
+\DoxyCodeLine{00013\ \textcolor{keywordtype}{void}\ PlunkExpr(FILE\ *fd,\ \textcolor{keyword}{const}\ std::string\ \&s);}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \textcolor{keywordtype}{void}\ HandleCState(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *s,\ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *t,\ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *ival);}
+\DoxyCodeLine{00016\ }
+\DoxyCodeLine{00017\ \textcolor{keywordtype}{void}\ HandleCTrack(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *s,\ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *t,}
+\DoxyCodeLine{00018\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *stackonly);}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \textcolor{keywordtype}{void}\ HandleCDescls(FILE\ *fd);}
+\DoxyCodeLine{00021\ }
+\DoxyCodeLine{00022\ \textcolor{keywordtype}{void}\ HandleCFCTS(FILE\ *fd);}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \textcolor{keywordtype}{void}\ AddLocInit(FILE\ *fd,\ \textcolor{keywordtype}{int}\ tpnr,\ \textcolor{keyword}{const}\ std::string\ \&pnm);}
+\DoxyCodeLine{00025\ }
+\DoxyCodeLine{00026\ \textcolor{keywordtype}{void}\ CPreview();}
+\DoxyCodeLine{00027\ \textcolor{keywordtype}{int}\ CAddSv(FILE\ *fd);}
+\DoxyCodeLine{00028\ \textcolor{keywordtype}{void}\ CStackSize(FILE\ *fd);}
+\DoxyCodeLine{00029\ \textcolor{keywordtype}{void}\ CAddStack(FILE\ *fd);}
+\DoxyCodeLine{00030\ \textcolor{keywordtype}{void}\ CAddLoc(FILE\ *fd,\ \textcolor{keyword}{const}\ std::string\ \&s);}
+\DoxyCodeLine{00031\ \textcolor{keywordtype}{void}\ CAddDef(FILE\ *fd);}
+\DoxyCodeLine{00032\ }
+\DoxyCodeLine{00033\ \textcolor{keywordtype}{void}\ PreRuse(FILE\ *fd,\ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *n);}
+\DoxyCodeLine{00034\ \textcolor{keywordtype}{char}*\ PutInline(FILE*\ fd,\ \textcolor{keyword}{const}\ std::string\&\ s);}
+\DoxyCodeLine{00035\ \}\ \textcolor{comment}{//\ namespace\ codegen}}
+
+\end{DoxyCode}

@@ -1,0 +1,39 @@
+\doxysection{lextok.\+hpp}
+\hypertarget{lextok_8hpp_source}{}\label{lextok_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ }
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}models\_fwd.hpp"{}}}
+\DoxyCodeLine{00004\ }
+\DoxyCodeLine{00005\ \textcolor{keyword}{namespace\ }models\ \{}
+\DoxyCodeLine{00006\ }
+\DoxyCodeLine{00007\ \textcolor{keyword}{struct\ }\mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ \{}
+\DoxyCodeLine{00008\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{short}\ node\_type;\ \textcolor{comment}{/*\ node\ type\ \ OLD:\ node\_type*/}}
+\DoxyCodeLine{00009\ \ \ \textcolor{keywordtype}{bool}\ is\_mtype\_token;\ \ \ \ \ \ \textcolor{comment}{/*\ CONST\ derived\ from\ MTYP\ OLD:\ ismtyp*/}}
+\DoxyCodeLine{00010\ \ \ \textcolor{keywordtype}{int}\ value;\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ value\ attribute\ old:\ val*/}}
+\DoxyCodeLine{00011\ \ \ \textcolor{keywordtype}{int}\ line\_number;\ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ line\ number\ old:ln\ */}}
+\DoxyCodeLine{00012\ \ \ \textcolor{keywordtype}{int}\ index\_step;\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ part\ of\ d\_step\ sequence,\ indstep\ */}}
+\DoxyCodeLine{00013\ \ \ \textcolor{keywordtype}{int}\ opt\_inline\_id;\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ inline\ id,\ if\ non-\/zero,\ \ uiid*/}}
+\DoxyCodeLine{00014\ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}}\ *file\_name;\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ file\ name\ old:\ fn*/}}
+\DoxyCodeLine{00015\ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}}\ *symbol;\ \ \ \ \ \ \ \ \ \ \ \textcolor{comment}{/*\ symbol\ reference\ old:\ sym*/}}
+\DoxyCodeLine{00016\ \ \ \mbox{\hyperlink{structmodels_1_1_sequence}{Sequence}}\ *sequence;\ \ \ \ \ \ \ \textcolor{comment}{/*\ sequence\ old:\ sq*/}}
+\DoxyCodeLine{00017\ \ \ \mbox{\hyperlink{structmodels_1_1_seq_list}{SeqList}}\ *seq\_list;\ \ \ \ \ \ \ \ \textcolor{comment}{/*\ sequence\ list\ old:\ sl*/}}
+\DoxyCodeLine{00018\ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *left,\ *right;\ \ \ \ \ \textcolor{comment}{/*\ children\ in\ parse\ tree\ old:\ fn*/}}
+\DoxyCodeLine{00019\ \ \ \textcolor{keywordtype}{void}\ ProcessSymbolForRead();}
+\DoxyCodeLine{00020\ \ \ \textcolor{keywordtype}{int}\ ResolveSymbolType();}
+\DoxyCodeLine{00021\ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *AddTail(\mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *tail);}
+\DoxyCodeLine{00022\ }
+\DoxyCodeLine{00023\ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *nn(\mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *symbol,\ \textcolor{keywordtype}{int}\ type,\ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *left,}
+\DoxyCodeLine{00024\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *right);}
+\DoxyCodeLine{00025\ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *CreateRemoteLabelAssignment(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *proctype\_name,}
+\DoxyCodeLine{00026\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *pid,}
+\DoxyCodeLine{00027\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *label\_name);}
+\DoxyCodeLine{00028\ \ \ \textcolor{keyword}{static}\ \mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}}\ *CreateRemoteVariableAssignment(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *a,}
+\DoxyCodeLine{00029\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *b,}
+\DoxyCodeLine{00030\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *c,}
+\DoxyCodeLine{00031\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *ndx);}
+\DoxyCodeLine{00032\ \};}
+\DoxyCodeLine{00033\ \}\ \textcolor{comment}{//\ namespace\ models}}
+
+\end{DoxyCode}

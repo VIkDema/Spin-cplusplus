@@ -1,0 +1,104 @@
+\doxysection{models\+::Symbol Struct Reference}
+\hypertarget{structmodels_1_1_symbol}{}\label{structmodels_1_1_symbol}\index{models::Symbol@{models::Symbol}}
+\doxysubsubsection*{Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a9025bbc77210cb3995f4c74c08cca0b3}\label{structmodels_1_1_symbol_a9025bbc77210cb3995f4c74c08cca0b3} 
+void {\bfseries Add\+Access} (\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*}what, int count, int type)
+\item 
+\Hypertarget{structmodels_1_1_symbol_ade0f40bfee092185539849c246b2591b}\label{structmodels_1_1_symbol_ade0f40bfee092185539849c246b2591b} 
+void {\bfseries Detect\+Side\+Effects} ()
+\item 
+\Hypertarget{structmodels_1_1_symbol_a1f198d5eb0794a949111edc7e24197dc}\label{structmodels_1_1_symbol_a1f198d5eb0794a949111edc7e24197dc} 
+bool {\bfseries Is\+Proctype} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Static Public Member Functions}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aa315e41e477e2028c17841e02a55f4ff}\label{structmodels_1_1_symbol_aa315e41e477e2028c17841e02a55f4ff} 
+static \mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries Build\+Or\+Find} (const std\+::string \&name)
+\item 
+\Hypertarget{structmodels_1_1_symbol_a085966e5c6dc4a6bbad4e6b2ef6c9382}\label{structmodels_1_1_symbol_a085966e5c6dc4a6bbad4e6b2ef6c9382} 
+static void {\bfseries Set\+Context} (\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*}context)
+\item 
+\Hypertarget{structmodels_1_1_symbol_a125549b31788a111ab4628ee7df439ed}\label{structmodels_1_1_symbol_a125549b31788a111ab4628ee7df439ed} 
+static \mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries Get\+Context} ()
+\end{DoxyCompactItemize}
+\doxysubsubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aa96572babff719c99dd61357378664b4}\label{structmodels_1_1_symbol_aa96572babff719c99dd61357378664b4} 
+std\+::string {\bfseries name}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aaa5756759a531b56f6d281f31e446180}\label{structmodels_1_1_symbol_aaa5756759a531b56f6d281f31e446180} 
+short {\bfseries id}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a8caf6a35478dfc54b40cdbb752a61263}\label{structmodels_1_1_symbol_a8caf6a35478dfc54b40cdbb752a61263} 
+Symbol\+Type {\bfseries type} = k\+None
+\item 
+\Hypertarget{structmodels_1_1_symbol_adce3947dc62732ae5698b37048f91e2a}\label{structmodels_1_1_symbol_adce3947dc62732ae5698b37048f91e2a} 
+unsigned char {\bfseries hidden\+\_\+flags}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a9257fa2d2ae6b8a641a4598c968c2ca6}\label{structmodels_1_1_symbol_a9257fa2d2ae6b8a641a4598c968c2ca6} 
+unsigned char {\bfseries color\+\_\+number}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a69c427811db5f9bc2d000f23fa113ecc}\label{structmodels_1_1_symbol_a69c427811db5f9bc2d000f23fa113ecc} 
+bool {\bfseries is\+\_\+array}
+\item 
+\Hypertarget{structmodels_1_1_symbol_acb5f74393b62096233d4f871aa285bda}\label{structmodels_1_1_symbol_acb5f74393b62096233d4f871aa285bda} 
+std\+::string {\bfseries block\+\_\+scope}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a18da558569add885a3f3c55cd7d80915}\label{structmodels_1_1_symbol_a18da558569add885a3f3c55cd7d80915} 
+int {\bfseries sc}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aed6ac4892016df42bd2df0f0fde56ea6}\label{structmodels_1_1_symbol_aed6ac4892016df42bd2df0f0fde56ea6} 
+std\+::optional$<$ int $>$ {\bfseries nbits}
+\item 
+\Hypertarget{structmodels_1_1_symbol_ac74d036c4ae4038e629f1f00db0ff5ed}\label{structmodels_1_1_symbol_ac74d036c4ae4038e629f1f00db0ff5ed} 
+int {\bfseries value\+\_\+type}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a228bfd0b4f571fc04b96dec8ed29c0bf}\label{structmodels_1_1_symbol_a228bfd0b4f571fc04b96dec8ed29c0bf} 
+int {\bfseries last\+\_\+depth}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aebc58109e5626f3982da4f1847c2a7ca}\label{structmodels_1_1_symbol_aebc58109e5626f3982da4f1847c2a7ca} 
+std\+::vector$<$ int $>$ {\bfseries value}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a270c23d658cb4b26e6fe51718c813343}\label{structmodels_1_1_symbol_a270c23d658cb4b26e6fe51718c813343} 
+\mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}} \texorpdfstring{$\ast$}{*}\texorpdfstring{$\ast$}{*} {\bfseries Sval}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a037f56f1e4fd2ad815b490d8a6092346}\label{structmodels_1_1_symbol_a037f56f1e4fd2ad815b490d8a6092346} 
+int {\bfseries xu}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a283d9344fcedc45633bb0f729ed48b34}\label{structmodels_1_1_symbol_a283d9344fcedc45633bb0f729ed48b34} 
+\mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}} \texorpdfstring{$\ast$}{*} {\bfseries init\+\_\+value}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a550f37767d47aa145c4b52623b931adc}\label{structmodels_1_1_symbol_a550f37767d47aa145c4b52623b931adc} 
+\mbox{\hyperlink{structmodels_1_1_lextok}{Lextok}} \texorpdfstring{$\ast$}{*} {\bfseries struct\+\_\+template}
+\item 
+\Hypertarget{structmodels_1_1_symbol_ae3b1b8cc784c6a5caa100e3a1d814fc6}\label{structmodels_1_1_symbol_ae3b1b8cc784c6a5caa100e3a1d814fc6} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries xup} \mbox{[}2\mbox{]}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a6daece1f466b65983fb59869593f6e96}\label{structmodels_1_1_symbol_a6daece1f466b65983fb59869593f6e96} 
+\mbox{\hyperlink{structmodels_1_1_access}{Access}} \texorpdfstring{$\ast$}{*} {\bfseries access}
+\item 
+\Hypertarget{structmodels_1_1_symbol_aa5b471dc47f79cff44383d4c5655ea84}\label{structmodels_1_1_symbol_aa5b471dc47f79cff44383d4c5655ea84} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries mtype\+\_\+name}
+\item 
+\Hypertarget{structmodels_1_1_symbol_af7bce5289ea661644fed885052707abe}\label{structmodels_1_1_symbol_af7bce5289ea661644fed885052707abe} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries struct\+\_\+name}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a2f6ef1a434028361cf24cf093e90d44a}\label{structmodels_1_1_symbol_a2f6ef1a434028361cf24cf093e90d44a} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries owner\+\_\+name}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a4536fc197e8f3f0f2613e21701471a4b}\label{structmodels_1_1_symbol_a4536fc197e8f3f0f2613e21701471a4b} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries context}
+\item 
+\Hypertarget{structmodels_1_1_symbol_a52dcd278ab64a299e07e5a85b5783de2}\label{structmodels_1_1_symbol_a52dcd278ab64a299e07e5a85b5783de2} 
+\mbox{\hyperlink{structmodels_1_1_symbol}{Symbol}} \texorpdfstring{$\ast$}{*} {\bfseries next}
+\end{DoxyCompactItemize}
+
+
+The documentation for this struct was generated from the following files\+:\begin{DoxyCompactItemize}
+\item 
+/\+Users/vikdema/\+Desktop/projects/\+Spin/src++/src/models/symbol.\+hpp\item 
+/\+Users/vikdema/\+Desktop/projects/\+Spin/src++/src/models/symbol.\+cpp\end{DoxyCompactItemize}

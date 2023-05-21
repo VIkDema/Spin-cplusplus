@@ -1,0 +1,101 @@
+\doxysection{lexer.\+hpp}
+\hypertarget{lexer_8hpp_source}{}\label{lexer_8hpp_source}\index{/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp@{/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp}}
+
+\begin{DoxyCode}{0}
+\DoxyCodeLine{00001\ \textcolor{preprocessor}{\#pragma\ once}}
+\DoxyCodeLine{00002\ \textcolor{preprocessor}{\#include\ "{}deferred.hpp"{}}}
+\DoxyCodeLine{00003\ \textcolor{preprocessor}{\#include\ "{}file\_stream.hpp"{}}}
+\DoxyCodeLine{00004\ \textcolor{preprocessor}{\#include\ "{}scope.hpp"{}}}
+\DoxyCodeLine{00005\ \textcolor{preprocessor}{\#include\ <optional>}}
+\DoxyCodeLine{00006\ \textcolor{preprocessor}{\#include\ <string>}}
+\DoxyCodeLine{00007\ \textcolor{preprocessor}{\#include\ <vector>}}
+\DoxyCodeLine{00008\ }
+\DoxyCodeLine{00009\ \textcolor{keyword}{namespace\ }lexer\ \{}
+\DoxyCodeLine{00010\ \textcolor{keyword}{class\ }\mbox{\hyperlink{classlexer_1_1_lexer}{Lexer}}\ \{}
+\DoxyCodeLine{00011\ \textcolor{keyword}{public}:}
+\DoxyCodeLine{00012\ \ \ \mbox{\hyperlink{classlexer_1_1_lexer}{Lexer}}();}
+\DoxyCodeLine{00013\ \ \ \mbox{\hyperlink{classlexer_1_1_lexer}{Lexer}}(\textcolor{keywordtype}{bool}\ pp\_mode);}
+\DoxyCodeLine{00014\ }
+\DoxyCodeLine{00015\ \ \ \textcolor{keywordtype}{void}\ SetLastToken(\textcolor{keywordtype}{int}\ last\_token);}
+\DoxyCodeLine{00016\ \ \ \textcolor{keywordtype}{int}\ GetLastToken();}
+\DoxyCodeLine{00017\ }
+\DoxyCodeLine{00018\ \ \ \textcolor{keywordtype}{int}\ lex();}
+\DoxyCodeLine{00019\ }
+\DoxyCodeLine{00020\ \ \ \textcolor{keywordtype}{void}\ add\_inline\_argument();}
+\DoxyCodeLine{00021\ \ \ \textcolor{keywordtype}{void}\ update\_inline\_argument(\textcolor{keyword}{const}\ std::string\ \&additional);}
+\DoxyCodeLine{00022\ \ \ \textcolor{keywordtype}{void}\ inc\_index\_argument();}
+\DoxyCodeLine{00023\ }
+\DoxyCodeLine{00024\ \ \ \textcolor{keywordtype}{void}\ inc\_inline\_nesting();}
+\DoxyCodeLine{00025\ \ \ \textcolor{keywordtype}{void}\ des\_inline\_nesting();}
+\DoxyCodeLine{00026\ \ \ std::size\_t\ get\_inline\_nesting();}
+\DoxyCodeLine{00027\ }
+\DoxyCodeLine{00028\ \ \ \textcolor{keywordtype}{void}\ inc\_parameter\_count()\ \{\ parameter\_count\_++;\ \}}
+\DoxyCodeLine{00029\ \ \ \textcolor{keywordtype}{void}\ des\_parameter\_count()\ \{\ parameter\_count\_-\/-\/;\ \}}
+\DoxyCodeLine{00030\ }
+\DoxyCodeLine{00031\ \ \ \textcolor{keywordtype}{void}\ SetHasCode(\textcolor{keywordtype}{int}\ has\_code)\ \{\ has\_code\_\ =\ has\_code;\ \}}
+\DoxyCodeLine{00032\ \ \ \textcolor{keywordtype}{void}\ SetHasPriority(\textcolor{keywordtype}{int}\ has\_priority)\ \{\ has\_priority\_\ =\ has\_priority;\ \}}
+\DoxyCodeLine{00033\ \ \ \textcolor{keywordtype}{void}\ SetInFor(\textcolor{keywordtype}{int}\ in\_for)\ \{\ in\_for\_\ =\ in\_for;\ \}}
+\DoxyCodeLine{00034\ \ \ \textcolor{keywordtype}{void}\ IncHasPriority()\ \{\ has\_priority\_++;\ \}}
+\DoxyCodeLine{00035\ }
+\DoxyCodeLine{00036\ \ \ \textcolor{keywordtype}{short}\ GetHasCode()\ \{\ \textcolor{keywordflow}{return}\ has\_code\_;\ \}}
+\DoxyCodeLine{00037\ \ \ \textcolor{keywordtype}{short}\ GetHasPriority()\ \{\ \textcolor{keywordflow}{return}\ has\_priority\_;\ \}}
+\DoxyCodeLine{00038\ \ \ \textcolor{keywordtype}{short}\ GetHasLast()\ \{\ \textcolor{keywordflow}{return}\ has\_last\_;\ \}}
+\DoxyCodeLine{00039\ \ \ \textcolor{keywordtype}{int}\ GetInFor()\ \{\ \textcolor{keywordflow}{return}\ in\_for\_;\ \}}
+\DoxyCodeLine{00040\ }
+\DoxyCodeLine{00041\ \ \ \textcolor{keywordtype}{bool}\ IsLtlMode()\ \{\ \textcolor{keywordflow}{return}\ ltl\_mode\_;\ \}}
+\DoxyCodeLine{00042\ \ \ \textcolor{keywordtype}{void}\ SetLtlMode(\textcolor{keywordtype}{bool}\ ltl\_mode)\ \{}
+\DoxyCodeLine{00043\ \ \ \ \ \textcolor{keywordflow}{if}\ (ltl\_mode)\ \{}
+\DoxyCodeLine{00044\ \ \ \ \ \ \ has\_ltl\_\ =\ \textcolor{keyword}{true};}
+\DoxyCodeLine{00045\ \ \ \ \ \}}
+\DoxyCodeLine{00046\ \ \ \ \ ltl\_mode\_\ =\ ltl\_mode;}
+\DoxyCodeLine{00047\ \ \ \}}
+\DoxyCodeLine{00048\ \ \ \textcolor{keywordtype}{bool}\ HasLtl()\ \{\ \textcolor{keywordflow}{return}\ has\_ltl\_;\ \}}
+\DoxyCodeLine{00049\ \ \ \textcolor{keywordtype}{int}\ GetInSeq()\ \{\ \textcolor{keywordflow}{return}\ in\_seq\_;\ \}}
+\DoxyCodeLine{00050\ \ \ \textcolor{keywordtype}{void}\ SetInSeq(\textcolor{keywordtype}{int}\ in\_seq)\ \{\ in\_seq\_\ =\ in\_seq;\ \}}
+\DoxyCodeLine{00051\ \ \ \textcolor{keywordtype}{int}\ GetImpliedSemis()\ \{\ \textcolor{keywordflow}{return}\ implied\_semis\_;\ \}}
+\DoxyCodeLine{00052\ \ \ \textcolor{keywordtype}{void}\ SetImpliedSemis(\textcolor{keywordtype}{int}\ implied\_semis)\ \{\ implied\_semis\_\ =\ implied\_semis;\ \}}
+\DoxyCodeLine{00053\ }
+\DoxyCodeLine{00054\ \ \ \mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *HandleInline(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *s,\ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *nms);}
+\DoxyCodeLine{00055\ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *ReturnStatement(\mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *Lextok);}
+\DoxyCodeLine{00056\ }
+\DoxyCodeLine{00057\ \ \ \textcolor{keywordtype}{void}\ PickupInline(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *t,\ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *apars,}
+\DoxyCodeLine{00058\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *rval);}
+\DoxyCodeLine{00059\ }
+\DoxyCodeLine{00060\ \textcolor{keyword}{private}:}
+\DoxyCodeLine{00061\ \ \ \textcolor{keywordtype}{int}\ pre\_proc();}
+\DoxyCodeLine{00062\ \ \ \textcolor{keywordtype}{void}\ do\_directive(\textcolor{keywordtype}{int}\ first\_char);}
+\DoxyCodeLine{00063\ \ \ \textcolor{keywordtype}{int}\ CheckName(\textcolor{keyword}{const}\ std::string\ \&value);}
+\DoxyCodeLine{00064\ \ \ \textcolor{keywordtype}{bool}\ ScatTo(\textcolor{keywordtype}{int}\ stop,\ \textcolor{keywordtype}{int}\ (*Predicate)(\textcolor{keywordtype}{int}),\ std::string\ \&buf,}
+\DoxyCodeLine{00065\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \textcolor{keywordtype}{int}\ max\_size\ =\ 0);}
+\DoxyCodeLine{00066\ \ \ \textcolor{keywordtype}{bool}\ ScatTo(\textcolor{keywordtype}{int}\ stop);}
+\DoxyCodeLine{00067\ \ \ \textcolor{keywordtype}{int}\ Follow(\textcolor{keywordtype}{int}\ token,\ \textcolor{keywordtype}{int}\ ifyes,\ \textcolor{keywordtype}{int}\ ifno);}
+\DoxyCodeLine{00068\ \ \ \textcolor{keywordtype}{void}\ Precondition(\textcolor{keywordtype}{char}\ *q);}
+\DoxyCodeLine{00069\ \ \ \textcolor{keywordtype}{void}\ DefInline(\mbox{\hyperlink{structmodels_1_1_symbol}{models::Symbol}}\ *s,\ \textcolor{keywordtype}{int}\ ln,\ \textcolor{keywordtype}{char}\ *ptr,\ \textcolor{keywordtype}{char}\ *prc,}
+\DoxyCodeLine{00070\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \mbox{\hyperlink{structmodels_1_1_lextok}{models::Lextok}}\ *nms);}
+\DoxyCodeLine{00071\ }
+\DoxyCodeLine{00072\ \ \ \mbox{\hyperlink{classfile_1_1_file_stream}{file::FileStream}}\ stream\_;}
+\DoxyCodeLine{00073\ \ \ \mbox{\hyperlink{classhelpers_1_1_deferred}{::helpers::Deferred}}\ deferred\_;}
+\DoxyCodeLine{00074\ }
+\DoxyCodeLine{00075\ \ \ std::vector<std::string>\ inline\_arguments\_;}
+\DoxyCodeLine{00076\ \ \ std::size\_t\ curr\_inline\_argument\_;}
+\DoxyCodeLine{00077\ \ \ std::size\_t\ argument\_nesting\_;}
+\DoxyCodeLine{00078\ \ \ \textcolor{keywordtype}{int}\ last\_token\_;}
+\DoxyCodeLine{00079\ \ \ \textcolor{keywordtype}{bool}\ pp\_mode\_;}
+\DoxyCodeLine{00080\ }
+\DoxyCodeLine{00081\ \ \ std::string\ temp\_hold\_;}
+\DoxyCodeLine{00082\ \ \ \textcolor{keywordtype}{int}\ temp\_has\_;}
+\DoxyCodeLine{00083\ }
+\DoxyCodeLine{00084\ \ \ \textcolor{keywordtype}{int}\ parameter\_count\_;}
+\DoxyCodeLine{00085\ \ \ \textcolor{keywordtype}{int}\ has\_last\_;}
+\DoxyCodeLine{00086\ \ \ \textcolor{keywordtype}{short}\ has\_code\_;\ \ \ \ \ \textcolor{comment}{/*\ spec\ contains\ c\_code,\ c\_expr,\ c\_state\ */}}
+\DoxyCodeLine{00087\ \ \ \textcolor{keywordtype}{short}\ has\_priority\_;\ \textcolor{comment}{/*\ spec\ refers\ to\ \_priority\ */}}
+\DoxyCodeLine{00088\ \ \ \textcolor{keywordtype}{int}\ in\_for\_;}
+\DoxyCodeLine{00089\ \ \ \textcolor{keywordtype}{unsigned}\ \textcolor{keywordtype}{char}\ in\_comment\_;}
+\DoxyCodeLine{00090\ \ \ \textcolor{keywordtype}{bool}\ ltl\_mode\_;\ \textcolor{comment}{/*\ set\ when\ parsing\ an\ ltl\ formula\ */}}
+\DoxyCodeLine{00091\ \ \ \textcolor{keywordtype}{bool}\ has\_ltl\_;}
+\DoxyCodeLine{00092\ \ \ \textcolor{keywordtype}{int}\ implied\_semis\_;}
+\DoxyCodeLine{00093\ \ \ \textcolor{keywordtype}{int}\ in\_seq\_;}
+\DoxyCodeLine{00094\ \};}
+\DoxyCodeLine{00095\ \}\ \textcolor{comment}{//\ namespace\ lexer}}
+
+\end{DoxyCode}
