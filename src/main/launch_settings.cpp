@@ -15,50 +15,50 @@ void LaunchSettings::SetOptimizationsOptions(int value) {
   case '1':
     need_use_dataflow_optimizations = false;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: dataflow optimizations turned off" << std::endl;
+      std::cout << "spin++: dataflow optimizations turned off" << std::endl;
     }
     break;
   case '2':
     need_hide_write_only_variables = false;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: dead variable elimination turned off" << std::endl;
+      std::cout << "spin++: dead variable elimination turned off" << std::endl;
     }
     break;
   case '3':
     need_statemate_merging = false;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: statement merging turned off" << std::endl;
+      std::cout << "spin++: statement merging turned off" << std::endl;
     }
     break;
 
   case '4':
     need_rendezvous_optimizations = false;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: rendezvous optimization turned off" << std::endl;
+      std::cout << "spin++:: rendezvous optimization turned off" << std::endl;
     }
     break;
   case '5':
     need_case_caching = false;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: case caching turned off" << std::endl;
+      std::cout << "spin++: case caching turned off" << std::endl;
     }
     break;
   case '6':
     need_revert_old_rultes_for_priority = true;
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: using old priority rules (pre version 6.2)"
+      std::cout << "spin++: using old priority rules (pre version 6.2)"
                 << std::endl;
     }
     return; /* no break */
   case '7':
     lexer_.SetImpliedSemis(0);
     if (verbose_flags.NeedToPrintVerbose()) {
-      std::cout << "spin: no implied semi-colons (pre version 6.3)"
+      std::cout << "spin++: no implied semi-colons (pre version 6.3)"
                 << std::endl;
     }
     return; /* no break */
   default:
-    throw std::runtime_error("spin: bad or missing parameter on -o");
+    throw std::runtime_error("spin++: bad or missing parameter on -o");
     break;
   }
   need_use_optimizations = true;

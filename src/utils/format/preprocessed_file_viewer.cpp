@@ -22,7 +22,7 @@ void PreprocessedFileViewer::doindent() {
   }
 }
 
-// TODO: fix name variable
+
 void PreprocessedFileViewer::recursive_view_sequence(
     models::Sequence *sequence) {
   models::Symbol *v;

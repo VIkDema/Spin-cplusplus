@@ -60,7 +60,7 @@ models::Symbol *DoSame(models::Lextok *n, models::Symbol *v, int xinit) {
     InitStruct(v); /* once, at top level */
   }
   if (ix >= v->value_type || ix < 0) {
-    printf("spin: indexing %s[%d] - size is %d\n", v->name.c_str(), ix,
+    printf("spin++: indexing %s[%d] - size is %d\n", v->name.c_str(), ix,
            v->value_type);
     loger::fatal("indexing error \'%s\'", v->name);
   }
@@ -621,7 +621,7 @@ models::Lextok *mk_explicit(models::Lextok *n, int Ok, int Ntyp)
   if (!Ok || !n->symbol->struct_template) {
     if (need_arguments)
       return n;
-    printf("spin: saw '");
+    printf("spin++: saw '");
     comment(stdout, n, 0);
     printf("'\n");
     loger::fatal("incomplete structure ref '%s'", n->symbol->name);

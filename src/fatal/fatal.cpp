@@ -12,7 +12,6 @@
 
 extern models::Symbol *Fname;
 extern models::Symbol *oFname;
-//TODO: fix it
 extern int nr_errs;
 extern int yychar;
 extern char yytext[];
@@ -32,7 +31,7 @@ void non_fatal(const std::string_view &s1,
   std::string near =
       strlen(yytext) > 1 ? fmt::format(" near '{}'", yytext) : "";
 
-  std::cout << fmt::format("spin: {0}:{1}, Error: {2}{3} {4}", fname, file::LineNumber::Get(),
+  std::cout << fmt::format("spin++: {0}:{1}, Error: {2}{3} {4}", fname, file::LineNumber::Get(),
                            s1, s2.value_or(""), separator, near);
   std::cout << std::endl;
   nr_errs++;

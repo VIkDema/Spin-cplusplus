@@ -120,7 +120,7 @@ Symbol *Symbol::BuildOrFind(const std::string &name) {
                 0 &&
             samename(sp->owner_name, owner)))) {
         if (!samename(sp->owner_name, owner)) {
-          printf("spin: different container %s\n", sp->name.c_str());
+          printf("spin++: different container %s\n", sp->name.c_str());
           printf("    old: %s\n",
                  sp->owner_name ? sp->owner_name->name.c_str() : "--");
           printf("    new: %s\n", owner ? owner->name.c_str() : "--");

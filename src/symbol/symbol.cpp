@@ -278,7 +278,7 @@ void SetPname(models::Lextok *mtype_name, models::Lextok *n, int t,
     if (mtype_name && n->symbol->mtype_name &&
         mtype_name->symbol->name != n->symbol->mtype_name->name) {
       fprintf(stderr,
-              "spin: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
+              "spin++: %s:%d, Error: '%s' is type '%s' but assigned type '%s'\n",
               n->file_name->name.c_str(), n->line_number,
               n->symbol->name.c_str(), mtype_name->symbol->name.c_str(),
               n->symbol->mtype_name->name.c_str());
@@ -352,7 +352,7 @@ void SetXus(models::Lextok *p, int t) {
 
   if (launch_settings.need_lose_msgs_sent_to_full_queues && t == XS) {
     printf(
-        "spin: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
+        "spin++: %s:%d, warning, xs tag not compatible with -m (message loss)\n",
         (p->file_name != NULL) ? p->file_name->name.c_str() : "stdin",
         p->line_number);
   }
@@ -587,7 +587,7 @@ void CheckChanAccess() {
         if (!verbose_flags.NeedToPrintVerbose() || lexer_.GetHasCode())
           continue;
 
-        printf("spin: %s:0, warning, ", Fname->name.c_str());
+        printf("spin++: %s:0, warning, ", Fname->name.c_str());
         helpers::PutType(buf, walk->entry->type);
         if (walk->entry->context) {
           printf("proctype %s", walk->entry->context->name.c_str());

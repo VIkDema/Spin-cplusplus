@@ -6,7 +6,7 @@
 #include "../utils/verbose/verbose.hpp"
 #include "../structs/structs.hpp"
 #include "../symbol/symbol.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
+#include "y.tab.h"
 #include "inline_processor.hpp"
 #include "line_number.hpp"
 #include "names.hpp"
@@ -126,7 +126,7 @@ int Lexer::CheckName(const std::string &value) {
             std::string(tt->left->symbol->name)) {
           continue;
         }
-        std::cout << fmt::format("spin: {}:{} replacement value: {}",
+        std::cout << fmt::format("spin++: {}:{} replacement value: {}",
                                  !oFname->name.empty() ? oFname->name : "--",
                                  file::LineNumber::Get(),
                                  tt->left->symbol->name)
@@ -413,7 +413,7 @@ again:
       std::size_t pos;
       nr = std::stol(yytext, &pos, 10);
       if (pos != yytext.length()) {
-        throw std::invalid_argument("spin: value out of range");
+        throw std::invalid_argument("spin++: value out of range");
       }
     } catch (const std::invalid_argument &e) {
       std::cerr << e.what() << ": " << yytext << std::endl;
@@ -633,7 +633,7 @@ models::Symbol *Lexer::HandleInline(models::Symbol *symbol,
         continue;
       }
       default: {
-        printf("spin: saw char '%c'\n", c);
+        printf("spin++: saw char '%c'\n", c);
       bad:
         loger::fatal("bad inline: %s", symbol->name);
       }

@@ -98,7 +98,6 @@ void PrettyPrintViewer::view() {
       int temp_indent = indent;
       start_new_line(buffer);
 
-      assert(yylval->symbol->name.length() < sizeof(buffer));
       buffer = yylval->symbol->name;
 
       indent = 0;

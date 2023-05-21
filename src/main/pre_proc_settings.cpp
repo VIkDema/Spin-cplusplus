@@ -56,7 +56,7 @@ void PreProcSettings::Preprocess(const std::string &a, const std::string &b,
     unlink(b.c_str());
     if (a_tmp)
       unlink(a.c_str());
-    fprintf(stdout, "spin: preprocessing failed %s\n", cmd.c_str());
+    fprintf(stdout, "spin++: preprocessing failed %s\n", cmd.c_str());
     MainProcessor::Exit(1); /* no return, error exit */
   }
   if (a_tmp)

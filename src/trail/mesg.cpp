@@ -119,7 +119,7 @@ void mtype_ck(const std::string &p, models::Lextok *arg) {
   }
 
   if (s != t) {
-    printf("spin: %s:%d, Error: '%s' is type '%s', but ",
+    printf("spin++: %s:%d, Error: '%s' is type '%s', but ",
            arg->file_name ? arg->file_name->name.c_str() : "", arg->line_number,
            arg->symbol->name.c_str(), t.c_str());
     printf("should be type '%s'\n", s.c_str());
@@ -639,7 +639,7 @@ void CheckAndProcessChannelAssignment(models::Lextok *p, models::Lextok *n,
       p->symbol->mtype_name->name = rhs;
     } else if (lhs != rhs) {
       fprintf(stderr,
-              "spin: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
+              "spin++: %s:%d, Error: '%s' is type '%s' but '%s' is type '%s'\n",
               p->file_name->name.c_str(), p->line_number,
               p->symbol ? p->symbol->name.c_str() : "?", lhs.c_str(),
               n->symbol ? n->symbol->name.c_str() : "?", rhs.c_str());

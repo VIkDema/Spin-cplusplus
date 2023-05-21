@@ -1,5 +1,6 @@
 #include "seed.hpp"
 
+#include <iostream>
 #include <time.h>
 
 namespace utils::seed {
@@ -32,8 +33,12 @@ long Seed::Rand() {
   auto Seed = seed.GetSeed();
 
   Seed = 16807 * (Seed % 127773) - 2836 * (Seed / 127773);
-  if (Seed <= 0)
+
+  if (Seed <= 0) {
     Seed += 2147483647;
+  }
+
+  seed.SetSeed(Seed);
   return Seed;
 }
 

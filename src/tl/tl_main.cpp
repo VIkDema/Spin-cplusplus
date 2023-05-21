@@ -137,7 +137,7 @@ int tl_main(int argc, char *argv[]) {
       strcpy(claim_name, argv[1]);
       break;
     default:
-      printf("spin -f: saw '-%c'\n", argv[1][1]);
+      printf("spin++ -f: saw '-%c'\n", argv[1][1]);
       goto nogood;
     }
     argc--;
@@ -145,7 +145,7 @@ int tl_main(int argc, char *argv[]) {
   }
   if (hasuform == 0) {
   nogood:
-    printf("usage:\tspin [-v] [-n] -f formula\n");
+    printf("usage:\tspin++ [-v] [-n] -f formula\n");
     printf("	-v verbose translation\n");
     printf("	-n normalize tl formula and exit\n");
     exit(1);

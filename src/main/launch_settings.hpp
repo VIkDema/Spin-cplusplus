@@ -52,8 +52,8 @@ struct LaunchSettings {
   std::vector<std::string> trail_file_name;       // old: trailfilename
   std::vector<std::string> never_claim_file_name; // old: nvr_file
 
-  std::vector<std::string> ltl_file; // OLD: ltl_file
-  std::vector<std::string> ltl_add;  // OLD: add_ltl
+  char	**add_ltl  = nullptr;
+  char	**ltl_file = nullptr;
 
   std::vector<std::string> pre_args =
       {}; // OLD: PreArg[++PreCnt] = (char *)&argv[1][0];

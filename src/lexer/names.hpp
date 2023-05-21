@@ -1,6 +1,6 @@
 #pragma once
 
-#include "/Users/vikdema/Desktop/projects/Spin/src++/build/y.tab.h"
+#include "y.tab.h"
 #include <array>
 #include <optional>
 #include <string>

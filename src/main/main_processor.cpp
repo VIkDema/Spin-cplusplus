@@ -1,5 +1,6 @@
 #include "main_processor.hpp"
 
+#include "../lexer/line_number.hpp"
 #include "../lexer/scope.hpp"
 #include "../run/flow.hpp"
 #include "../run/sched.hpp"
@@ -14,24 +15,22 @@
 #include "launch_settings.hpp"
 #include "pan_processor.hpp"
 #include "pre_proc_settings.hpp"
-
 #include <cassert>
-#include <cstdio>
 #include <cstdlib>
 #include <fmt/core.h>
+#include <stdio.h>
 #include <string>
 #include <sys/stat.h>
 
-// TODO: change it
 extern FILE *yyin, *yyout, *tl_out;
 extern int depth; /* at least some steps were made */
 models::Symbol *Fname, *oFname;
-static char *ltl_claims = nullptr;
+char *ltl_claims = nullptr;
 extern PanProcessor pan_processor_;
 extern void ana_src(int, int);
 extern short has_accept;
 int nr_errs;
-static FILE *fd_ltl = (FILE *)0;
+FILE *fd_ltl = nullptr;
 
 extern LaunchSettings launch_settings;
 extern lexer::Lexer lexer_;
@@ -85,12 +84,26 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
 
   if (launch_settings.need_use_optimizations &&
       !launch_settings.need_to_analyze) {
-    std::cout << "spin: warning -o[1..5] option ignored in simulations"
+    std::cout << "spin++: warning -o[1..5] option ignored in simulations"
               << std::endl;
   }
 
-  if (!launch_settings.ltl_file.empty()) {
-    // open_ltl
+  if (launch_settings.ltl_file) {
+    launch_settings.add_ltl = launch_settings.ltl_file - 2;
+    launch_settings.add_ltl[1][1] = 'f';
+    if (!(tl_out = fopen(*launch_settings.ltl_file, "r"))) {
+      printf("spin++: cannot open %s\n", *launch_settings.ltl_file);
+      Exit(1);
+    }
+    size_t linebuffsize = 0;
+    char *formula = nullptr;
+    ssize_t length = getline(&formula, &linebuffsize, tl_out);
+    if (!formula || !length) {
+      printf("spin++: cannot read %s\n", *launch_settings.ltl_file);
+    }
+    fclose(tl_out);
+    tl_out = stdout;
+    *launch_settings.ltl_file = formula;
   }
 
   if (argc > 1) {
@@ -99,20 +112,20 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
 
     /* must remain in current dir */
     out_ = "pan.pre";
-    if (!launch_settings.ltl_add.empty() ||
+    if (launch_settings.add_ltl ||
         !launch_settings.never_claim_file_name.empty()) {
       assert(strlen(argv[1]) + 6 < sizeof(out2));
       out2 = fmt::format("{}.nvr", argv[1]);
       if ((fd = fopen(out2.c_str(), MFLAGS)) == NULL) {
-        printf("spin: cannot create tmp file %s\n", out2.c_str());
+        printf("spin++: cannot create tmp file %s\n", out2.c_str());
         MainProcessor::Exit(1);
       }
       fprintf(fd, "#include \"%s\"\n", argv[1]);
     }
 
-    if (!launch_settings.ltl_add.empty()) {
+    if (launch_settings.add_ltl) {
       tl_out = fd;
-      // nr_errs = tl_main(2, add_ltl);
+      nr_errs = tl_main(2, launch_settings.add_ltl);
       fclose(fd);
       pre_proc_processor.Preprocess(out2, out_, 1);
     } else if (!launch_settings.never_claim_file_name.empty()) {
@@ -147,13 +160,13 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     }
   } else {
     oFname = Fname = models::Symbol::BuildOrFind("<stdin>");
-    if (!launch_settings.ltl_add.empty()) {
-      if (argc > 0)
-        //   exit(tl_main(2, add_ltl));
-        printf("spin: missing argument to -f\n");
+    if (launch_settings.add_ltl) {
+      if (argc > 0) {
+        exit(tl_main(2, launch_settings.add_ltl));
+      }
+      printf("spin: missing argument to -f\n");
       Exit(1);
     }
-    // printf("%s\n", SpinVersion);
     fprintf(stderr, "spin: error, no filename specified\n");
     fflush(stdout);
     Exit(1);
@@ -179,6 +192,7 @@ bool MainProcessor::HandleLaunchSettings(int argc, char *argv[]) {
     }
     r = oFname;
     oFname = Fname = models::Symbol::BuildOrFind(ltl_claims);
+    file::LineNumber::Set(0);
     yyparse();
     fclose(yyin);
     oFname = Fname = r;
@@ -259,7 +273,7 @@ void MainProcessor::Exit(int estatus) {
       !lexer_.GetHasCode() && !estatus) {
     std::string pan_runtime = launch_settings.BuildPanRuntime();
     std::string tmp;
-    tmp = fmt::format("spin -t {} {}", pan_runtime, Fname->name);
+    tmp = fmt::format("spin++ -t {} {}", pan_runtime, Fname->name);
     estatus = e_system(1, tmp);
     exit(estatus);
   }

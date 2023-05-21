@@ -148,7 +148,7 @@ int pid_is_claim(int p) /* Pid_nr (p->tn) to type (p->b) */
     if (r->tn == p)
       return (r->b == models::btypes::N_CLAIM);
   }
-  printf("spin: error, cannot find pid %d\n", p);
+  printf("spin++: error, cannot find pid %d\n", p);
   return 0;
 }
 
@@ -222,7 +222,7 @@ void gensrc(void) {
       || !(fd_tb = fopen(Cfile[4].nm[launch_settings.separate_version],
                          MFLAGS))) /* backward moves */
   {
-    printf("spin: cannot create pan.[chtmfb]\n");
+    printf("spin++: cannot create pan.[chtmfb]\n");
     MainProcessor::Exit(1);
   }
 
@@ -348,7 +348,7 @@ void gensrc(void) {
   }
   if (launch_settings.separate_version == 2) {
     if (has_remote) {
-      printf("spin: warning, make sure that the S1 model\n");
+      printf("spin++: warning, make sure that the S1 model\n");
       printf("      includes the same remote references\n");
     }
     fprintf(fd_th, "#ifndef NFAIR\n");
@@ -795,7 +795,7 @@ doless:
   fclose(fd_tb);
 
   if (!(fd_th = fopen("pan.p", MFLAGS))) {
-    printf("spin: cannot create pan.p for -DBFS_PAR\n");
+    printf("spin++: cannot create pan.p for -DBFS_PAR\n");
     return; /* we're done anyway */
   }
 
@@ -2075,7 +2075,7 @@ static void put_seq(models::Sequence *s, int Tt0, int Tt1) {
           fprintf(fd_tt, "#if 0\n\t/* dead link: */\n");
           deadlink = 1;
           if (verbose_flags.NeedToPrintVerbose())
-            printf("spin: %s:%d, warning, condition is always false\n",
+            printf("spin++: %s:%d, warning, condition is always false\n",
                    g->n->file_name ? g->n->file_name->name.c_str() : "",
                    g->n->line_number);
         } else
@@ -2554,7 +2554,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     else
       fprintf(fd, "((trpt->tau)&1)");
     if (GenCode)
-      printf("spin: %s:%d, warning, 'timeout' in d_step sequence\n",
+      printf("spin++: %s:%d, warning, 'timeout' in d_step sequence\n",
              Fname->name.c_str(), file::LineNumber::Get());
     /* is okay as a guard */
     break;
@@ -3464,7 +3464,7 @@ void putstmnt(FILE *fd, models::Lextok *now, int m) {
     break;
 
   default:
-    printf("spin: error, %s:%d, bad node type %d (.m)\n",
+    printf("spin++: error, %s:%d, bad node type %d (.m)\n",
            now->file_name->name.c_str(), now->line_number, now->node_type);
     fflush(fd);
     MainProcessor::Exit(1);

@@ -1,20 +1,20 @@
 %{
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/spin.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/fatal/fatal.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/lexer.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/inline_processor.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/scope.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/symbol.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/models/lextok.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/lexer/yylex.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/main/launch_settings.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/structs/structs.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/symbol/symbol.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/run/flow.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/trail/mesg.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/run/sched.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/trail/mesg.hpp"
-#include "/Users/vikdema/Desktop/projects/Spin/src++/src/codegen/codegen.hpp"
+#include "spin.hpp"
+#include "fatal/fatal.hpp"
+#include "lexer/lexer.hpp"
+#include "lexer/inline_processor.hpp"
+#include "lexer/scope.hpp"
+#include "models/symbol.hpp"
+#include "models/lextok.hpp"
+#include "lexer/yylex.hpp"
+#include "main/launch_settings.hpp"
+#include "structs/structs.hpp"
+#include "symbol/symbol.hpp"
+#include "run/flow.hpp"
+#include "trail/mesg.hpp"
+#include "run/sched.hpp"
+#include "trail/mesg.hpp"
+#include "codegen/codegen.hpp"
 #include <sys/types.h>
 #include <iostream>
 #ifndef PC
@@ -45,7 +45,7 @@ extern	void	any_runs(models::Lextok *);
 extern	std::string yytext;
 extern LaunchSettings launch_settings;
 
-void ltl_list(const std::string& , const std::string& );
+
 
 int	Mpars = 0;	/* max nr of message parameters  */
 int	nclaims = 0;	/* nr of never claims */
@@ -204,11 +204,14 @@ init	: INIT		{
 	;
 
 ltl	: LTL optname2	{ 
-	lexer_.SetLtlMode(true);  
-ltl_name = new char[$2->symbol->name.length() + 1];
-strcpy(ltl_name, $2->symbol->name.c_str());
-}
-	  ltl_body	{ if ($4) ltl_list($2->symbol->name, $4->symbol->name);
+		lexer_.SetLtlMode(true);  
+		ltl_name = new char[$2->symbol->name.length() + 1];
+		strcpy(ltl_name, $2->symbol->name.c_str());
+	}
+	  ltl_body	{ 
+			  if ($4) {
+				ltl_list($2->symbol->name, $4->symbol->name);
+			  }
 			  lexer_.SetLtlMode(false);
 			}
 	;
@@ -243,7 +246,8 @@ optname : /* empty */	{ char tb[32];
 	| NAME		{ $$ = $1; }
 	;
 
-optname2 : /* empty */ { char tb[32]; static int nltl = 0;
+optname2 : /* empty */ { 
+			  char tb[32]; static int nltl = 0;
 			  memset(tb, 0, 32);
 			  sprintf(tb, "ltl_%d", nltl++);
 			  $$ = models::Lextok::nn(ZN, NAME, ZN, ZN);
@@ -1180,36 +1184,4 @@ void
 yyerror(char *fmt, ...)
 {
 	loger::non_fatal(fmt );
-}
-//TODO: 
-void ltl_list(const std::string &, const std::string &) {
-  if (true
-      // s_trail || launch_settings.need_to_analyze ||
-      //       dumptab
-      ) /* when generating pan.c or replaying a trace */
-  {
-   /* if (!ltl_claims) {
-      ltl_claims = "_spin_nvr.tmp";
-       if ((fd_ltl = fopen(ltl_claims, MFLAGS)) == NULL) {
-         loger::fatal("cannot open tmp file %s", ltl_claims);
-       }
-       tl_out = fd_ltl;
-     */
-    }
-    /*
-    add_ltl = (char **)emalloc(5 * sizeof(char *));
-    add_ltl[1] = "-c";
-    add_ltl[2] = nm;
-    add_ltl[3] = "-f";
-    add_ltl[4] = (char *)emalloc(strlen(fm) + 4);
-    strcpy(add_ltl[4], "!(");
-    strcat(add_ltl[4], fm);
-    strcat(add_ltl[4], ")");
-    */
-    /* add_ltl[4] = fm; */
-    // TODO:    nr_errs += tl_main(4, add_ltl);
-
-    //fflush(tl_out);
-    /* should read this file after the main file is read */
- // }
 }
