@@ -1,0 +1,37 @@
+#define N	5	/* nr of processes */ 
+byte turn [ N ], flag [ N ];
+byte ncrit;
+active [ N ] proctype user()
+{
+   byte j, k;
+again:
+   k = 0;
+   do
+   :: k < N - 1->flag [ _pid ] = k;
+      turn [ k ] = _pid;
+      j = 0;
+      do
+      :: j == _pid->j ++
+      :: j != _pid->
+         if
+         :: j < N->( flag [ j ] < k || turn [ k ] != _pid );
+            j ++
+         :: j >= N->break
+         fi
+      od;
+      k ++
+   :: else
+      ->break
+   od;
+   ncrit ++;
+cs:
+   assert( ncrit == 1 );
+   printf( "Process %d in cs\n", _pid );
+   ncrit --;
+   flag [ _pid ] = 0;
+   goto again 
+}
+ltl bounded_bypass
+{
+   user [ 1 ]@again-><> user [ 1 ]@cs 
+}
