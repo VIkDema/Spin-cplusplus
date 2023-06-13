@@ -3,17 +3,21 @@
 #include "models_fwd.hpp"
 
 namespace models {
+/**
+ * @struct IType
+ * Structure representing an inline type.
+ */
 struct IType {
-  Symbol *nm;                /* name of the type */
-  Lextok *cn;                /* contents */
-  Lextok *params;            /* formal pars if any */
-  Lextok *rval;              /* variable to assign return value, if any */
-  char **anms;               /* literal text for actual pars */
-  char *prec;                /* precondition for c_code or c_expr */
-  int uiid;                  /* unique inline id */
-  int is_expr;               /* c_expr in an ltl formula */
-  int dln, cln;              /* def and call linenr */
-  Symbol *dfn, *cfn; /* def and call filename */
-  IType *next;               /* linked list */
+    Symbol *nm; /**< Name of the type. */
+    Lextok *cn; /**< Contents. */
+    Lextok *params; /**< Formal parameters, if any. */
+    Lextok *rval; /**< Variable to assign the return value, if any. */
+    char **anms; /**< Literal text for actual parameters. */
+    char *prec; /**< Precondition for c_code or c_expr. */
+    int uiid; /**< Unique inline ID. */
+    int is_expr; /**< Indicates if c_expr is in an LTL formula. */
+    int dln, cln; /**< Definition and call line numbers. */
+    Symbol *dfn, *cfn; /**< Definition and call filenames. */
+    IType *next; /**< Linked list. */
 };
 } // namespace models

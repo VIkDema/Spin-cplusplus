@@ -4,11 +4,16 @@
 
 namespace models {
 
+/**
+ * @struct Slicer
+ * Structure representing a slicer.
+ */
 struct Slicer {
-  models::Lextok *slice_criterion;  /* global var, usable as slice criterion */
-  short code;         /* type of use: DEREF_USE or normal USE */
-  short used;         /* set when handled */
-  struct Slicer *next; /* linked list */
+    models::Lextok *slice_criterion; /**< Global variable usable as a slice criterion. */
+    short code; /**< Type of use: DEREF_USE or normal USE. */
+    short used; /**< Flag indicating if the slicer has been handled. */
+    struct Slicer *next; /**< Pointer to the next slicer in the linked list. */
 };
+
 
 } // namespace models

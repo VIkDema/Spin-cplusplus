@@ -41,9 +41,9 @@ bool Flags::Active() {
          need_to_print_sends_ || need_to_print_verbose_ ||
          need_to_print_very_verbose_;
 }
-bool Flags::Clean() { clean_ = true; }
+void Flags::Clean() { clean_ = true; }
 
-bool Flags::Activate() { clean_ = false; }
+void Flags::Activate() { clean_ = false; }
 
 void Flags::SetNeedToPrintGlobalVariables() {
   need_to_print_global_variables_ = true;

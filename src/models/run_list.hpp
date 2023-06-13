@@ -4,17 +4,22 @@
 
 namespace models {
 
+/**
+ * @struct RunList
+ * Structure representing a run list.
+ */
 struct RunList {
-  Symbol *n;      /* name            */
-  int tn;         /* ordinal of type */
-  int pid;        /* process id      */
-  int priority;   /* for simulations only */
-  btypes b;       /* the type of process */
-  Element *pc;    /* current stmnt   */
-  Sequence *ps;   /* used by analyzer generator */
-  Lextok *prov;   /* provided clause */
-  Symbol *symtab; /* local variables */
-  RunList *next;   /* linked list */
+    Symbol *n; /**< Name of the process. */
+    int tn; /**< Ordinal of the type. */
+    int pid; /**< Process ID. */
+    int priority; /**< Priority for simulations only. */
+    btypes b; /**< Type of the process. */
+    Element *pc; /**< Current statement. */
+    Sequence *ps; /**< Used by the analyzer generator. */
+    Lextok *prov; /**< Provided clause. */
+    Symbol *symtab; /**< Local variables. */
+    RunList *next; /**< Linked list of processes. */
 };
+
 
 } // namespace models

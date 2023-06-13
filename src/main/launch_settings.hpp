@@ -8,6 +8,9 @@
 #include <sys/_types/_size_t.h>
 #include <vector>
 
+/**
+ * @brief Struct representing the launch settings for the program.
+ */
 struct LaunchSettings {
   bool need_export_ast = false;                         // OLD:export_ast
   bool need_to_analyze = false;                         // OLD:analyze

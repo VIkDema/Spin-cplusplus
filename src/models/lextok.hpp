@@ -4,30 +4,37 @@
 
 namespace models {
 
+/**
+ * @struct Lextok
+ * Structure representing a lexical token in the parse tree.
+ */
 struct Lextok {
-  unsigned short node_type; /* node type  OLD: node_type*/
-  bool is_mtype_token;      /* CONST derived from MTYP OLD: ismtyp*/
-  int value;                /* value attribute old: val*/
-  int line_number;          /* line number old:ln */
-  int index_step;           /* part of d_step sequence, indstep */
-  int opt_inline_id;        /* inline id, if non-zero,  uiid*/
-  Symbol *file_name;        /* file name old: fn*/
-  Symbol *symbol;           /* symbol reference old: sym*/
-  Sequence *sequence;       /* sequence old: sq*/
-  SeqList *seq_list;        /* sequence list old: sl*/
-  Lextok *left, *right;     /* children in parse tree old: fn*/
-  void ProcessSymbolForRead();
-  int ResolveSymbolType();
-  Lextok *AddTail(Lextok *tail);
+    unsigned short node_type; /**< Node type. */
+    bool is_mtype_token; /**< Indicates if it is a CONST derived from MTYP. */
+    int value; /**< Value attribute. */
+    int line_number; /**< Line number. */
+    int index_step; /**< Part of the d_step sequence. */
+    int opt_inline_id; /**< Inline ID, if non-zero. */
+    Symbol *file_name; /**< File name. */
+    Symbol *symbol; /**< Symbol reference. */
+    Sequence *sequence; /**< Sequence. */
+    SeqList *seq_list; /**< Sequence list. */
+    Lextok *left; /**< Left child in the parse tree. */
+    Lextok *right; /**< Right child in the parse tree. */
 
-  static Lextok *nn(models::Lextok *symbol, int type, models::Lextok *left,
-                    models::Lextok *right);
-  static Lextok *CreateRemoteLabelAssignment(models::Symbol *proctype_name,
-                                             models::Lextok *pid,
-                                             models::Symbol *label_name);
-  static Lextok *CreateRemoteVariableAssignment(models::Symbol *a,
-                                                models::Lextok *b,
-                                                models::Symbol *c,
-                                                models::Lextok *ndx);
+    void ProcessSymbolForRead();
+    int ResolveSymbolType();
+    Lextok *AddTail(Lextok *tail);
+
+    static Lextok *nn(models::Lextok *symbol, int type, models::Lextok *left,
+                      models::Lextok *right);
+    static Lextok *CreateRemoteLabelAssignment(models::Symbol *proctype_name,
+                                               models::Lextok *pid,
+                                               models::Symbol *label_name);
+    static Lextok *CreateRemoteVariableAssignment(models::Symbol *a,
+                                                  models::Lextok *b,
+                                                  models::Symbol *c,
+                                                  models::Lextok *ndx);
 };
+
 } // namespace models

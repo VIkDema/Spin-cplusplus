@@ -3,33 +3,45 @@
 #include "models_fwd.hpp"
 
 namespace models {
-
-struct FSM_state { /* used in pangen5.c - dataflow */
-  int from;        /* state number */
-  int seen;        /* used for dfs */
-  int in;          /* nr of incoming edges */
-  int cr;          /* has reachable 1-relevant successor */
-  int scratch;
-  unsigned long *dom;
-  unsigned long *mod; /* to mark dominant nodes */
-  struct FSM_trans *t;      /* outgoing edges */
-  struct FSM_trans *p;      /* incoming edges, predecessors */
-  struct FSM_state *next;    /* linked list of all states */
+/**
+ * @struct FSM_state
+ * Structure used in pangen5.c for dataflow.
+ */
+struct FSM_state {
+    int from; /**< State number. */
+    int seen; /**< Used for depth-first search. */
+    int in; /**< Number of incoming edges. */
+    int cr; /**< Indicates whether there is a reachable 1-relevant successor. */
+    int scratch;
+    unsigned long *dom; /**< Dominant nodes. */
+    unsigned long *mod; /**< Marks dominant nodes. */
+    struct FSM_trans *t; /**< Outgoing edges. */
+    struct FSM_trans *p; /**< Incoming edges (predecessors). */
+    struct FSM_state *next; /**< Linked list of all states. */
 };
 
-struct FSM_trans { /* used in pangen5.c - dataflow */
-  int to;
-  short relevant;         /* when sliced */
-  short round;            /* ditto: iteration when marked */
-  struct FSM_use *Val[2]; /* 0=reads, 1=writes */
-  struct Element *step;
-  struct FSM_trans *next;
+/**
+ * @struct FSM_trans
+ * Structure used in pangen5.c for dataflow.
+ */
+struct FSM_trans {
+    int to;
+    short relevant; /**< Relevant when sliced. */
+    short round; /**< Iteration when marked. */
+    struct FSM_use *Val[2]; /**< Value array: 0=reads, 1=writes. */
+    struct Element *step;
+    struct FSM_trans *next;
 };
 
-struct FSM_use { /* used in pangen5.c - dataflow */
-  models::Lextok *n;
-  models::Symbol *var;
-  int special;
-  struct FSM_use *next;
+/**
+ * @struct FSM_use
+ * Structure used in pangen5.c for dataflow.
+ */
+struct FSM_use {
+    models::Lextok *n;
+    models::Symbol *var;
+    int special;
+    struct FSM_use *next;
 };
+
 } // namespace models

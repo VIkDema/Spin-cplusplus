@@ -4,9 +4,14 @@
 
 namespace models {
 
+/**
+ * @struct QH
+ * Structure representing a queue header.
+ */
 struct QH {
-  int n;
-  struct QH *next;
+    int n; /**< Number. */
+    struct QH *next; /**< Pointer to the next queue header. */
 };
+
 
 } // namespace models

@@ -4,16 +4,22 @@
 
 namespace models {
 
+/**
+ * @struct Queue
+ * Structure representing a queue.
+ */
 struct Queue {
-  short qid;         /* runtime q index */
-  int qlen;          /* nr messages stored */
-  int nslots, nflds; /* capacity, flds/slot */
-  int setat;         /* last depth value changed */
-  int *fld_width;    /* type of each field */
-  int *contents;     /* the values stored */
-  int *stepnr;       /* depth when each msg was sent */
-  char **mtp;        /* if mtype, name of list, else 0 */
-  struct Queue *next; /* linked list */
+    short qid; /**< Runtime queue index. */
+    int qlen; /**< Number of messages stored. */
+    int nslots; /**< Capacity of the queue. */
+    int nflds; /**< Number of fields per slot. */
+    int setat; /**< Last depth value changed. */
+    int *fld_width; /**< Type of each field. */
+    int *contents; /**< Values stored in the queue. */
+    int *stepnr; /**< Depth when each message was sent. */
+    char **mtp; /**< If mtype, name of the list; otherwise, NULL. */
+    struct Queue *next; /**< Pointer to the next queue in the linked list. */
 };
+
 
 } // namespace models
