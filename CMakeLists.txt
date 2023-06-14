@@ -88,6 +88,13 @@ enable_testing()
 add_executable(
     regression_tests
     tests/regression_tests.cpp
+    tests/arguments_parser_tests.cpp
+    tests/pan_processor_tests.cpp
+    tests/pre_proc_settings_tests.cpp
+    tests/defferred_tests.cpp
+    tests/line_number_tests.cpp
+    tests/names_tests.cpp
+    tests/scope_tests.cpp
     ${SPIN_SOURCES} ${MODELS_SOURCES}
     ${PANGEN_SOURCES} ${UTILS_SOURCES}
     ${TL_SOURCES} ${MAIN_SOURCES} ${PROCESSOR_SOURCES}
